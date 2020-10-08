@@ -1,4 +1,4 @@
-## chipmunk
+# chipmunk
 
 Freely moving auditory and visual discrimination task for mice (adapted from Raposo et al. 2012)
 
@@ -12,17 +12,17 @@ The task is a visual and/or auditory accumulation of evidence task. The stimuli 
 
 ### Description of the setup
 
-	[partslist here](partslist.xml)
+[partslist here](partslist.xml)
 	
-	![There should be a picture here.](images/setupdescription.png)
+![There should be a picture here.](images/setupdescription.png)
 	
-	Here goes a description in words.
+Here goes a description in words.
 	
-	3d parts for building the setup are in the **custom_parts/3d** folder.
+3d parts for building the setup are in the **custom_parts/3d** folder.
 	
-	The walls are laser cut from *pololu* and the drawings are in the **custom_parts/walls**
+The walls are laser cut from *pololu* and the drawings are in the **custom_parts/walls**
 	
-	The visual and auditory stimuli printed circuit boards are [here](https://github.com/churchlandlab/SpatialSparrow/tree/dev-couto/pcb/led_panel_split) and can be ordered from *SeeedStudio*.
+The visual and auditory stimuli printed circuit boards are [here](https://github.com/churchlandlab/SpatialSparrow/tree/dev-couto/pcb/led_panel_split) and can be ordered from *SeeedStudio*.
 	
 ### Software instalation
 
