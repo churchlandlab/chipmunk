@@ -12,7 +12,7 @@ The task is a visual and/or auditory accumulation of evidence task. The stimuli 
 
 ### Description of the setup
 
-[partslist here](partslist.xml)
+[partslist here](partslist.xlsx)
 	
 ![There should be a picture here.](images/setupdescription.png)
 	
