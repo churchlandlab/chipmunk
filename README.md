@@ -77,7 +77,7 @@ Figure of performance, accross days. Code to produce this figure in the **notebo
 
 Arena size is 20x20cm. An additional chamber can attached to hold an observer.
  
-1. walls and floor - laser cut drawings there is an additional 3d part to connect the walls - use transparent red acrylic #2423 from *Pololu*, 6mm. 
+1. walls and floor - laser cut drawings there is an additional 3d part to connect the walls - use transparent red acrylic #2423 from *Pololu*, 6mm. Where can we find small hinges?
 2. test the stimuli and put the results in a figure here somewhere. With a description of how to do this.
 3. Do we use a sound card?? What the latency? Fixed? How fixed?
 4. 3d parts for the ports 2 - adapt the design so that head gear on a mouse is not does not touch the port during licking. Can we do this just with a spout and capacitive sensing?
