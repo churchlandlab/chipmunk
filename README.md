@@ -20,7 +20,7 @@ Here goes a description in words.
 	
 3d parts for building the setup are in the **custom_parts/3d** folder.
 	
-The walls are laser cut from *pololu* and the drawings are in the **custom_parts/walls**
+The walls are laser cut from *pololu* and the drawings are in the **custom_parts/enclosure**
 	
 The visual and auditory stimuli printed circuit boards are [here](https://github.com/churchlandlab/SpatialSparrow/tree/dev-couto/pcb/led_panel_split) and can be ordered from *SeeedStudio*.
 	
