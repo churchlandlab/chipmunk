@@ -24,18 +24,18 @@ switch Op
         
         
         BpodSystem.GUIHandles.ParameterGUI.LabelsHandle = zeros(1,nValues);
-        Pos = Vsize-60;
+        Pos = (Vsize-60);
         
         for x = 1:nValues
             if ~isempty(str2num(num2str(ParamValues{x}))); % if is numeric
                 BpodSystem.GUIHandles.ParameterGUI.LastParamValues{x} = str2num(num2str(ParamValues{x}));
             end
-            eval(['BpodSystem.GUIHandles.ParameterGUI.LabelsHandle(x) = uicontrol(''Style'', ''text'', ''String'', ''' ParamNames{x} ''', ''Position'', [10 ' num2str(Pos) ' 120 18], ''FontWeight'', ''normal'', ''FontSize'', 10, ''FontName'', ''Arial'');']);
+            eval(['BpodSystem.GUIHandles.ParameterGUI.LabelsHandle(x) = uicontrol(''Style'', ''text'', ''String'', ''' ParamNames{x} ''', ''Position'', [10 ' num2str(Pos) ' 120 15], ''FontWeight'', ''normal'', ''FontSize'', 9, ''FontName'', ''Arial'');']);
             eval(['BpodSystem.GUIHandles.ParameterGUI.ParamValHandle(x) = uicontrol(''Style'', ''edit'', ''String'', ''' num2str(ParamValues{x}) ''', ''Position'', [140 ' num2str(Pos) ' 80 20], ''FontWeight'', ''normal'', ''FontSize'', 9, ''FontName'', ''Arial'');']);
-            Pos = Pos - 20;
+            Pos = Pos - 18; %20
         end
-        uicontrol('Style', 'pushbutton', 'String', 'Update settings', 'Position', [40 40 150 25], 'Callback', {@update_settings_callback});
-        uicontrol('Style', 'pushbutton', 'String', 'Save settings', 'Position', [40 10 150 25], 'Callback', {@save_settings_callback});
+        uicontrol('Style', 'pushbutton', 'String', 'Update settings', 'Position', [40 120 150 18], 'Callback', {@update_settings_callback});
+        uicontrol('Style', 'pushbutton', 'String', 'Save settings', 'Position', [40 100 150 18], 'Callback', {@save_settings_callback});
         
         
     case 'update'
@@ -99,8 +99,10 @@ end
 function update_settings_callback (h, ev)
 
 global update
-update = 1;
-    
+    update = 1;
+    global BpodSystem
+    uiresume(BpodSystem.GUIHandles.Figures.FigureAllFigures); %wait for spout control and clear handle afterwards
+
 end
 
 

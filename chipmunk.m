@@ -18,7 +18,7 @@
 % 28-Jan-2015 by KO: Added LED reward port cue
 % 11-Dec-2015 by KO: Added auto-run configuration. useful for test recording sessions
 
-function TheMudSkipper2
+function chipmunk
 
 global BpodSystem
 
@@ -131,12 +131,12 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
                     break
                 end
             end
-            videoDataPath = fullfile('C:','Users','Anne','Documents','Bpod Local',...
-                BpodSystem.ProtocolSettings.SubjectName,'TheMudSkipper2','BehaviorVideo');
+            videoDataPath = fullfile('C:','Users','Anne','Documents','Bpod Local','Data',...
+                BpodSystem.ProtocolSettings.SubjectName,'chipmunk','video');
             [~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile);
             fwrite(udpObj,['expname=' videoDataPath filesep bhvFile])
             fgetl(udpObj);
-            fwrite(udpObj,'manualsave=1')
+            fwrite(udpObj,'manualsave=0')
             fgetl(udpObj);
             fwrite(udpObj,'softtrigger=1')
             fgetl(udpObj);
@@ -223,6 +223,20 @@ TrialsDone =  0;
 global update
 update = 0;
 
+if BpodSystem.Status.BeingUsed %only run this code if protocol is still active
+    % start spout adjustment
+    disp('Set the camera and hit start')
+    uiwait(BpodSystem.GUIHandles.Figures.FigureAllFigures); %wait for spout control and clear handle afterwards
+end
+%% Start saving labcams if connected
+if exist('udplabcams','var')
+    fwrite(udplabcams,'softtrigger=0')
+    fgetl(udplabcams);
+    fwrite(udplabcams,'manualsave=1')
+    fgetl(udplabcams);
+    fwrite(udplabcams,'softtrigger=1')
+    fgetl(udplabcams);
+end    
 %% Main loop
 for currentTrial = 1:maxTrials
     disp("---------------New Loop Starts!---------------");
@@ -631,11 +645,9 @@ for currentTrial = 1:maxTrials
  
  % Build state matrix
  sma = NewStateMatrix();
- if S.AutoRun
-     sma = AddState(sma, 'Name', 'GoToCenter', ...
-         'Timer', 0,...
-         'StateChangeConditions', {'Tup', 'PlayWaitStartCue'},...
-         'OutputActions', {});
+ if S.AutoRun % Auto run means than the stim is played without the
+     % animal going to the middle nose poke.
+     %No initiation needed in auto run mode, changed 10/22/2020 
      
      sma = AddState(sma, 'Name', 'PlayWaitStartCue', ...
          'Timer', preStimDelay, ...
@@ -648,7 +660,7 @@ for currentTrial = 1:maxTrials
          'OutputActions', {'SoftCode', 1});
      
      sma = AddState(sma, 'Name', 'WaitCenter', ...
-         'Timer', S.minWaitTime, ...
+         'Timer', S.timeToChoose, ...
          'StateChangeConditions', { 'Tup', 'PlayGoTone'}, ...
          'OutputActions',{});
      
@@ -666,7 +678,7 @@ for currentTrial = 1:maxTrials
      sma = AddState(sma, 'Name', 'PlayStimulus', ...
          'Timer', 0, ...
          'StateChangeConditions', {'Tup','WaitCenter', 'Port2Out', 'EarlyWithdrawal'},...
-         'OutputActions', {'SoftCode', 1});
+         'OutputActions', {'SoftCode', 1,'BNCState',1});
      
      sma = AddState(sma, 'Name', 'WaitCenter', ...
          'Timer', S.minWaitTime, ...
@@ -743,7 +755,7 @@ for currentTrial = 1:maxTrials
      'OutputActions', {'SoftCode', 255});
  
  sma = AddState(sma, 'Name', 'PrepareNextTrial', ...
-     'Timer', 0, ...
+     'Timer', 1, ...
      'StateChangeConditions', {'Tup', 'exit'}, ...
      'OutputActions', {'SoftCode', 255} );
  
@@ -896,8 +908,9 @@ for currentTrial = 1:maxTrials
              fwrite(udpObj,sprintf('log=end'));fgetl(udpObj);
              fwrite(udpObj,sprintf('softtrigger=0'));fgetl(udpObj);
              fwrite(udpObj,sprintf('manualsave=0'));fgetl(udpObj);
-             
-             fwrite(udpObj,sprintf('quit=1'))
+             fwrite(udpObj,sprintf('quit=1'));
+             fclose(udpObj);
+             clear udpObj
          end
      end
      SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
