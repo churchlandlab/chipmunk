@@ -34,7 +34,7 @@ switch Op
             eval(['BpodSystem.GUIHandles.ParameterGUI.ParamValHandle(x) = uicontrol(''Style'', ''edit'', ''String'', ''' num2str(ParamValues{x}) ''', ''Position'', [140 ' num2str(Pos) ' 80 20], ''FontWeight'', ''normal'', ''FontSize'', 9, ''FontName'', ''Arial'');']);
             Pos = Pos - 18; %20
         end
-        uicontrol('Style', 'pushbutton', 'String', 'Update settings', 'Position', [40 120 150 18], 'Callback', {@update_settings_callback});
+        cont = uicontrol('Style', 'pushbutton', 'String', 'Start', 'Position', [40 120 150 18], 'Callback', {@update_settings_callback});
         uicontrol('Style', 'pushbutton', 'String', 'Save settings', 'Position', [40 100 150 18], 'Callback', {@save_settings_callback});
         
         
@@ -102,7 +102,7 @@ global update
     update = 1;
     global BpodSystem
     uiresume(BpodSystem.GUIHandles.Figures.FigureAllFigures); %wait for spout control and clear handle afterwards
-
+    set(h,'String','Update settings');
 end
 
 

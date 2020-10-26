@@ -27,11 +27,35 @@ PsychToolboxSoundServer('init')
 % Set soft code handler to trigger sounds
 BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 
+%Store the data and settings in folders with date spec
+allFolders = split(BpodSystem.Path.CurrentDataFile,filesep);
+sessionFolder = [];
+for k=1:length(allFolders)-2 %also the actual file is a cell!
+    sessionFolder = fullfile(sessionFolder, allFolders{k});
+end
+sessionFolder = fullfile(sessionFolder, char(datetime('today', 'Format','uuuuMMdd')));
+
+%check for existing Session Data directory
+if ~isfolder(fullfile(sessionFolder,allFolders{end-1}))
+mkdir(sessionFolder,allFolders{end-1});
+end
+% Same for Session Settings
+if ~isfolder(fullfile(sessionFolder,'Session Settings'))
+mkdir(sessionFolder,'Session Settings');
+end
+BpodSystem.Path.CurrentDataFile = fullfile(sessionFolder,allFolders{end-1},allFolders{end});
+BpodSystem.Path.CurrentProtocol = fullfile(sessionFolder,allFolders{end-1},allFolders{end});
+
 %% Define settings for protocol
 
 %Initialize default settings.
 %Append new settings to the end
-DefaultSettings.SubjectName = 'Fish';
+
+% Extract subject name for video from data file name
+[~,dataFileName] = fileparts(BpodSystem.Path.CurrentDataFile);
+underlineIndex = strfind(dataFileName, '_');
+DefaultSettings.SubjectName = dataFileName(1:min(underlineIndex)-1);
+
 DefaultSettings.leftRewardVolume = 24; % ul
 DefaultSettings.rightRewardVolume = 24;% ul
 % DefaultSettings.centerRewardVolume = 0;% ul
@@ -65,9 +89,9 @@ DefaultSettings.AutoRun = 0; %runs in autorun configuration. behavioral reportin
 DefaultSettings.UseAntiBias = 0;
 DefaultSettings.AntiBiasTau = 0; %reflects number of trials to look back to compute bias measure.
 DefaultSettings.labcamsAddress = '';%'127.0.0.1:9999 for Rig 2';
-load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');     % Here, the addresses of the same Dropbox file in Ubuntu and Windows 
-                                                                                               % are different. This will induce bugs if you run this code on a computer with
-                                                                                               % Ubuntu. Please make sure the file address you are using is correct. 
+load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');     % Here, the addresses of the same Dropbox file in Ubuntu and Windows
+% are different. This will induce bugs if you run this code on a computer with
+% Ubuntu. Please make sure the file address you are using is correct.
 DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
 DefaultSettings.ExtraStimDuration = 0; %sec
 DefaultSettings.ExtraStimDurationStep = 0; %secs...0.00006 will decrement at approx 200ms /week, 0.00008 ms at ~250ms/week (assuming mouse performs 650 on average every session)
@@ -79,6 +103,7 @@ DefaultSettings.PunishDuration = 2;
 DefaultSettings.EarlyPunishLoudness = 70;
 DefaultSettings.EarlyPunishDuration = 2;
 DefaultSettings.IsPoissonStim = 0;
+DefaultSettings.initCenterPlayStimUntilCorrect = false; %start by poking in center play stimulus until correct or time is up.
 
 
 defaultFieldNames = fieldnames(DefaultSettings);
@@ -89,15 +114,13 @@ prevFieldVals = struct2cell(prevSettings);
 
 newSettings = DefaultSettings;
 for n = 1:numel(defaultFieldNames)
-   thisfield = defaultFieldNames{n};
-   index = find(strcmpi(thisfield,prevFieldNames));
-        if isempty(index)
-            continue;
-        end
-   newSettings.(thisfield) = prevFieldVals{index};
+    thisfield = defaultFieldNames{n};
+    index = find(strcmpi(thisfield,prevFieldNames));
+    if isempty(index)
+        continue;
+    end
+    newSettings.(thisfield) = prevFieldVals{index};
 end
-
-
 
 S = newSettings; %update parameters
 
@@ -131,9 +154,10 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
                     break
                 end
             end
-            videoDataPath = fullfile('C:','Users','Anne','Documents','Bpod Local','Data',...
-                BpodSystem.ProtocolSettings.SubjectName,'chipmunk','video');
-            [~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile);
+%             videoDataPath = fullfile('C:','Users','Anne','Documents','Bpod Local','Data',...
+%                 BpodSystem.ProtocolSettings.SubjectName,'chipmunk', datetime('today', 'Format','uuuuMMdd'),'video');
+            videoDataPath = fullfile(sessionFolder,'video')
+[~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile);
             fwrite(udpObj,['expname=' videoDataPath filesep bhvFile])
             fgetl(udpObj);
             fwrite(udpObj,'manualsave=0')
@@ -229,14 +253,14 @@ if BpodSystem.Status.BeingUsed %only run this code if protocol is still active
     uiwait(BpodSystem.GUIHandles.Figures.FigureAllFigures); %wait for spout control and clear handle afterwards
 end
 %% Start saving labcams if connected
-if exist('udplabcams','var')
-    fwrite(udplabcams,'softtrigger=0')
-    fgetl(udplabcams);
-    fwrite(udplabcams,'manualsave=1')
-    fgetl(udplabcams);
-    fwrite(udplabcams,'softtrigger=1')
-    fgetl(udplabcams);
-end    
+if exist('udpObj','var')
+    fwrite(udpObj,'softtrigger=0')
+    fgetl(udpObj);
+    fwrite(udpObj,'manualsave=1')
+    fgetl(udpObj);
+    fwrite(udpObj,'softtrigger=1')
+    fgetl(udpObj);
+end
 %% Main loop
 for currentTrial = 1:maxTrials
     disp("---------------New Loop Starts!---------------");
@@ -280,16 +304,16 @@ for currentTrial = 1:maxTrials
     else
         WaitTimeMode = 'Fixed';
     end
-      
+    
     LeftValveTime = GetValveTimes(LeftRewardVolume, 1);
     RightValveTime = GetValveTimes(RightRewardVolume, 3);
-
     
-%     if rand < S.centerRewardProp %reward center
-%         CenterValveTime = GetValveTimes(S.centerRewardVolume, 2);
-%         disp('center reward')
-%         centerRewarded = 1;
-%     end
+    
+    %     if rand < S.centerRewardProp %reward center
+    %         CenterValveTime = GetValveTimes(S.centerRewardVolume, 2);
+    %         disp('center reward')
+    %         centerRewarded = 1;
+    %     end
     
     directTrial = rand < S.Direct; %probability of direct reward
     
@@ -297,12 +321,12 @@ for currentTrial = 1:maxTrials
         outcome  = OutcomeRecord(TrialsDone);
         if outcome > -1
             
-         % Update arrays
+            % Update arrays
             [newModalityRightArray, newSuccessArray] = updateAntiBiasArrays(ModalityRightArray, SuccessArray, ...
-                                                   modalityRecord(TrialsDone - 1), outcome, ...
-                                                   correctSideRecord(TrialsDone -1), ...
-                                                   AntiBiasPrevLR, AntiBiasPrevSuccess, ...
-                                                   S.AntiBiasTau, ResponseSideRecord(TrialsDone - 1) - 1);
+                modalityRecord(TrialsDone - 1), outcome, ...
+                correctSideRecord(TrialsDone -1), ...
+                AntiBiasPrevLR, AntiBiasPrevSuccess, ...
+                S.AntiBiasTau, ResponseSideRecord(TrialsDone - 1) - 1);
             
             % Update history
             AntiBiasPrevLR = correctSideRecord(TrialsDone -1);
@@ -351,7 +375,7 @@ for currentTrial = 1:maxTrials
     % update the next trial.
     % Note: at this point in the trial, 'outcome' is still from the
     % previous trial
-
+    
     
     if TrialsDone > 1 && S.UseAntiBias > 0 && outcome > -1
         
@@ -376,14 +400,14 @@ for currentTrial = 1:maxTrials
         
     end %end S.UseAntiBias, S.PropLeft
     
-     if TrialsDone > 0
-         %cla(BpodSystem.GUIHandles.OutcomePlot);
-         UpdateOutcomePlot(uint8(TrialSidesList), BpodSystem.Data);
-     end
+    if TrialsDone > 0
+        %cla(BpodSystem.GUIHandles.OutcomePlot);
+        UpdateOutcomePlot(uint8(TrialSidesList), BpodSystem.Data);
+    end
     
     % Pick this trial type
     thisTrialSide = TrialSidesList(currentTrial);
-
+    
     
     if currentTrial < S.NumWarmup
         audEventRateList = [min(audEventRateList) max(audEventRateList)];
@@ -452,7 +476,7 @@ for currentTrial = 1:maxTrials
     end
     toc
     
-
+    
     
     
     %% Get the list of random events given the rate for this trial, long/short interval version
@@ -573,356 +597,390 @@ for currentTrial = 1:maxTrials
         end
         
     end
- %% Get the list of random events end    
- %%
- 
- if S.IsPoissonStim == 0
-     audio_waveform = create_audio_signal(aud_isis, SamplingFreq, ToneDuration, ...
-         HighSilenceDuration, LowSilenceDuration, 'White noise', S.StimLoudness, offset, NoiseMaskAmp, S.WhiteNoiseLinearModelParams);
-     
-     visual_waveform = create_visual_signal(vis_isis, SamplingFreq, S.StimBrightness, ...
-         ToneDuration, LowSilenceDuration, HighSilenceDuration);
-     
- else
-     audio_waveform = Poisson_audsignal(aud_isis, SamplingFreq, ToneDuration, ...
-         'White noise', S.StimLoudness, offset, NoiseMaskAmp, S.WhiteNoiseLinearModelParams);
-     
-     visual_waveform = Poisson_vissignal(vis_isis, SamplingFreq, S.StimBrightness, ToneDuration);   
- end
- 
- 
- if length(visual_waveform) > length(audio_waveform)
-     visual_waveform = visual_waveform(1:length(audio_waveform));
- else
-     visual_waveform = [visual_waveform zeros(1, length(audio_waveform) - length(visual_waveform))];
- end
- 
- Signal = [show_visual*visual_waveform; show_audio*audio_waveform];
- 
- disp(['This event rate: ' num2str(thisTrialRate) ' events/s'])
- 
- 
- plot_StimulusPlotA = plot(BpodSystem.GUIHandles.StimulusPlotA, linspace(0,1,length(audio_waveform)), show_audio*audio_waveform,'color',[0 0.8 0]);title('Auditory stimulus');
- plot_StimulusPlotV = plot(BpodSystem.GUIHandles.StimulusPlotV, linspace(0,1,length(visual_waveform)), show_visual*visual_waveform, 'color',[0 0 0.8]);title('Visual stimulus');
- set(BpodSystem.GUIHandles.StimulusPlotA, 'box', 'off','xtick',[]);
- set(BpodSystem.GUIHandles.StimulusPlotV, 'box', 'off');
- %linkdata on
- drawnow
- 
- if S.ExtraStimDuration > 0.0001
-     %add extra stimulus
-     extraStimRatio = S.ExtraStimDuration / desiredStimDuration;
-     extraStimLength = round(extraStimRatio * length(Signal));
-     extraSignal = repmat(Signal,1,(ceil(extraStimRatio)));
-     SignalplusExtra = cat(2,Signal, zeros(2,round(eventDuration*SamplingFreq)),extraSignal(:,1:extraStimLength));
-     S.ExtraStimDuration = S.ExtraStimDuration - S.ExtraStimDurationStep;
-     Signal = SignalplusExtra;
- else
-     S.ExtraStimDuration = 0;
- end
- 
- if ~S.PlayStimulus
-     Signal = 0;
-     Modality = '-';
- end
- 
- PsychToolboxSoundServer('Load', 1, Signal); % send signal to sound server
- 
- % Determine whether to play start cue or cue
- if ~S.WaitStartCue
-     StartCueOutputAction  = {};
- else
-     StartCueOutputAction = {'SoftCode', 2};
- end
- 
- if ~S.WaitEndGoCue
-     GoCueOutputAction  = {};
- else
-     GoCueOutputAction = {'SoftCode', 3};
- end
- toc
- 
- 
- % Build state matrix
- sma = NewStateMatrix();
- if S.AutoRun % Auto run means than the stim is played without the
-     % animal going to the middle nose poke.
-     %No initiation needed in auto run mode, changed 10/22/2020 
-     
-     sma = AddState(sma, 'Name', 'PlayWaitStartCue', ...
-         'Timer', preStimDelay, ...
-         'StateChangeConditions', {'Tup','PlayStimulus'},...
-         'OutputActions', StartCueOutputAction);
-     
-     sma = AddState(sma, 'Name', 'PlayStimulus', ...
-         'Timer', 0, ...
-         'StateChangeConditions', {'Tup','WaitCenter'},...
-         'OutputActions', {'SoftCode', 1});
-     
-     sma = AddState(sma, 'Name', 'WaitCenter', ...
-         'Timer', S.timeToChoose, ...
-         'StateChangeConditions', { 'Tup', 'PlayGoTone'}, ...
-         'OutputActions',{});
-     
- else
-     sma = AddState(sma, 'Name', 'GoToCenter', ...
-         'Timer', 0,...
-         'StateChangeConditions', {'Port2In', 'PlayWaitStartCue'},...
-         'OutputActions', {});
-     
-     sma = AddState(sma, 'Name', 'PlayWaitStartCue', ...
-         'Timer', preStimDelay, ...
-         'StateChangeConditions', {'Tup','PlayStimulus', 'Port2Out', 'EarlyWithdrawal'},...
-         'OutputActions', StartCueOutputAction);
-     
-     sma = AddState(sma, 'Name', 'PlayStimulus', ...
-         'Timer', 0, ...
-         'StateChangeConditions', {'Tup','WaitCenter', 'Port2Out', 'EarlyWithdrawal'},...
-         'OutputActions', {'SoftCode', 1,'BNCState',1});
-     
-     sma = AddState(sma, 'Name', 'WaitCenter', ...
-         'Timer', S.minWaitTime, ...
-         'StateChangeConditions', {'Port2Out', 'EarlyWithdrawal', 'Tup', 'PlayGoTone'}, ...
-         'OutputActions',{});
- end
- 
- if ~S.PortLEDCue %added 28Jan2015
-     sma = AddState(sma, 'Name', 'PlayGoTone', ...
-         'Timer', CenterValveTime, ...
-         'StateChangeConditions', {'Tup', 'WaitForWithdrawalFromCenter'},...
-         'OutputActions', [GoCueOutputAction,'ValveState', CenterPortValveState]);
- else
-     sma = AddState(sma, 'Name', 'PlayGoTone', ...
-         'Timer', CenterValveTime, ...
-         'StateChangeConditions', {'Tup', 'CueRewardPortLED'},...
-         'OutputActions', [GoCueOutputAction,'ValveState', CenterPortValveState]);
-     
-     sma = AddState(sma, 'Name', 'CueRewardPortLED', ...
-         'Timer', 0.1, ...
-         'StateChangeConditions', {'Tup', 'WaitForWithdrawalFromCenter'},...
-         'OutputActions', {RewardPortLED,255});
- end
- 
- 
- if directTrial == 1
-     sma = AddState(sma, 'Name', 'WaitForWithdrawalFromCenter', ...
-         'Timer', S.timeToChoose,...
-         'StateChangeConditions', {'Port2Out', 'DirectReward', 'Tup', 'DidNotChoose'},...
-         'OutputActions', {});
-     
-     sma = AddState(sma, 'Name', 'DirectReward', ...
-         'Timer', 0, ...
-         'StateChangeConditions', {'Tup', 'Reward'},...
-         'OutputActions', {'SoftCode', 255});
-     
- else
-     sma = AddState(sma, 'Name', 'WaitForWithdrawalFromCenter', ...
-         'Timer', S.timeToChoose,...
-         'StateChangeConditions', {'Port2Out', 'WaitForResponse', 'Tup', 'DidNotChoose'},...
-         'OutputActions', {});
- end
- 
- sma = AddState(sma, 'Name', 'WaitForResponse', ...
-     'Timer', S.timeToChoose,...
-     'StateChangeConditions', {'Port1In', LeftPortAction, 'Port3In', RightPortAction, 'Tup', 'DidNotChoose'},...
-     'OutputActions', {}); %stop stimulus when subjects responds, to accomodate extra stimulus...added 14-Jan-2015
- 
- sma = AddState(sma, 'Name', 'Reward', ...
-     'Timer', rewardValveTime,...
-     'StateChangeConditions', {'Tup','PrepareNextTrial'},...
-     'OutputActions', {'ValveState', RewardValve,'SoftCode', 255});
- 
- % For soft punishment just give time out
- sma = AddState(sma, 'Name', 'SoftPunish', ...
-     'Timer', S.PunishDuration + 0.05,...
-     'StateChangeConditions', {'Tup','PrepareNextTrial'},...
-     'OutputActions', {'SoftCode', 5});
- 
- sma = AddState(sma, 'Name', 'EarlyWithdrawal', ...
-     'Timer', 0,...
-     'StateChangeConditions', {'Tup', 'HardPunish'},...
-     'OutputActions', {'SoftCode', 255});
- 
- % For hard punishment play noise and give time out
- sma = AddState(sma, 'Name', 'HardPunish', ...
-     'Timer', S.EarlyPunishDuration, ...
-     'StateChangeConditions', {'Tup', 'PrepareNextTrial'}, ...
-     'OutputActions', {'SoftCode', 4});
- 
- sma = AddState(sma, 'Name', 'DidNotChoose', ...
-     'Timer', 0, ...
-     'StateChangeConditions', {'Tup', 'SoftPunish'}, ...
-     'OutputActions', {'SoftCode', 255});
- 
- sma = AddState(sma, 'Name', 'PrepareNextTrial', ...
-     'Timer', 1, ...
-     'StateChangeConditions', {'Tup', 'exit'}, ...
-     'OutputActions', {'SoftCode', 255} );
- 
- 
- % Send and run state matrix
- BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
- 
- SendStateMatrix(sma);
- % Add to the camera log
- if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
-     if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-         fwrite(udpObj,sprintf('log=trial_start:%d',currentTrial))
-     end
- end
- 
- RawEvents = RunStateMatrix;
-
- if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
-     if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-         fwrite(udpObj,sprintf('log=trial_end:%d',currentTrial))
-     end
- end
- % Save events and data
- if ~isempty(fieldnames(RawEvents))
-     tic
-     disp('Data saving time:');
-     BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents);
-     TrialsDone = TrialsDone + 1; %increment number of trials done
-     
-     % need to save these next five variables as they are no longer
-     % included in the settings file.
-     BpodSystem.Data.Modality{TrialsDone} = Modality;
-     BpodSystem.Data.EventDuration(TrialsDone) = eventDuration;
-     BpodSystem.Data.CategoryBoundary(TrialsDone) = categoryBoundary;
-     BpodSystem.Data.DesiredStimDuration(TrialsDone) = desiredStimDuration;
-     
-     Rewarded(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,currentTrial}.States.Reward(1));
-     EarlyWithdrawal(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,currentTrial}.States.EarlyWithdrawal(1));
-     DidNotChoose(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,currentTrial}.States.DidNotChoose(1));
-     
-     BpodSystem.Data.stimEventList{TrialsDone} = stimEventList;
-     BpodSystem.Data.auditoryIsis{TrialsDone} = aud_isis;
-     BpodSystem.Data.visualIsis{TrialsDone} = vis_isis;
-     
-     if S.IsPoissonStim == 0      % The reguler task and Possion task use different aud_isis/vis_isis.
-         % So the number of events have to be calculated differently.
-         BpodSystem.Data.nAuditoryEvents(TrialsDone) = length(aud_isis)+1;
-         BpodSystem.Data.nVisualEvents(TrialsDone) = length(vis_isis)+1;
-     else
-         BpodSystem.Data.nAuditoryEvents(TrialsDone) = length(aud_isis)-1;
-         BpodSystem.Data.nVisualEvents(TrialsDone) = length(vis_isis)-1;
-     end
-     
-     BpodSystem.Data.Rewarded(TrialsDone) = Rewarded(TrialsDone);
-     BpodSystem.Data.EarlyWithdrawal(TrialsDone) = EarlyWithdrawal(TrialsDone);
-     BpodSystem.Data.DidNotChoose(TrialsDone) = DidNotChoose(TrialsDone);
-     BpodSystem.Data.EventRate(TrialsDone) = thisTrialRate;
-     BpodSystem.Data.PreStimDelay(TrialsDone) = preStimDelay;
-     BpodSystem.Data.SetWaitTime(TrialsDone) = S.minWaitTime;
-     BpodSystem.Data.TotalStimDuration(TrialsDone) = TotalStimDuration*1000;
-     BpodSystem.Data.DirectReward(TrialsDone) = directTrial;
-     %BpodSystem.Data.DesiredStimGenerated(TrialsDone) = stimflag;
-     BpodSystem.Data.ExtraStimDuration(TrialsDone) = S.ExtraStimDuration;
-     BpodSystem.Data.CenterRewarded(TrialsDone) = centerRewarded;
-     BpodSystem.Data.WarmUpTrial(TrialsDone) = warmUpTrial;
-     BpodSystem.Data.AutoRunModeON(TrialsDone) = S.AutoRun;
-     
-     
-     %compute time spent in center for all each trial with one nose poke in
-     %and out of the center port. better to compute this now
-     BpodSystem.Data.ActualWaitTime(TrialsDone) = nan;
-     if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2Out') && isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2In')
-         if (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out)== 1) && (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In) == 1)
-             BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In;
-         end
-     end
-     
-     modalityRecord(TrialsDone) = modalityNum;
-     correctSideRecord(TrialsDone) = correctSide;
-     BpodSystem.Data.CorrectSide(TrialsDone) = correctSideRecord(TrialsDone);
-     
-     if BpodSystem.Data.Rewarded(TrialsDone) == 1
-         %correct!
-         OutcomeRecord(TrialsDone) = 1;
-     elseif BpodSystem.Data.EarlyWithdrawal(TrialsDone) == 1
-         %early withdrawal
-         OutcomeRecord(TrialsDone) = -1;
-     elseif BpodSystem.Data.DidNotChoose(TrialsDone) == 1
-         %did not choose
-         OutcomeRecord(TrialsDone) = -2;
-     else
-         %incorrect
-         OutcomeRecord(TrialsDone) = 0;
-     end
-     
-     if OutcomeRecord(TrialsDone) >= 0 %if the subject responded
-         if ((correctSideRecord(TrialsDone)==1) && Rewarded(TrialsDone)) || ((correctSideRecord(TrialsDone)==2) && ~Rewarded(TrialsDone))
-             ResponseSideRecord(TrialsDone) = 1;
-         elseif ((correctSideRecord(TrialsDone)==1) && ~Rewarded(TrialsDone)) || ((correctSideRecord(TrialsDone)==2) && Rewarded(TrialsDone))
-             ResponseSideRecord(TrialsDone) = 2;
-         end
-     end
-     
-     BpodSystem.Data.ResponseSide(TrialsDone) = ResponseSideRecord(TrialsDone);
-     
-     RewardAmounts(TrialsDone) = RewardAmount*Rewarded(TrialsDone);
-     toc
-     
-     
-     % If previous trial was not an early withdrawal, increase wait duration
-     if ~BpodSystem.Data.EarlyWithdrawal(TrialsDone)
-         S.minWaitTime = S.minWaitTime + S.minWaitTimeStep;
-     end
-     
-     if S.minWaitTime > 1.1 && isequal(WaitTimeMode, 'Fixed') == 1
-         S.minWaitTime = 1.1;
-         S.minWaitTimeStep = 0;
-     end
-     
-     if isequal(WaitTimeMode, 'Exp') == 1
-         S.minWaitTime = 'Exp';
-     end
-     tic
-     disp('Result plotting time:');
-     set(BpodSystem.GUIHandles.LabelsVal.TrialsDone,'String',num2str(TrialsDone'));
-     set(BpodSystem.GUIHandles.LabelsVal.CompletedTrials,'String',num2str(TrialsDone - nansum(EarlyWithdrawal)-nansum(DidNotChoose)));
-     set(BpodSystem.GUIHandles.LabelsVal.RewardedTrials,'String',num2str(nansum(Rewarded)));
-     set(BpodSystem.GUIHandles.LabelsVal.WaterAmount,'String',[num2str((nansum(Rewarded) * (mean([S.leftRewardVolume S.rightRewardVolume])))/1000) ' ml']);
-     drawnow;
-     
-     PerformancePlot(BpodSystem.GUIHandles.PerformancePlot, 'update', currentTrial, TrialSidesList, OutcomeRecord);
-     toc
-     if TrialsDone > S.PlotPMFnTrials && (directTrial==0)
-         if mod(TrialsDone,S.UpdatePMfnTrials) == 1
-             %every n-th trial after TrialsDone, update the PMF plot
-             pmfPlot;
-         end
-     end
- end
- 
- 
- % Save protocol settings file to directory
- % SaveProtocolSettings(S);    % Moved to the GUI, changed by C.Y.
- 
- if BpodSystem.Status.BeingUsed == 0
-     
-     % Close video
-     if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
-         if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-             fwrite(udpObj,sprintf('log=end'));fgetl(udpObj);
-             fwrite(udpObj,sprintf('softtrigger=0'));fgetl(udpObj);
-             fwrite(udpObj,sprintf('manualsave=0'));fgetl(udpObj);
-             fwrite(udpObj,sprintf('quit=1'));
-             fclose(udpObj);
-             clear udpObj
-         end
-     end
-     SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
-     %        BpodParameterGUI_Visual('close',S)
-     PsychToolboxSoundServer('Close');
-     
-     return;
- end
- 
-% Deleting the stimulus plotting every trial to save GPU memory
-delete([plot_StimulusPlotA, plot_StimulusPlotV]);
-
+    %% Get the list of random events end
+    %%
+    
+    if S.IsPoissonStim == 0
+        audio_waveform = create_audio_signal(aud_isis, SamplingFreq, ToneDuration, ...
+            HighSilenceDuration, LowSilenceDuration, 'White noise', S.StimLoudness, offset, NoiseMaskAmp, S.WhiteNoiseLinearModelParams);
+        
+        visual_waveform = create_visual_signal(vis_isis, SamplingFreq, S.StimBrightness, ...
+            ToneDuration, LowSilenceDuration, HighSilenceDuration);
+        
+    else
+        audio_waveform = Poisson_audsignal(aud_isis, SamplingFreq, ToneDuration, ...
+            'White noise', S.StimLoudness, offset, NoiseMaskAmp, S.WhiteNoiseLinearModelParams);
+        
+        visual_waveform = Poisson_vissignal(vis_isis, SamplingFreq, S.StimBrightness, ToneDuration);
+    end
+    
+    
+    if length(visual_waveform) > length(audio_waveform)
+        visual_waveform = visual_waveform(1:length(audio_waveform));
+    else
+        visual_waveform = [visual_waveform zeros(1, length(audio_waveform) - length(visual_waveform))];
+    end
+    
+    Signal = [show_visual*visual_waveform; show_audio*audio_waveform];
+    
+    disp(['This event rate: ' num2str(thisTrialRate) ' events/s'])
+    
+    
+    plot_StimulusPlotA = plot(BpodSystem.GUIHandles.StimulusPlotA, linspace(0,1,length(audio_waveform)), show_audio*audio_waveform,'color',[0 0.8 0]);title('Auditory stimulus');
+    plot_StimulusPlotV = plot(BpodSystem.GUIHandles.StimulusPlotV, linspace(0,1,length(visual_waveform)), show_visual*visual_waveform, 'color',[0 0 0.8]);title('Visual stimulus');
+    set(BpodSystem.GUIHandles.StimulusPlotA, 'box', 'off','xtick',[]);
+    set(BpodSystem.GUIHandles.StimulusPlotV, 'box', 'off');
+    %linkdata on
+    drawnow
+    
+    if S.ExtraStimDuration > 0.0001
+        %add extra stimulus
+        extraStimRatio = S.ExtraStimDuration / desiredStimDuration;
+        extraStimLength = round(extraStimRatio * length(Signal));
+        extraSignal = repmat(Signal,1,(ceil(extraStimRatio)));
+        SignalplusExtra = cat(2,Signal, zeros(2,round(eventDuration*SamplingFreq)),extraSignal(:,1:extraStimLength));
+        S.ExtraStimDuration = S.ExtraStimDuration - S.ExtraStimDurationStep;
+        Signal = SignalplusExtra;
+    else
+        S.ExtraStimDuration = 0;
+    end
+    
+    if ~S.PlayStimulus
+        Signal = 0;
+        Modality = '-';
+    end
+    
+    PsychToolboxSoundServer('Load', 1, Signal); % send signal to sound server
+    
+    % Determine whether to play start cue or cue
+    if ~S.WaitStartCue
+        StartCueOutputAction  = {};
+    else
+        StartCueOutputAction = {'SoftCode', 2};
+    end
+    
+    if ~S.WaitEndGoCue
+        GoCueOutputAction  = {};
+    else
+        GoCueOutputAction = {'SoftCode', 3};
+    end
+    toc
+    
+    
+    % Build state matrix
+    sma = NewStateMatrix();
+    if S.AutoRun % Auto run means than the stim is played without the
+        % animal going to the middle nose poke.
+        %No initiation needed in auto run mode, changed 10/22/2020
+        
+        sma = AddState(sma, 'Name', 'PlayWaitStartCue', ...
+            'Timer', preStimDelay, ...
+            'StateChangeConditions', {'Tup','PlayStimulus'},...
+            'OutputActions', StartCueOutputAction);
+        
+        sma = AddState(sma, 'Name', 'PlayStimulus', ...
+            'Timer', 0, ...
+            'StateChangeConditions', {'Tup','WaitCenter'},...
+            'OutputActions', {'SoftCode', 1});
+        if thisTrialSide == 1 %correct side is left
+            sma = AddState(sma, 'Name', 'WaitCenter', ...
+                'Timer', S.timeToChoose, ...
+                'StateChangeConditions', { 'Tup', 'DidNotChoose', 'Port1In', LeftPortAction}, ...
+                'OutputActions',{});
+        else
+            sma = AddState(sma, 'Name', 'WaitCenter', ...
+                'Timer', S.timeToChoose, ...
+                'StateChangeConditions', { 'Tup', 'DidNotChoose', 'Port3In', RightPortAction}, ...
+                'OutputActions',{});
+        end
+    elseif S.initCenterPlayStimUntilCorrect %condition where the animal
+        %pokes in the center and then the stimulus is played until the
+        %animal either finds the correct side or the stimulus ends after
+        %the time to choose.
+        
+        sma = AddState(sma, 'Name', 'GoToCenter', ...
+            'Timer', 0,...
+            'StateChangeConditions', {'Port2In', 'PlayWaitStartCue'},...
+            'OutputActions', {});
+        
+        sma = AddState(sma, 'Name', 'PlayWaitStartCue', ...
+            'Timer', preStimDelay, ...
+            'StateChangeConditions', {'Tup','PlayStimulus'},...
+            'OutputActions', StartCueOutputAction);
+        
+        sma = AddState(sma, 'Name', 'PlayStimulus', ...
+            'Timer', 0, ...
+            'StateChangeConditions', {'Tup','WaitCenter'},...
+            'OutputActions', {'SoftCode', 1});
+        
+        if thisTrialSide == 1 %correct side is left
+            sma = AddState(sma, 'Name', 'WaitCenter', ...
+                'Timer', S.timeToChoose, ...
+                'StateChangeConditions', { 'Tup', 'DidNotChoose', 'Port1In', LeftPortAction}, ...
+                'OutputActions',{});
+        else
+            sma = AddState(sma, 'Name', 'WaitCenter', ...
+                'Timer', S.timeToChoose, ...
+                'StateChangeConditions', { 'Tup', 'DidNotChoose', 'Port3In', RightPortAction}, ...
+                'OutputActions',{});
+        end
+    else
+        sma = AddState(sma, 'Name', 'GoToCenter', ...
+            'Timer', 0,...
+            'StateChangeConditions', {'Port2In', 'PlayWaitStartCue'},...
+            'OutputActions', {});
+        
+        sma = AddState(sma, 'Name', 'PlayWaitStartCue', ...
+            'Timer', preStimDelay, ...
+            'StateChangeConditions', {'Tup','PlayStimulus', 'Port2Out', 'EarlyWithdrawal'},...
+            'OutputActions', StartCueOutputAction);
+        
+        sma = AddState(sma, 'Name', 'PlayStimulus', ...
+            'Timer', 0, ...
+            'StateChangeConditions', {'Tup','WaitCenter', 'Port2Out', 'EarlyWithdrawal'},...
+            'OutputActions', {'SoftCode', 1,'BNCState',1});
+        
+        sma = AddState(sma, 'Name', 'WaitCenter', ...
+            'Timer', S.minWaitTime, ...
+            'StateChangeConditions', {'Port2Out', 'EarlyWithdrawal', 'Tup', 'PlayGoTone'}, ...
+            'OutputActions',{});
+        
+        
+        if ~S.PortLEDCue %added 28Jan2015
+            sma = AddState(sma, 'Name', 'PlayGoTone', ...
+                'Timer', CenterValveTime, ...
+                'StateChangeConditions', {'Tup', 'WaitForWithdrawalFromCenter'},...
+                'OutputActions', [GoCueOutputAction,'ValveState', CenterPortValveState]);
+        else
+            sma = AddState(sma, 'Name', 'PlayGoTone', ...
+                'Timer', CenterValveTime, ...
+                'StateChangeConditions', {'Tup', 'CueRewardPortLED'},...
+                'OutputActions', [GoCueOutputAction,'ValveState', CenterPortValveState]);
+            
+            sma = AddState(sma, 'Name', 'CueRewardPortLED', ...
+                'Timer', 0.1, ...
+                'StateChangeConditions', {'Tup', 'WaitForWithdrawalFromCenter'},...
+                'OutputActions', {RewardPortLED,255});
+        end
+        
+        if directTrial == 1
+            sma = AddState(sma, 'Name', 'WaitForWithdrawalFromCenter', ...
+                'Timer', S.timeToChoose,...
+                'StateChangeConditions', {'Port2Out', 'DirectReward', 'Tup', 'DidNotChoose'},...
+                'OutputActions', {});
+            
+            sma = AddState(sma, 'Name', 'DirectReward', ...
+                'Timer', 0, ...
+                'StateChangeConditions', {'Tup', 'Reward'},...
+                'OutputActions', {'SoftCode', 255});
+            
+        else
+            sma = AddState(sma, 'Name', 'WaitForWithdrawalFromCenter', ...
+                'Timer', S.timeToChoose,...
+                'StateChangeConditions', {'Port2Out', 'WaitForResponse', 'Tup', 'DidNotChoose'},...
+                'OutputActions', {});
+        end
+    end
+    sma = AddState(sma, 'Name', 'WaitForResponse', ...
+        'Timer', S.timeToChoose,...
+        'StateChangeConditions', {'Port1In', LeftPortAction, 'Port3In', RightPortAction, 'Tup', 'DidNotChoose'},...
+        'OutputActions', {}); %stop stimulus when subjects responds, to accomodate extra stimulus...added 14-Jan-2015
+    
+    sma = AddState(sma, 'Name', 'Reward', ...
+        'Timer', rewardValveTime,...
+        'StateChangeConditions', {'Tup','PrepareNextTrial'},...
+        'OutputActions', {'ValveState', RewardValve,'SoftCode', 255});
+    
+    % For soft punishment just give time out
+    sma = AddState(sma, 'Name', 'SoftPunish', ...
+        'Timer', S.PunishDuration + 0.05,...
+        'StateChangeConditions', {'Tup','PrepareNextTrial'},...
+        'OutputActions', {'SoftCode', 5});
+    
+    sma = AddState(sma, 'Name', 'EarlyWithdrawal', ...
+        'Timer', 0,...
+        'StateChangeConditions', {'Tup', 'HardPunish'},...
+        'OutputActions', {'SoftCode', 255});
+    
+    % For hard punishment play noise and give time out
+    sma = AddState(sma, 'Name', 'HardPunish', ...
+        'Timer', S.EarlyPunishDuration, ...
+        'StateChangeConditions', {'Tup', 'PrepareNextTrial'}, ...
+        'OutputActions', {'SoftCode', 4});
+    
+    sma = AddState(sma, 'Name', 'DidNotChoose', ...
+        'Timer', 0, ...
+        'StateChangeConditions', {'Tup', 'SoftPunish'}, ...
+        'OutputActions', {'SoftCode', 255});
+    
+    sma = AddState(sma, 'Name', 'PrepareNextTrial', ...
+        'Timer', 1, ...
+        'StateChangeConditions', {'Tup', 'exit'}, ...
+        'OutputActions', {'SoftCode', 255} );
+    
+    
+    % Send and run state matrix
+    BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
+    
+    SendStateMatrix(sma);
+    % Add to the camera log
+    if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
+        if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
+            fwrite(udpObj,sprintf('log=trial_start:%d',currentTrial))
+        end
+    end
+    
+    RawEvents = RunStateMatrix;
+    
+    if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
+        if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
+            fwrite(udpObj,sprintf('log=trial_end:%d',currentTrial))
+        end
+    end
+    % Save events and data
+    if ~isempty(fieldnames(RawEvents))
+        tic
+        disp('Data saving time:');
+        BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents);
+        TrialsDone = TrialsDone + 1; %increment number of trials done
+        
+        % need to save these next five variables as they are no longer
+        % included in the settings file.
+        BpodSystem.Data.Modality{TrialsDone} = Modality;
+        BpodSystem.Data.EventDuration(TrialsDone) = eventDuration;
+        BpodSystem.Data.CategoryBoundary(TrialsDone) = categoryBoundary;
+        BpodSystem.Data.DesiredStimDuration(TrialsDone) = desiredStimDuration;
+        
+        Rewarded(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,currentTrial}.States.Reward(1));
+        EarlyWithdrawal(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,currentTrial}.States.EarlyWithdrawal(1));
+        DidNotChoose(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,currentTrial}.States.DidNotChoose(1));
+        
+        BpodSystem.Data.stimEventList{TrialsDone} = stimEventList;
+        BpodSystem.Data.auditoryIsis{TrialsDone} = aud_isis;
+        BpodSystem.Data.visualIsis{TrialsDone} = vis_isis;
+        
+        if S.IsPoissonStim == 0      % The reguler task and Possion task use different aud_isis/vis_isis.
+            % So the number of events have to be calculated differently.
+            BpodSystem.Data.nAuditoryEvents(TrialsDone) = length(aud_isis)+1;
+            BpodSystem.Data.nVisualEvents(TrialsDone) = length(vis_isis)+1;
+        else
+            BpodSystem.Data.nAuditoryEvents(TrialsDone) = length(aud_isis)-1;
+            BpodSystem.Data.nVisualEvents(TrialsDone) = length(vis_isis)-1;
+        end
+        
+        BpodSystem.Data.Rewarded(TrialsDone) = Rewarded(TrialsDone);
+        BpodSystem.Data.EarlyWithdrawal(TrialsDone) = EarlyWithdrawal(TrialsDone);
+        BpodSystem.Data.DidNotChoose(TrialsDone) = DidNotChoose(TrialsDone);
+        BpodSystem.Data.EventRate(TrialsDone) = thisTrialRate;
+        BpodSystem.Data.PreStimDelay(TrialsDone) = preStimDelay;
+        BpodSystem.Data.SetWaitTime(TrialsDone) = S.minWaitTime;
+        BpodSystem.Data.TotalStimDuration(TrialsDone) = TotalStimDuration*1000;
+        BpodSystem.Data.DirectReward(TrialsDone) = directTrial;
+        %BpodSystem.Data.DesiredStimGenerated(TrialsDone) = stimflag;
+        BpodSystem.Data.ExtraStimDuration(TrialsDone) = S.ExtraStimDuration;
+        BpodSystem.Data.CenterRewarded(TrialsDone) = centerRewarded;
+        BpodSystem.Data.WarmUpTrial(TrialsDone) = warmUpTrial;
+        BpodSystem.Data.AutoRunModeON(TrialsDone) = S.AutoRun;
+        
+        
+        %compute time spent in center for all each trial with one nose poke in
+        %and out of the center port. better to compute this now
+        BpodSystem.Data.ActualWaitTime(TrialsDone) = nan;
+        if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2Out') && isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2In')
+            if (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out)== 1) && (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In) == 1)
+                BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In;
+            end
+        end
+        
+        modalityRecord(TrialsDone) = modalityNum;
+        correctSideRecord(TrialsDone) = correctSide;
+        BpodSystem.Data.CorrectSide(TrialsDone) = correctSideRecord(TrialsDone);
+        
+        if BpodSystem.Data.Rewarded(TrialsDone) == 1
+            %correct!
+            OutcomeRecord(TrialsDone) = 1;
+        elseif BpodSystem.Data.EarlyWithdrawal(TrialsDone) == 1
+            %early withdrawal
+            OutcomeRecord(TrialsDone) = -1;
+        elseif BpodSystem.Data.DidNotChoose(TrialsDone) == 1
+            %did not choose
+            OutcomeRecord(TrialsDone) = -2;
+        else
+            %incorrect
+            OutcomeRecord(TrialsDone) = 0;
+        end
+        
+        if OutcomeRecord(TrialsDone) >= 0 %if the subject responded
+            if ((correctSideRecord(TrialsDone)==1) && Rewarded(TrialsDone)) || ((correctSideRecord(TrialsDone)==2) && ~Rewarded(TrialsDone))
+                ResponseSideRecord(TrialsDone) = 1;
+            elseif ((correctSideRecord(TrialsDone)==1) && ~Rewarded(TrialsDone)) || ((correctSideRecord(TrialsDone)==2) && Rewarded(TrialsDone))
+                ResponseSideRecord(TrialsDone) = 2;
+            end
+        end
+        
+        BpodSystem.Data.ResponseSide(TrialsDone) = ResponseSideRecord(TrialsDone);
+        
+        RewardAmounts(TrialsDone) = RewardAmount*Rewarded(TrialsDone);
+        toc
+        
+        
+        % If previous trial was not an early withdrawal, increase wait duration
+        if ~BpodSystem.Data.EarlyWithdrawal(TrialsDone)
+            S.minWaitTime = S.minWaitTime + S.minWaitTimeStep;
+        end
+        
+        if S.minWaitTime > 1.1 && isequal(WaitTimeMode, 'Fixed') == 1
+            S.minWaitTime = 1.1;
+            S.minWaitTimeStep = 0;
+        end
+        
+        if isequal(WaitTimeMode, 'Exp') == 1
+            S.minWaitTime = 'Exp';
+        end
+        tic
+        disp('Result plotting time:');
+        set(BpodSystem.GUIHandles.LabelsVal.TrialsDone,'String',num2str(TrialsDone'));
+        set(BpodSystem.GUIHandles.LabelsVal.CompletedTrials,'String',num2str(TrialsDone - nansum(EarlyWithdrawal)-nansum(DidNotChoose)));
+        set(BpodSystem.GUIHandles.LabelsVal.RewardedTrials,'String',num2str(nansum(Rewarded)));
+        set(BpodSystem.GUIHandles.LabelsVal.WaterAmount,'String',[num2str((nansum(Rewarded) * (mean([S.leftRewardVolume S.rightRewardVolume])))/1000) ' ml']);
+        drawnow;
+        
+        PerformancePlot(BpodSystem.GUIHandles.PerformancePlot, 'update', currentTrial, TrialSidesList, OutcomeRecord);
+        toc
+        if TrialsDone > S.PlotPMFnTrials && (directTrial==0)
+            if mod(TrialsDone,S.UpdatePMfnTrials) == 1
+                %every n-th trial after TrialsDone, update the PMF plot
+                pmfPlot;
+            end
+        end
+    end
+    
+    
+    % Save protocol settings file to directory
+    %SaveProtocolSettings(S);    % Moved to the GUI, changed by C.Y.
+    if BpodSystem.Status.BeingUsed == 0
+        
+        % Close video
+        if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
+            if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
+                fwrite(udpObj,sprintf('log=end'));fgetl(udpObj);
+                fwrite(udpObj,sprintf('softtrigger=0'));fgetl(udpObj);
+                fwrite(udpObj,sprintf('manualsave=0'));fgetl(udpObj);
+                fwrite(udpObj,sprintf('quit=1'));
+                fclose(udpObj);
+                clear udpObj
+            end
+        end
+        SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
+        %        BpodParameterGUI_Visual('close',S)
+        PsychToolboxSoundServer('Close');
+        
+        return;
+    end
+    
+    % Deleting the stimulus plotting every trial to save GPU memory
+    delete([plot_StimulusPlotA, plot_StimulusPlotV]);
+    
 end
 end
 
@@ -947,14 +1005,14 @@ PunishSound = [zeros(1,size(wavePunishSound,2)); wavePunishSound];
 %  wavePunishSound = 0.075 * soundLoudness * GenerateSineWave(samplingFreq, 12000, 1);
 % PunishSound = [zeros(1,size(wavePunishSound,2)); wavePunishSound];
 
-load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');     
+load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');
 
 DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
 PunishNoiseModelParams = DefaultSettings.WhiteNoiseLinearModelParams;
-            pnoise_amplitude = 10^(1/10*(PunishNoiseModelParams(1)* earlyPunishLoudness + PunishNoiseModelParams(2)));%white noise
-            %         pnoise = 2 * pnoise_loudness * rand(1, pnoise_duration * srate) - pnoise_loudness;
-            EarlyPunishSound = [zeros(1,earlyPunishDuration*samplingFreq); 2*pnoise_amplitude * rand(1, earlyPunishDuration * samplingFreq)- pnoise_amplitude];
-            
+pnoise_amplitude = 10^(1/10*(PunishNoiseModelParams(1)* earlyPunishLoudness + PunishNoiseModelParams(2)));%white noise
+%         pnoise = 2 * pnoise_loudness * rand(1, pnoise_duration * srate) - pnoise_loudness;
+EarlyPunishSound = [zeros(1,earlyPunishDuration*samplingFreq); 2*pnoise_amplitude * rand(1, earlyPunishDuration * samplingFreq)- pnoise_amplitude];
+
 % Upload sounds to sound server. Channel 1 reserved for stimuli
 PsychToolboxSoundServer('Load', 2, WaitStartSound);
 PsychToolboxSoundServer('Load', 3, WaitStopSound);
@@ -1342,9 +1400,9 @@ stimEventList = zeros(1, (length(a)+1));
 for i = 1 : length(stimEventList)
     
     if i == 1
-        stimEventList(i) = (ToneDuration + MinInterval) * (a(i) - 1);    
+        stimEventList(i) = (ToneDuration + MinInterval) * (a(i) - 1);
     elseif i > 1 && i < length(stimEventList)
-        stimEventList(i) = MinInterval + (ToneDuration + MinInterval) * (a(i) - a(i-1) - 1);       
+        stimEventList(i) = MinInterval + (ToneDuration + MinInterval) * (a(i) - a(i-1) - 1);
     elseif i == length(stimEventList)
         stimEventList(i) = TotalStimDuration - (ToneDuration + MinInterval) * a(i-1) + MinInterval;
     end
@@ -1386,8 +1444,8 @@ offset_part = zeros(1, round(audiorate * offset));
 signal_audio = [offset_part];
 
 for i = 1: (length(isis) - 1)
-        interval = zeros(1, round(isis(i)*audiorate/1000));
-        signal_audio = [signal_audio interval soundpart];    
+    interval = zeros(1, round(isis(i)*audiorate/1000));
+    signal_audio = [signal_audio interval soundpart];
 end
 
 interval = zeros(1, round(isis(length(isis))*audiorate/1000));
@@ -1414,8 +1472,8 @@ flash(locs) = 1;
 signal_visual = [];
 
 for i = 1 : (length(isis) - 1)
-        interval = zeros(1, round(isis(i)*rate/1000));
-        signal_visual = [signal_visual interval flash];
+    interval = zeros(1, round(isis(i)*rate/1000));
+    signal_visual = [signal_visual interval flash];
 end
 
 interval = zeros(1, round(isis(length(isis))*rate/1000));
@@ -1433,10 +1491,10 @@ minWaitTime = 1000 + minimum;
 timelength = 0;
 probility = 0.9;
 probility_acum = probility;
-threshold = rand();	
-for n = 1 : floor((maximum-minimum)/stepsize)      
+threshold = rand();
+for n = 1 : floor((maximum-minimum)/stepsize)
     if threshold >= probility_acum
-        break;      
+        break;
     else
         timelength = timelength + stepsize;
         probility_acum = probility_acum * probility;
