@@ -1,5 +1,3 @@
-
-
 % My first protocol for Bpod
 % David Raposo, Kachi Odoemene Sep 2014
 % Based on RateDiscrimination (by Kachi)
