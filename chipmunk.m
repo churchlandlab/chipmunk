@@ -30,21 +30,14 @@ BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 %Store the data and settings in folders with date spec
 allFolders = split(BpodSystem.Path.CurrentDataFile,filesep);
 sessionFolder = [];
-for k=1:length(allFolders)-2 %also the actual file is a cell!
+for k=1:length(allFolders)-3 %Bpod hierarchy from bottom up is: data file, Session Data Folder, Task, Subject
     sessionFolder = fullfile(sessionFolder, allFolders{k});
 end
-sessionFolder = fullfile(sessionFolder, char(datetime('today', 'Format','uuuuMMdd')));
+sessionFolder = fullfile(sessionFolder, char('now', 'Format',['uuuuMMdd','_','HHmmss']), allFolders{end-2});
+%construct the path for the file folder so that it is consistent with datajoint:
+% Subject -> Session (date and time) -> Task -> ...Data
 
-%check for existing Session Data directory
-if ~isfolder(fullfile(sessionFolder,allFolders{end-1}))
-mkdir(sessionFolder,allFolders{end-1});
-end
-% Same for Session Settings
-if ~isfolder(fullfile(sessionFolder,'Session Settings'))
-mkdir(sessionFolder,'Session Settings');
-end
-BpodSystem.Path.CurrentDataFile = fullfile(sessionFolder,allFolders{end-1},allFolders{end});
-BpodSystem.Path.CurrentProtocol = fullfile(sessionFolder,allFolders{end-1},allFolders{end});
+BpodSystem.Path.CurrentDataFile = fullfile(sessionFolder,allFolders{end});
 
 %% Define settings for protocol
 
@@ -52,9 +45,7 @@ BpodSystem.Path.CurrentProtocol = fullfile(sessionFolder,allFolders{end-1},allFo
 %Append new settings to the end
 
 % Extract subject name for video from data file name
-[~,dataFileName] = fileparts(BpodSystem.Path.CurrentDataFile);
-underlineIndex = strfind(dataFileName, '_');
-DefaultSettings.SubjectName = dataFileName(1:min(underlineIndex)-1);
+DefaultSettings.SubjectName = sessionFolder{end-3};
 
 DefaultSettings.leftRewardVolume = 24; % ul
 DefaultSettings.rightRewardVolume = 24;% ul
@@ -154,9 +145,8 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
                     break
                 end
             end
-%             videoDataPath = fullfile('C:','Users','Anne','Documents','Bpod Local','Data',...
-%                 BpodSystem.ProtocolSettings.SubjectName,'chipmunk', datetime('today', 'Format','uuuuMMdd'),'video');
-            videoDataPath = fullfile(sessionFolder,'video')
+
+            videoDataPath = sessionFolder;
 [~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile);
             fwrite(udpObj,['expname=' videoDataPath filesep bhvFile])
             fgetl(udpObj);
@@ -977,7 +967,10 @@ for currentTrial = 1:maxTrials
     % Save protocol settings file to directory
     %SaveProtocolSettings(S);    % Moved to the GUI, changed by C.Y.
     if BpodSystem.Status.BeingUsed == 0
-        
+        %Include the name of the protocol settings file to indicate the
+        %phase of the task
+        [~, settingsFileName, ~] = fileparts(BpodSystem.GUIData.SettingsFileName);
+        BpodSystem.Data.TaskPhase = settingsFileName;
         % Close video
         if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
             if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
