@@ -29,15 +29,19 @@ BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 
 %Store the data and settings in folders with date spec
 allFolders = split(BpodSystem.Path.CurrentDataFile,filesep);
-sessionFolder = [];
+subjectFolder = [];
 for k=1:length(allFolders)-3 %Bpod hierarchy from bottom up is: data file, Session Data Folder, Task, Subject
-    sessionFolder = fullfile(sessionFolder, allFolders{k});
+    subjectFolder = fullfile(subjectFolder, allFolders{k});
 end
-sessionFolder = fullfile(sessionFolder, char('now', 'Format',['uuuuMMdd','_','HHmmss']), allFolders{end-2});
-%construct the path for the file folder so that it is consistent with datajoint:
-% Subject -> Session (date and time) -> Task -> ...Data
+%Construct the file path and generate the folders so that it is consistent with datajoint:
+% Subject -> Session (date and time) -> Task -> Data
+mkdir(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss']))); %First create session folder
+mkdir(subjectFolder, fullfile(char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])), allFolders{end-2}));%Second the task folder
 
-BpodSystem.Path.CurrentDataFile = fullfile(sessionFolder,allFolders{end});
+subjectFolder = fullfile(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])), allFolders{end-2});
+
+
+BpodSystem.Path.CurrentDataFile = fullfile(subjectFolder,allFolders{end});
 
 %% Define settings for protocol
 
@@ -45,7 +49,7 @@ BpodSystem.Path.CurrentDataFile = fullfile(sessionFolder,allFolders{end});
 %Append new settings to the end
 
 % Extract subject name for video from data file name
-DefaultSettings.SubjectName = sessionFolder{end-3};
+DefaultSettings.SubjectName = allFolders{end-3};
 
 DefaultSettings.leftRewardVolume = 24; % ul
 DefaultSettings.rightRewardVolume = 24;% ul
@@ -146,7 +150,7 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
                 end
             end
 
-            videoDataPath = sessionFolder;
+            videoDataPath = subjectFolder;
 [~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile);
             fwrite(udpObj,['expname=' videoDataPath filesep bhvFile])
             fgetl(udpObj);
