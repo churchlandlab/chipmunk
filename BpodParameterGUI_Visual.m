@@ -3,6 +3,8 @@ function varargout = BpodParameterGUI_Visual(varargin)
 % BpodParameterGUI('update', ParamStruct) - updates the GUI with fields of
 %       ParamStruct.GUI, if they have not been changed by the user.
 %       Returns a param struct. Fields in the GUI sub-struct are read from the UI.
+% BpodParameterGUI('refresh', ParamStruct) - refreshes the display after
+% each trial to report automatically changing values. 11/9/2020 LO
 global BpodSystem
 Op = varargin{1};
 Params = varargin{2};
@@ -68,8 +70,15 @@ switch Op
         
     end
     varargout{1} = Params;
+     
+    case 'refresh' %Refresh automatically changing settings on the GUI
+        refreshedSettings = struct2cell(Params);
+        BpodSystem.GUIHandles.ParameterGUI.LastParamValues = refreshedSettings;
         
-    
+        for x = 1:length(refreshedSettings)
+            set(BpodSystem.GUIHandles.ParameterGUI.ParamValHandle(x), 'String', num2str(refreshedSettings{x}));
+        end
+        
     case 'close'
         close(BpodSystem.GUIHandles.Figures.ParamFig);
         

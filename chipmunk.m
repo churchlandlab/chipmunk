@@ -949,6 +949,10 @@ for currentTrial = 1:maxTrials
         if isequal(WaitTimeMode, 'Exp') == 1
             S.minWaitTime = 'Exp';
         end
+       
+       BpodParameterGUI_Visual('refresh', S); %Display refreshed settings
+        drawnow; 
+        
         tic
         disp('Result plotting time:');
         set(BpodSystem.GUIHandles.LabelsVal.TrialsDone,'String',num2str(TrialsDone'));
