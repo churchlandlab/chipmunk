@@ -90,9 +90,11 @@ load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibrat
 DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
 DefaultSettings.ExtraStimDuration = 0; %sec
 DefaultSettings.ExtraStimDurationStep = 0; %secs...0.00006 will decrement at approx 200ms /week, 0.00008 ms at ~250ms/week (assuming mouse performs 650 on average every session)
+DefaultSettings.linkTimeToChooseToExtraStim = false
 DefaultSettings.PlotPMFnTrials = 100;
 DefaultSettings.UpdatePMfnTrials = 5;
 DefaultSettings.NumWarmup = 0;
+DefaultSettings.WrongPunishType = 'HardPunish';
 DefaultSettings.PunishLoudness = 70;
 DefaultSettings.PunishDuration = 2;
 DefaultSettings.EarlyPunishLoudness = 70;
@@ -286,6 +288,8 @@ for currentTrial = 1:maxTrials
         
         update = 0;
     end
+    BpodParameterGUI_Visual('refresh', S); %Display refreshed settings, do this only after updating the user input to  avoid overriding it!
+    drawnow; 
     toc
     
     tic
@@ -414,7 +418,7 @@ for currentTrial = 1:maxTrials
     
     if thisTrialSide == 1 % Leftward trial
         LeftPortAction = 'Reward';
-        RightPortAction = 'SoftPunish';
+        RightPortAction = 'WrongChoice';
         RewardValve = LeftPortValveState; %left-hand port represents port#0, therefore valve value is 2^0
         rewardValveTime = LeftValveTime;
         RewardPortLED = 'PWM1'; % to turn on port LED when reward available- 28Jan2015
@@ -430,7 +434,7 @@ for currentTrial = 1:maxTrials
             multEventList = multEventRateList(multEventRateList >= categoryBoundary);
         end
     else % Rightward trial (thisTrialSide == 0)
-        LeftPortAction = 'SoftPunish';
+        LeftPortAction = 'WrongChoice';
         RightPortAction = 'Reward';
         RewardValve = RightPortValveState; %right-hand port represents port#2, therefore valve value is 2^2
         rewardValveTime = RightValveTime;
@@ -635,6 +639,13 @@ for currentTrial = 1:maxTrials
         SignalplusExtra = cat(2,Signal, zeros(2,round(eventDuration*SamplingFreq)),extraSignal(:,1:extraStimLength));
         S.ExtraStimDuration = S.ExtraStimDuration - S.ExtraStimDurationStep;
         Signal = SignalplusExtra;
+        if S.linkTimeToChooseToExtraStim %reduce the time to choose as the stimulus playing is reduced
+            if S.ExtraStimDuration > 10  %only link for values above 10s
+            S.timeToChoose = S.ExtraStimDuration;
+            else
+                S.timeToChoose = 10;
+            end
+        end
     else
         S.ExtraStimDuration = 0;
     end
@@ -797,7 +808,7 @@ for currentTrial = 1:maxTrials
             'StateChangeConditions', {'Port1In', LeftPortAction, 'Port3In', RightPortAction, 'Tup', 'DidNotChoose'},...
             'OutputActions', {}); %stop stimulus when subjects responds, to accomodate extra stimulus...added 14-Jan-2015
     end
-    
+     
     sma = AddState(sma, 'Name', 'Reward', ...
         'Timer', rewardValveTime,...
         'StateChangeConditions', {'Tup','PrepareNextTrial'},...
@@ -811,18 +822,28 @@ for currentTrial = 1:maxTrials
     
     sma = AddState(sma, 'Name', 'EarlyWithdrawal', ...
         'Timer', 0,...
-        'StateChangeConditions', {'Tup', 'HardPunish'},...
+        'StateChangeConditions', {'Tup', 'EarlyPunish'},...
         'OutputActions', {'SoftCode', 255});
     
-    % For hard punishment play noise and give time out
-    sma = AddState(sma, 'Name', 'HardPunish', ...
-        'Timer', S.EarlyPunishDuration, ...
-        'StateChangeConditions', {'Tup', 'PrepareNextTrial'}, ...
+    sma = AddState(sma, 'Name', 'EarlyPunish', ...
+        'Timer', S.EarlyPunishDuration,...
+        'StateChangeConditions', {'Tup', 'PrepareNextTrial'},...
         'OutputActions', {'SoftCode', 4});
+    
+    % For hard punishment play noise and give time out
+    sma = AddState(sma, 'Name', 'WrongChoice', ...
+        'Timer', 0, ...
+        'StateChangeConditions', {'Tup', S.WrongPunishType}, ...
+        'OutputActions', {'SoftCode', 255});
+    
+    sma = AddState(sma, 'Name', 'HardPunish', ...
+        'Timer', S.PunishDuration, ...
+        'StateChangeConditions', {'Tup', 'PrepareNextTrial'}, ...
+        'OutputActions', {'SoftCode', 5});
     
     sma = AddState(sma, 'Name', 'DidNotChoose', ...
         'Timer', 0, ...
-        'StateChangeConditions', {'Tup', 'SoftPunish'}, ...
+        'StateChangeConditions', {'Tup', 'HardPunish'}, ...
         'OutputActions', {'SoftCode', 255});
     
     sma = AddState(sma, 'Name', 'PrepareNextTrial', ...
@@ -949,9 +970,6 @@ for currentTrial = 1:maxTrials
         if isequal(WaitTimeMode, 'Exp') == 1
             S.minWaitTime = 'Exp';
         end
-       
-       BpodParameterGUI_Visual('refresh', S); %Display refreshed settings
-        drawnow; 
         
         tic
         disp('Result plotting time:');
