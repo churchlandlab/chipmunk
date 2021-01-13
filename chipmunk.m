@@ -22,106 +22,117 @@ function chipmunk
 
 global BpodSystem
 
-% Initialize sound server
-PsychToolboxSoundServer('init')
-% Set soft code handler to trigger sounds
-BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
+%Add the path to the external functions for chipmunk
+addpath(fullfile(BpodSystem.Path.ProtocolFolder,'chipmunk','Functions'));
 
-%Store the data and settings in folders with date spec
-allFolders = split(BpodSystem.Path.CurrentDataFile,filesep);
-subjectFolder = [];
-for k=1:length(allFolders)-3 %Bpod hierarchy from bottom up is: data file, Session Data Folder, Task, Subject
-    subjectFolder = fullfile(subjectFolder, allFolders{k});
-end
-%Construct the file path and generate the folders so that it is consistent with datajoint:
-% Subject -> Session (date and time) -> Task -> Data
-mkdir(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss']))); %First create session folder
-mkdir(subjectFolder, fullfile(char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])), allFolders{end-2}));%Second the task folder
-
-subjectFolder = fullfile(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])), allFolders{end-2});
-
-
-BpodSystem.Path.CurrentDataFile = fullfile(subjectFolder,allFolders{end});
-
-%% Define settings for protocol
-
-%Initialize default settings.
-%Append new settings to the end
-
-% Extract subject name for video from data file name
-DefaultSettings.SubjectName = allFolders{end-3};
-
-DefaultSettings.leftRewardVolume = 24; % ul
-DefaultSettings.rightRewardVolume = 24;% ul
-% DefaultSettings.centerRewardVolume = 0;% ul
-% DefaultSettings.centerRewardProp = 0; %probability of center reward
-DefaultSettings.highRateSide = 'L';
-DefaultSettings.preStimDelayMin = 0.001; % secs
-DefaultSettings.preStimDelayMax = 0.1; % secs
-DefaultSettings.lambdaDelay = 15;
-DefaultSettings.minWaitTime = 0.025; % secs
-DefaultSettings.minWaitTimeStep = 0.0005;% secs
-DefaultSettings.timeToChoose = 10; % secs
-DefaultSettings.timeOut = 0; % secs
-DefaultSettings.visEventRateList = [9 16]; %events per second
-DefaultSettings.audEventRateList = [9 16]; %events per second
-DefaultSettings.multEventRateList = [9 16]; %events per second
-DefaultSettings.PropLeft = 0.5;
-DefaultSettings.PropOnlyAuditory = 1;
-DefaultSettings.PropOnlyVisual = 1;
-DefaultSettings.SynchMultiSensory = 1;
-DefaultSettings.WaitStartCue = 0;
-DefaultSettings.WaitEndGoCue = 1;
-DefaultSettings.PlayStimulus = 1;
-DefaultSettings.StimBrightness = 20;
-% DefaultSettings.PWMBrightness = 0;
-DefaultSettings.StimLoudness = 80;
-DefaultSettings.GoCueLoudness = 80;
-DefaultSettings.Direct = 1; %probability/fraction of trials that are direct reward
-DefaultSettings.PortLEDCue = 0; %cue the animal to reward port--28Jan2015
-DefaultSettings.AutoRun = 0; %runs in autorun configuration. behavioral reporting not required, trials will be initiated
-
-DefaultSettings.UseAntiBias = 0;
-DefaultSettings.AntiBiasTau = 0; %reflects number of trials to look back to compute bias measure.
-DefaultSettings.labcamsAddress = '';%'127.0.0.1:9999 for Rig 2';
-load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');     % Here, the addresses of the same Dropbox file in Ubuntu and Windows
-% are different. This will induce bugs if you run this code on a computer with
-% Ubuntu. Please make sure the file address you are using is correct.
-DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
-DefaultSettings.ExtraStimDuration = 0; %sec
-DefaultSettings.ExtraStimDurationStep = 0; %secs...0.00006 will decrement at approx 200ms /week, 0.00008 ms at ~250ms/week (assuming mouse performs 650 on average every session)
-DefaultSettings.linkTimeToChooseToExtraStim = false
-DefaultSettings.PlotPMFnTrials = 100;
-DefaultSettings.UpdatePMfnTrials = 5;
-DefaultSettings.NumWarmup = 0;
-DefaultSettings.WrongPunishType = 'HardPunish';
-DefaultSettings.PunishLoudness = 70;
-DefaultSettings.PunishDuration = 2;
-DefaultSettings.EarlyPunishLoudness = 70;
-DefaultSettings.EarlyPunishDuration = 2;
-DefaultSettings.IsPoissonStim = 0;
-DefaultSettings.initCenterPlayStimUntilCorrect = false; %start by poking in center play stimulus until correct or time is up.
-DefaultSettings.holdCenterStimUntilCorrect = false;
-
-defaultFieldNames = fieldnames(DefaultSettings);
-
-prevSettings = BpodSystem.ProtocolSettings; % Load settings chosen in launch manager into current workspace as a struct S
-prevFieldNames = fieldnames(prevSettings);
-prevFieldVals = struct2cell(prevSettings);
-
-newSettings = DefaultSettings;
-for n = 1:numel(defaultFieldNames)
-    thisfield = defaultFieldNames{n};
-    index = find(strcmpi(thisfield,prevFieldNames));
-    if isempty(index)
-        continue;
-    end
-    newSettings.(thisfield) = prevFieldVals{index};
-end
-
-S = newSettings; %update parameters
+[S, errorCode] = initChipmunk;
+% 
+% % Initialize sound server
+% PsychToolboxSoundServer('init')
+% % Set soft code handler to trigger sounds
+% BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
+% 
+% %Store the data and settings in folders with date spec
+% allFolders = split(BpodSystem.Path.CurrentDataFile,filesep);
+% subjectFolder = [];
+% for k=1:length(allFolders)-3 %Bpod hierarchy from bottom up is: data file, Session Data Folder, Task, Subject
+%     subjectFolder = fullfile(subjectFolder, allFolders{k});
+% end
+% %Construct the file path and generate the folders so that it is consistent with datajoint:
+% % Subject -> Session (date and time) -> Task -> Data
+% mkdir(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss']))); %First create session folder
+% mkdir(subjectFolder, fullfile(char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])), allFolders{end-2}));%Second the task folder
+% 
+% subjectFolder = fullfile(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])), allFolders{end-2});
+% 
+% 
+% BpodSystem.Path.CurrentDataFile = fullfile(subjectFolder,allFolders{end});
+% 
+% %% Define settings for protocol
+% 
+% %Initialize default settings.
+% %Append new settings to the end
+% 
+% % Extract subject name for video from data file name
+% DefaultSettings.SubjectName = allFolders{end-3};
+% 
+% DefaultSettings.leftRewardVolume = 24; % ul
+% DefaultSettings.rightRewardVolume = 24;% ul
+% % DefaultSettings.centerRewardVolume = 0;% ul
+% % DefaultSettings.centerRewardProp = 0; %probability of center reward
+% DefaultSettings.highRateSide = 'L';
+% DefaultSettings.preStimDelayMin = 0.001; % secs
+% DefaultSettings.preStimDelayMax = 0.1; % secs
+% DefaultSettings.lambdaDelay = 15;
+% DefaultSettings.minWaitTime = 0.025; % secs
+% DefaultSettings.minWaitTimeStep = 0.0005;% secs
+% DefaultSettings.timeToChoose = 10; % secs
+% DefaultSettings.timeOut = 0; % secs
+% DefaultSettings.visEventRateList = [9 16]; %events per second
+% DefaultSettings.audEventRateList = [9 16]; %events per second
+% DefaultSettings.multEventRateList = [9 16]; %events per second
+% DefaultSettings.PropLeft = 0.5;
+% DefaultSettings.PropOnlyAuditory = 1;
+% DefaultSettings.PropOnlyVisual = 1;
+% DefaultSettings.SynchMultiSensory = 1;
+% DefaultSettings.WaitStartCue = 0;
+% DefaultSettings.WaitEndGoCue = 1;
+% DefaultSettings.PlayStimulus = 1;
+% DefaultSettings.StimBrightness = 20;
+% % DefaultSettings.PWMBrightness = 0;
+% DefaultSettings.StimLoudness = 80;
+% DefaultSettings.GoCueLoudness = 80;
+% DefaultSettings.Direct = 1; %probability/fraction of trials that are direct reward
+% DefaultSettings.PortLEDCue = 0; %cue the animal to reward port--28Jan2015
+% DefaultSettings.AutoRun = 0; %runs in autorun configuration. behavioral reporting not required, trials will be initiated
+% 
+% DefaultSettings.UseAntiBias = 0;
+% DefaultSettings.AntiBiasTau = 0; %reflects number of trials to look back to compute bias measure.
+% DefaultSettings.labcamsAddress = '';%'127.0.0.1:9999 for Rig 2';
+% load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');     % Here, the addresses of the same Dropbox file in Ubuntu and Windows
+% % are different. This will induce bugs if you run this code on a computer with
+% % Ubuntu. Please make sure the file address you are using is correct.
+% DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
+% DefaultSettings.ExtraStimDuration = 0; %sec
+% DefaultSettings.ExtraStimDurationStep = 0; %secs...0.00006 will decrement at approx 200ms /week, 0.00008 ms at ~250ms/week (assuming mouse performs 650 on average every session)
+% DefaultSettings.linkTimeToChooseToExtraStim = false
+% DefaultSettings.PlotPMFnTrials = 100;
+% DefaultSettings.UpdatePMfnTrials = 5;
+% DefaultSettings.NumWarmup = 0;
+% DefaultSettings.WrongPunishType = 'HardPunish';
+% DefaultSettings.PunishLoudness = 70;
+% DefaultSettings.PunishDuration = 2;
+% DefaultSettings.EarlyPunishLoudness = 70;
+% DefaultSettings.EarlyPunishDuration = 2;
+% DefaultSettings.IsPoissonStim = 0;
+% DefaultSettings.initCenterPlayStimUntilCorrect = false; %start by poking in center play stimulus until correct or time is up.
+% DefaultSettings.holdCenterStimUntilCorrect = false;
+% 
+% defaultFieldNames = fieldnames(DefaultSettings);
+% 
+% prevSettings = BpodSystem.ProtocolSettings; % Load settings chosen in launch manager into current workspace as a struct S
+% prevFieldNames = fieldnames(prevSettings);
+% prevFieldVals = struct2cell(prevSettings);
+% 
+% newSettings = DefaultSettings;
+% for n = 1:numel(defaultFieldNames)
+%     thisfield = defaultFieldNames{n};
+%     index = find(strcmpi(thisfield,prevFieldNames));
+%     if isempty(index)
+%         continue;
+%     end
+%     newSettings.(thisfield) = prevFieldVals{index};
+% end
+% 
+% S = newSettings; %update parameters
 
 % Launch parameter GUI
+
+%-------------Dirty trick for now
+load('C:\Users\Lukas Oesch\Documents\MATLAB\Bpod Local\Data\FakeSubject\chipmunk\Session Settings\TaskTest.mat','standardSettings');
+S.WhiteNoiseLinearModelParams = standardSettings.WhiteNoiseLinearModelParams;
+%---------------------------
+
 BpodParameterGUI_Visual('init', S);
 
 % if there is a labcam address field and it is not empty start labcams
@@ -1041,12 +1052,14 @@ PunishSound = [zeros(1,size(wavePunishSound,2)); wavePunishSound];
 %  wavePunishSound = (rand(1,samplingFreq*.5)*2) - 1;
 %  wavePunishSound = 0.075 * soundLoudness * GenerateSineWave(samplingFreq, 12000, 1);
 % PunishSound = [zeros(1,size(wavePunishSound,2)); wavePunishSound];
+%------------
+%load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');
 
-load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');
-
-DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
-PunishNoiseModelParams = DefaultSettings.WhiteNoiseLinearModelParams;
-pnoise_amplitude = 10^(1/10*(PunishNoiseModelParams(1)* earlyPunishLoudness + PunishNoiseModelParams(2)));%white noise
+%DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
+%PunishNoiseModelParams = DefaultSettings.WhiteNoiseLinearModelParams;
+%pnoise_amplitude = 10^(1/10*(PunishNoiseModelParams(1)* earlyPunishLoudness + PunishNoiseModelParams(2)));%white noise
+%--------
+pnoise_amplitude = 10^(1/10*(CalibrationModelParams(1)* earlyPunishLoudness + CalibrationModelParams(2)));%white noise, changed 12/29/2020 LO
 %         pnoise = 2 * pnoise_loudness * rand(1, pnoise_duration * srate) - pnoise_loudness;
 EarlyPunishSound = [zeros(1,earlyPunishDuration*samplingFreq); 2*pnoise_amplitude * rand(1, earlyPunishDuration * samplingFreq)- pnoise_amplitude];
 
