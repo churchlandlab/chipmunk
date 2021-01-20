@@ -133,8 +133,10 @@ load('C:\Users\Lukas Oesch\Documents\MATLAB\Bpod Local\Data\FakeSubject\chipmunk
 S.WhiteNoiseLinearModelParams = standardSettings.WhiteNoiseLinearModelParams;
 %---------------------------
 
-BpodParameterGUI_Visual('init', S);
+%BpodParameterGUI_Visual('init', S);
 
+%--------------------------------------------------------------------------
+%% Start labcams
 % if there is a labcam address field and it is not empty start labcams
 if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
     if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
@@ -175,7 +177,27 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
     end
 end
 
-%%
+%--------------------------------------------------------------------------
+%% Assign valves
+% ports are numbered 0-7. Need to convert to 8bit values for bpod
+LeftPortValveState = 2^0;
+CenterPortValveState = 2^1;
+RightPortValveState = 2^2;
+ObserverPortValve = 2^3;
+
+%--------------------------------------------------------------------------
+%% Define static stimulus properties
+% The parameters below are typically not changed from trial to trial, so
+% keep fixed for now.
+eventDuration = 0.020; % secs
+desiredStimDuration =  1; % secs
+
+%--------------------------------------------------------------------------
+%% Set up the task control sounds
+
+
+%--------------------------------------------------------------------------
+% 
 SamplingFreq = 192000; % This has to match the sampling rate initialized in PsychToolboxSoundServer.m
 
 % Preconfigure audio signals and load to psychtoolbox
@@ -1224,8 +1246,8 @@ function [newModeRightArray, newSuccessArray] = ...
 % The integral from 0 to 1 is [1 - e^(-1/tau)]
 % This lets us do exponential decay using only the current
 % outcome and previous biases
-antiAlternationW = 1 - exp(-1/(3*antiBiasTau));
-antiBiasW = 1 - exp(-1/antiBiasTau);
+antiAlternationW = 1 - exp(-1/(3*antiBiasTau)); %3 because there are three modalities?
+antiBiasW = 1 - exp(-1/antiBiasTau); %Are these are the integrals of the the bias distributions?
 
 % modeRightArray -- how often he's gone right for each modality
 % modality = 2 + visOrAud;
@@ -1233,6 +1255,9 @@ modality = visOrAud;
 newModeRightArray = modeRightArray;
 if ~isnan(wentRight)
     newModeRightArray(modality) = antiAlternationW * wentRight + (1 - antiAlternationW) * modeRightArray(modality);
+%something like a parametrization of the right-ward propensity of the
+%animal. Assumes an exponential decay of of importance of the choice
+%history and returns thus a higher propensity for smaller antiBiasTaus.
 end
 
 % Can only update arrays if we already had a trial in the history (since we
