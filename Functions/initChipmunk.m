@@ -105,7 +105,6 @@ if ~strcmp(userInput.demonID,'Virtual') || ~strcmp(userInput,'Dummy') %For the m
     end
     mkdir(fullfile(BpodSystem.Path.DataFolder,userInput.demonID,'chipmunk', sessionSpecifier)); %create a folder with the respective session date and time
     mkdir(fullfile(BpodSystem.Path.DataFolder,userInput.demonID,'chipmunk', sessionSpecifier,experimentName)); %create folder with the experiment name
-    BpodSystem.Path.DataFolder = fullfile(BpodSystem.Path.DataFolder,userInput.demonID,'chipmunk', sessionSpecifier,experimentName);
 end
 
 %Also find or create a folder for the observer if required and generate the
@@ -119,14 +118,13 @@ if isfield(userInput,'ObserverID')
     end
     mkdir(fullfile(BpodSystem.Path.DataFolder,userInput.obsID,'chipmunk', sessionSpecifier)); %create a folder with the respective session date and time
     mkdir(fullfile(BpodSystem.Path.DataFolder,userInput.obsID,'chipmunk', sessionSpecifier,experimentName)); %create folder with the experiment name
-    BpodSystem.Path.DataFolder = fullfile(BpodSystem.Path.DataFolder,userInput.obsID,'chipmunk', sessionSpecifier,experimentName);
     
     %Define the name of the file to be saved. If there is an observer include
     %both subject's names separated by _x_, only put performer otherwise
-    dataFile = fullfile(BpodSystem.Path.DataFolder,...
+    dataFile = fullfile(BpodSystem.Path.DataFolder,userInput.obsID,'chipmunk', sessionSpecifier,experimentName,...
         [userInput.demonID '_x_' userInput.obsID '_' experimentName '_' sessionSpecifier '_chipmunk.mat']);
 else
-    dataFile = fullfile(BpodSystem.Path.DataFolder,...
+    dataFile = fullfile(BpodSystem.Path.DataFolder,userInput.obsID,'chipmunk', sessionSpecifier,experimentName,...
         [userInput.demonID '_' experimentName '_' sessionSpecifier '_chipmunk.mat']);
 end
 
