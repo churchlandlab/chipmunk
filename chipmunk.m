@@ -328,15 +328,20 @@ RewardAmounts = nan(1,maxTrials);
 %--------------------------------------------------------------------------
 %% Initialize GUI and plots
 
-DemonstratorFigure('init'); %initialize the main figure
+%initialize the main figure
+DemonstratorFigure('init');
 
+%Check whether an observer figure is required
 if isfield(S, 'obsID')
     ObserverFigure('init');
 end
 
-% % In current tasks, center port isn't used for giving reward.
-% CenterValveTime = 0;
-% centerRewarded = 0;
+%Set up the plots
+OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'init', TrialSidesList);
+
+% % % In current tasks, center port isn't used for giving reward.
+% % CenterValveTime = 0;
+% % centerRewarded = 0;
 
 %% Prepare the trial loop
 
