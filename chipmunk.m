@@ -41,6 +41,7 @@ subjectFolder = fullfile(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd
 
 BpodSystem.Path.CurrentDataFile = fullfile(subjectFolder,allFolders{end});
 
+serverDataPath = 'Z:\data'; %Quick fix, define server path here
 %% Define settings for protocol
 
 %Initialize default settings.
@@ -1009,6 +1010,32 @@ for currentTrial = 1:maxTrials
         SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
         %        BpodParameterGUI_Visual('close',S)
         PsychToolboxSoundServer('Close');
+        
+        %Create a session directory inside manchego and copy contents over
+        allFolders = split(BpodSystem.Path.CurrentDataFile,filesep);
+        subjectFolderServer = allFolders{end-3}; %This is the subject folder name set in the beginning
+        
+        sessionFolder = allFolders{1}; %Spot the folder whose contents are to be copied
+        for k = 2:length(allFolders)-2
+            sessionFolder = fullfile(sessionFolder,allFolders{k});
+        end
+        
+        if ~strcmp(subjectFolderServer,'FakeSubject') %Avoid copying the junk
+            try %create a folder if necessary and copy
+                if ~isfolder(fullfile(serverDataPath,subjectFolderServer)) %Check whether the subject exists
+                    mkdir(fullfile(serverDataPath,subjectFolderServer))
+                end
+                mkdir(fullfile(serverDataPath,subjectFolderServer,allFolders{end-2}))
+                [status,msg] = copyfile(sessionFolder,fullfile(serverDataPath,subjectFolderServer,allFolders{end-2}),'f');
+
+                %Error check
+                if status == 0
+                sprintf('%s',msg)
+                end
+            catch
+                
+            end
+        end
         
         return;
     end
