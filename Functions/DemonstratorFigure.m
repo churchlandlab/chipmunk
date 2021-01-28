@@ -11,7 +11,7 @@ function varargout = DemonstratorFigure(varargin)
 % INPUTS: -figMethod: The method for creation/updating of the figure
 %         -paramStruct: Struct containing the experiment parameters
 %
-% OOUTPUTS: -paramStruct: Updated experiment parameters
+% OUTPUTS: -paramStruct: Updated experiment parameters
 %
 % Make sure to run the update and refresh after the plotting so it can
 % scale the font on plots and display equally!
@@ -56,31 +56,28 @@ switch figMethod
         BpodSystem.GUIHandles.PerformanceSummaryPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform, 'Units', 'Normal',...
             'Position', [0.65, 0.31, 0.3, 0.21],'Title','Performance summary','FontWeight','bold');
         
-        BpodSystem.GUIHandles.SideChoiceByRatePlot = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
+        BpodSystem.GUIHandles.PsychometricPlotDemonstrator = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
             'Units', 'Normal', 'Position', [0.1, 0.31, 0.2, 0.2],'tickdir','out','NextPlot','add'); %NextPlot -> make sure to keep the settings
         xlabel('Stim frequency (Hz)'); ylabel('Prop right side choices'); title('Psychometric plot');
         box off; grid on;
-        
-        BpodSystem.GUIHandles.WaitTimeDiffPlot = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
+        BpodSystem.GUIHandles.WaitTimeDiffPlotDemonstrator = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
             'Units', 'Normal', 'Position', [0.4, 0.31, 0.2, 0.2],'tickdir','out', 'NextPlot','add');
-        xlabel('Estimated count'); ylabel('Wait time difference (s)'); title('Fixation time diff');
+        xlabel('Density estimate'); ylabel('Wait time difference (s)'); title('Fixation time diff');
         box off; grid on;
-        BpodSystem.GUIHandles.PerformancePlotChipmunk = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
+        BpodSystem.GUIHandles.PerformancePlotDemonstrator = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
             'Units', 'Normal', 'Position', [0.1, 0.604, 0.85, 0.11],'tickdir','out','NextPlot','add');
         xlabel('Trial number'); ylabel('Fraction correct'); title('Performance plot');
         box off; grid on;
-        BpodSystem.GUIHandles.OutcomePlotChipmunk = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
+        BpodSystem.GUIHandles.OutcomePlotDemonstrator = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
             'Units', 'Normal', 'Position', [0.1, 0.805, 0.85, 0.065],'tickdir','out','NextPlot','add');
         xlabel('Trial number'); title('Outcome plot');
         box off;
         BpodSystem.GUIHandles.StimulusPlotA = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
-            'Units', 'Normal', 'Position', [0.53, 0.9, 0.42, 0.05],'tickdir','out','NextPlot','add');
-        title(['\color{green}Auditory stimuli'],'interpreter','tex')
-        box off
+            'Units', 'Normal', 'Position', [0.53, 0.9, 0.42, 0.05],'xtick',[],'ytick',[],'NextPlot','add');
+        title('Auditory stimuli')
         BpodSystem.GUIHandles.StimulusPlotV = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
-            'Units', 'Normal', 'Position', [0.1, 0.9, 0.42, 0.05],'tickdir','out','NextPlot','add');
-        title(['\color{blue}Visual stimuli'],'interpreter','tex')
-        box off
+            'Units', 'Normal', 'Position', [0.1, 0.9, 0.42, 0.05],'xtick',[],'ytick',[],'NextPlot','add');
+        title('Visual stimuli')
         
         %------------
         %Fill in the UIcontrols for display and manipulation

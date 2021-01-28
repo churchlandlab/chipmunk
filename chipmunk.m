@@ -331,13 +331,16 @@ RewardAmounts = nan(1,maxTrials);
 %initialize the main figure
 DemonstratorFigure('init');
 
+%Set up the plots
+outcomePLotLimits = OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'init', TrialSidesList);
+PerformancePlotDemonstrator(BpodSystem.GUIHandles.PerformancePlotDemonstrator,'init',outcomePLotLimits);
+PsychometricPlotDemonstrator(BpodSystem.GUIHandles.PsychometricPlotDemonstrator,'init');
+WaitTimeDiffPlotDemonstrator(BpodSystem.GUIHandles.WaitTimeDiffPlotDemonstrator,'init',true);
+
 %Check whether an observer figure is required
 if isfield(S, 'obsID')
     ObserverFigure('init');
 end
-
-%Set up the plots
-OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'init', TrialSidesList);
 
 % % % In current tasks, center port isn't used for giving reward.
 % % CenterValveTime = 0;
