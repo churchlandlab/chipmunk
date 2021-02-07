@@ -42,7 +42,13 @@ subjectFolder = fullfile(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd
 BpodSystem.Path.CurrentDataFile = fullfile(subjectFolder,allFolders{end});
 
 serverDataPath = 'Z:\data'; %Quick fix, define server path here
-%% Define settings for protocol
+
+calibrationFilePath = []; % Quick fix: Get the location of the calibration file irrespective of username
+for k=1:3
+    calibrationFilePath = fullfile(calibrationFilePath, allFolders{k}); %This assumes your path is inside one of the folders of that user
+end
+ calibrationFilePath = fullfile(calibrationFilePath,'Documents','Bpod Local','Calibration Files','WhiteNoiseCalibration.mat');  
+    %% Define settings for protocol
 
 %Initialize default settings.
 %Append new settings to the end
@@ -83,7 +89,7 @@ DefaultSettings.AutoRun = 0; %runs in autorun configuration. behavioral reportin
 DefaultSettings.UseAntiBias = 0;
 DefaultSettings.AntiBiasTau = 0; %reflects number of trials to look back to compute bias measure.
 DefaultSettings.labcamsAddress = '';%'127.0.0.1:9999 for Rig 2';
-load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');     % Here, the addresses of the same Dropbox file in Ubuntu and Windows
+load(calibrationFilePath);     % Here, the addresses of the same Dropbox file in Ubuntu and Windows
 % are different. This will induce bugs if you run this code on a computer with
 % Ubuntu. Please make sure the file address you are using is correct.
 DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
@@ -1067,11 +1073,12 @@ PunishSound = [zeros(1,size(wavePunishSound,2)); wavePunishSound];
 %  wavePunishSound = 0.075 * soundLoudness * GenerateSineWave(samplingFreq, 12000, 1);
 % PunishSound = [zeros(1,size(wavePunishSound,2)); wavePunishSound];
 
-load('C:\Users\Anne\Dropbox\rat_protocols\Bpod\TheMudSkipper2\WhiteNoiseCalibration.mat');
+%load(calibrationFilePath); %SOOO redunant!
 
-DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
-PunishNoiseModelParams = DefaultSettings.WhiteNoiseLinearModelParams;
-pnoise_amplitude = 10^(1/10*(PunishNoiseModelParams(1)* earlyPunishLoudness + PunishNoiseModelParams(2)));%white noise
+% DefaultSettings.WhiteNoiseLinearModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
+% PunishNoiseModelParams = DefaultSettings.WhiteNoiseLinearModelParams;
+% pnoise_amplitude = 10^(1/10*(PunishNoiseModelParams(1)* earlyPunishLoudness + PunishNoiseModelParams(2)));%white noise
+pnoise_amplitude = 10^(1/10*(CalibrationModelParams(1)* earlyPunishLoudness + CalibrationModelParams(2)));%white noise
 %         pnoise = 2 * pnoise_loudness * rand(1, pnoise_duration * srate) - pnoise_loudness;
 EarlyPunishSound = [zeros(1,earlyPunishDuration*samplingFreq); 2*pnoise_amplitude * rand(1, earlyPunishDuration * samplingFreq)- pnoise_amplitude];
 
