@@ -107,7 +107,7 @@ DefaultSettings.EarlyPunishDuration = 2;
 DefaultSettings.IsPoissonStim = 0;
 DefaultSettings.initCenterPlayStimUntilCorrect = false; %start by poking in center play stimulus until correct or time is up.
 DefaultSettings.holdCenterStimUntilCorrect = false;
-
+DefaultSettings.BodyWeight = NaN; %Quick fix: add body weight as a parameter
 defaultFieldNames = fieldnames(DefaultSettings);
 
 prevSettings = BpodSystem.ProtocolSettings; % Load settings chosen in launch manager into current workspace as a struct S
