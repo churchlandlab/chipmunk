@@ -46,7 +46,8 @@ switch plotMethod
         %BpodSystem.GUIHandles.WatiTimeDiffDots = line([NaN],[NaN], 'LineStyle','none','color',plottingColors(2,:),'Marker','o','MarkerEdge',plottingColors(2,:),'MarkerFace',plottingColors(2,:), 'MarkerSize',2);
         BpodSystem.GUIHandles.WatiTimeDiffDots = scatter([NaN],[NaN],[],[NaN],'filled','SizeData',10);
         BpodSystem.GUIHandles.WaitTimeDiffFitLine = line([NaN],[NaN], 'LineStyle','-','color',plottingColors(3,:),'LineWidth',1.1);        
-       
+        hold(AxesHandle,'on')
+        
         %Preallocate memory for displaying the dots on the plot
         BpodSystem.GUIData.WaitTimeDiffPlotDemonstrator.randomShifts = NaN;
         BpodSystem.GUIData.WaitTimeDiffPlotDemonstrator.waitTimeDiff = NaN;

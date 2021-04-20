@@ -30,8 +30,8 @@ function PerformancePlotDemonstrator(AxesHandle, plotMethod, outcomePlotLimits, 
 global BpodSystem
 
 if ~exist('displayParam') || isempty(displayParam) %input check
-    performanceWindow = 10; %over these many trials the performance will be calculated
-    displayInterval = 5; %At this frequency the performance will be plotted.
+    performanceWindow = 24; %over these many trials the performance will be calculated
+    displayInterval = 4; %At this frequency the performance will be plotted.
     %The overlap between the points will be displayInterval/performanceWindow
     initialDisplayWindow = 200; %Start populating the plot until 200 are reached and squeeze afterwards
     minValidTrials = 3; %The minimum of completed trials to display the performance

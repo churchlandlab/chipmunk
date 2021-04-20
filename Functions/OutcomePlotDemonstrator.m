@@ -59,32 +59,32 @@ switch plotMethod
         %BpodSystem.GUIHandles.UnrewardedCorrectLine = line([0,0],[0,0], 'LineStyle','none','Marker','o','MarkerEdge','g','MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.NoResponseCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(3,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.NoTrialStartedCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(1,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
-        set(AxesHandle,'TickDir', 'out','YLim', [-1, 2], 'YTick', [0 1],'YTickLabel', {'Right','Left'});
+        set(AxesHandle,'TickDir', 'out','YLim', [-1, 2], 'YTick', [0 1],'YTickLabel', {'Left','Right'});
         xlabel(AxesHandle, 'Trial number');
         hold(AxesHandle,'on')
     varargout = {[0 nTrialsToShow]}; %return the shown trials
     %%
     case 'refresh'
-        CurrentTrial = varargin{1};
+        currentTrial = varargin{1};
         TrialSidesList = varargin{2};
         OutcomeRecord = varargin{3};
         
-        if CurrentTrial<1
-            CurrentTrial = 1;
+        if currentTrial<1 %Somewhat obsolete check
+            currentTrial = 1;
         end
         % recompute xlim
-        [mn, mx] = rescaleX(AxesHandle,CurrentTrial,nTrialsToShow);
+        [mn, mx] = rescaleX(AxesHandle,currentTrial,nTrialsToShow);
 
         %plot future trials
-        FutureTrialsIndx = CurrentTrial:mx;
+        FutureTrialsIndx = currentTrial:mx;
         Xdata = FutureTrialsIndx; Ydata = TrialSidesList(Xdata);
         set(BpodSystem.GUIHandles.FutureTrialCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
         %Plot current trial
-        set(BpodSystem.GUIHandles.CurrentTrialCircle, 'xdata', [CurrentTrial,CurrentTrial], 'ydata', [TrialSidesList(CurrentTrial),TrialSidesList(CurrentTrial)]);
+        set(BpodSystem.GUIHandles.CurrentTrialCircle, 'xdata', [currentTrial,currentTrial], 'ydata', [TrialSidesList(currentTrial),TrialSidesList(currentTrial)]);
         
         %Plot past trials
-        if ~isempty(OutcomeRecord)
-            indxToPlot = mn:CurrentTrial-1;
+        if currentTrial > 1 %Only needed when the current trial is at least the second one
+            indxToPlot = mn:currentTrial-1;
             %Plot Error, unpunished
             EarlyWithdrawalTrialsIndx = (OutcomeRecord(indxToPlot) == -1);
             Xdata = indxToPlot(EarlyWithdrawalTrialsIndx); Ydata = TrialSidesList(Xdata);
@@ -115,9 +115,9 @@ end
 
 end
 
-function [mn,mx] = rescaleX(AxesHandle,CurrentTrial,nTrialsToShow)
+function [mn,mx] = rescaleX(AxesHandle,currentTrial,nTrialsToShow)
 FractionWindowStickpoint = .75; % After this fraction of visible trials, the trial position in the window "sticks" and the window begins to slide through trials.
-mn = max(round(CurrentTrial - FractionWindowStickpoint*nTrialsToShow),1);
+mn = max(round(currentTrial - FractionWindowStickpoint*nTrialsToShow),1); %Find whether the first term is larger than 1
 mx = mn + nTrialsToShow - 1;
 set(AxesHandle,'XLim',[mn-1 mx+1]);
 end

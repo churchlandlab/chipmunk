@@ -173,59 +173,6 @@ end
 
 S = BpodSystem.ProtocolSettings; %update parameters
 
-%--------------------------------------------------------
-%% Junk to be deleted when tested.....
-%Assigning values to Bpod object (paths, status etc.)
-% BpodSystem.Status.Live = 1; %Switch internal status on
-% BpodSystem.Status.BeingUsed = 1; %
-% BpodSystem.Path.CurrentDataFile = dataFile; %use our dataFile name
-% BpodSystem.Data = struct('Demonstrator',[], 'Observer',[]);
-% BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
-% BpodSystem.ProtocolSettings = struct();
-% BpodSystem.ProtocolStartTime = now;
-% %--------
-% %Now the settings...
-% [settingsFile, settingsPath] = uigetfile(fullfile(BpodSystem.Path.DataFolder,userInput.Performer_DemonstratorID,'chipmunk'),...
-%     'Select a settings file for the current experiment or leave empty to choose the standard settings')
-%
-% %BpodSystem.Path.CurrentSettings =;
-% PsychToolboxSoundServer('init');
-% set(BpodSystem.GUIHandles.RunButton,'cdata', BpodSystem.GUIHandles.PauseButton, 'TooltipString', 'Press to pause session') %switch the run button from play to pause
-%
-%
-%
-% %-----
-% %Open an editor to allow the user to document incidents
-% fileContents{1} = ['cd "C:\Users\Public\"'];
-% fileContents{2} = ['echo.>' path 'SessionNotes.txt'];
-% fileContents{3} = ['notepad.exe' path 'SessionNotes.txt'];
-%
-% fid = fopen('C:\Users\Lukas Oesch\linkerFile.cmd','w'); %write the file to a place that exists on every Win
-% fprintf(fid,'%s \n', fileContents{:});
-% fclose(fid);
-% %------------
-% cdOld = cd;
-% cd(path) %starts the command prompt from the Matlab path
-% system(['echo.>SessionNotes.txt']) %processes the string as a command
-% system(['notepad.exe SessionNotes.txt'])
-%
-%
-% %
-% allFolders = split(BpodSystem.Path.CurrentDataFile,filesep);
-% subjectFolder = [];
-% for k=1:length(allFolders)-3 %Bpod hierarchy from bottom up is: data file, Session Data Folder, Task, Subject
-%     subjectFolder = fullfile(subjectFolder, allFolders{k});
-% end
-% %Construct the file path and generate the folders so that it is consistent with datajoint:
-% % Subject -> Session (date and time) -> Task -> Data
-% mkdir(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss']))); %First create session folder
-% mkdir(subjectFolder, fullfile(char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])), allFolders{end-2}));%Second the task folder
-%
-% subjectFolder = fullfile(subjectFolder, char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])), allFolders{end-2});
-%
-%
-% BpodSystem.Path.CurrentDataFile = fullfile(subjectFolder,allFolders{end});
-%
 %-------------------------------------------------------------------------
 %% Initialize button callback function
     function initializeButton(src,event,inputHandles,figHandles)
