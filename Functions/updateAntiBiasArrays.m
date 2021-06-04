@@ -42,13 +42,14 @@ function [updatedTrialModalityBiases, updatedTrialHistoryBiases] = updateAntiBia
 %                             completed trial. 0 = left, 1 = right.
 %         currentTrialOutcome: Outcome of the choice just made. 0 = Wrong
 %                              choice, 1 = correct choice.
-%         prevCorrectSide: The side that was correct in the trial preceding
-%                          the just completed trial. 0 = left, 1 = right.
-%         prevChosenSide: The side chosen by the animal in the trial
-%                         preceding the just completed trial. 0 = left, 1 = right
-%         prevOutcome: Outcome of the choice made by the animal in the
-%                      trial preceding the just completed one. 0 = Worong
-%                      choice, 1 = correct choice.
+%         prevCorrectSide: The side that was correct in the last completed
+%                          trial preceding the just completed trial.
+%                          0 = left, 1 = right.
+%         prevChosenSide: The side chosen by the animal in the last completed
+%                         trial preceding the just completed trial.
+%         prevOutcome: Outcome of the choice made by the animal in the last
+%                      completed trial preceding the just completed one.
+%                      0 = Worong choice, 1 = correct choice.
 %         antiBiasTau: Half-life or rate parameter of the exponential decay
 %                      function for modality or trial history biases.
 %

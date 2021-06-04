@@ -10,7 +10,7 @@ function PsychometricPlotDemonstrator(AxesHandle, plotMethod)
 %         plot and 'refresh' to add the new data.
 %
 %The data to be plotted are extracted from BpodSystem.Data.OutcomeRecord,
-% -Modality, -StimulusFrequency and -CompletedTrials.
+% -Modality, -StimulusRate and -ValidTrials.
 %Note: As of now this function does not feature flexible inputs for
 %x limits, or colors.
 %
@@ -70,12 +70,12 @@ switch plotMethod
             BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.126;
          end
         
-        numTrialsDone = length(BpodSystem.Data.CompletedTrials); %Get the number of completed trial to decide on the plotting
+        numTrialsDone = length(BpodSystem.Data.ValidTrials); %Get the number of completed trial to decide on the plotting
         %Go through the different modalities. First, get the completed
         %trials of the respective modality.
         %Visual
-        completedVisualTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.CompletedTrials==1 & BpodSystem.Data.Modality==1); %check all the trials so far
-        visualFrequencies = BpodSystem.Data.StimulusFrequency(BpodSystem.Data.CompletedTrials==1 & BpodSystem.Data.Modality==1);
+        completedVisualTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==1); %check all the trials so far
+        visualFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==1);
         Xdata = unique(visualFrequencies); %find the different frequencies that used so far
         if ~isempty(Xdata) %check whether there are actually data
             for k = 1:length(Xdata)
@@ -85,8 +85,8 @@ switch plotMethod
         end
         
         %Auditory
-        completedAuditoryTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.CompletedTrials==1 & BpodSystem.Data.Modality==2);
-        auditoryFrequencies = BpodSystem.Data.StimulusFrequency(BpodSystem.Data.CompletedTrials==1 & BpodSystem.Data.Modality==2);
+        completedAuditoryTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==2);
+        auditoryFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==2);
         Xdata = unique(auditoryFrequencies); %find the different frequencies that used so far
         if ~isempty(Xdata)
             for k = 1:length(Xdata)
@@ -96,8 +96,8 @@ switch plotMethod
         end
         
         %Multi-sensory
-        completedMultiSensoryTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.CompletedTrials==1 & BpodSystem.Data.Modality==3);
-        multiSensoryFrequencies = BpodSystem.Data.StimulusFrequency(BpodSystem.Data.CompletedTrials==1 & BpodSystem.Data.Modality==3);
+        completedMultiSensoryTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==3);
+        multiSensoryFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==3);
         Xdata = unique(multiSensoryFrequencies); %find the different frequencies that used so far
         if ~isempty(Xdata)
             for k = 1:length(Xdata)

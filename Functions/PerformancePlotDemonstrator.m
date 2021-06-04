@@ -15,9 +15,9 @@ function PerformancePlotDemonstrator(AxesHandle, plotMethod, outcomePlotLimits, 
 %         displayParam (optional): A struct containing the following fields:
 %                       -performanceWindow: How many trials should be
 %                       considered for the performance calculation, default
-%                       = 10.
+%                       = 24.
 %                       -displayInterval: The interval at which new lines
-%                       and dots will be displayed, default = 5.
+%                       and dots will be displayed, default = 4.
 %                       -initialDisplayWindow: The initial upper x-axis
 %                       (trial number) limit, defualt = 200.
 %                       -minValidTrials: Minimum number of valid trials to
@@ -88,20 +88,20 @@ switch plotMethod
          set(BpodSystem.GUIHandles.OutcomeLowerLimitLine, 'xdata', [outcomePlotLimits(1) outcomePlotLimits(1)])
          set(BpodSystem.GUIHandles.OutcomeUpperLimitLine, 'xdata', [outcomePlotLimits(2) outcomePlotLimits(2)])
                   
-numTrialsDone = length(BpodSystem.Data.CompletedTrials); %Get the number of completed trial to decide on the plotting
+numTrialsDone = length(BpodSystem.Data.OutcomeRecord); %Get the number of completed trial to decide on the plotting
 
         if numTrialsDone >= performanceWindow %only start plotting whe enough data has been acquired
             if mod(numTrialsDone,displayInterval) == 0 %only plot at the given interval
                 %Check for the number of trials that were actually
                 %completed and show no performance if there are too few
                 lowerWin = (numTrialsDone-performanceWindow)+1; %lower bound of trials to consider
-               if sum(BpodSystem.Data.CompletedTrials(lowerWin:numTrialsDone)) >= minValidTrials
+               if sum(BpodSystem.Data.ValidTrials(lowerWin:numTrialsDone)) >= minValidTrials
                    setOfOutcomes = BpodSystem.Data.OutcomeRecord(lowerWin:numTrialsDone);
                    setOfOutcomes(setOfOutcomes > 1) = NaN; %Reomove info of non-completed trials
                    setOfOutcomes(setOfOutcomes < 0) = NaN;
                    BpodSystem.GUIData.PerformancePlotDemonstrator.overallLineData(end+1) = nanmean(setOfOutcomes); %overall performance
-                   BpodSystem.GUIData.PerformancePlotDemonstrator.leftLineData(end+1) = nanmean(setOfOutcomes(BpodSystem.Data.SideRecord(lowerWin:numTrialsDone)==0));
-                   BpodSystem.GUIData.PerformancePlotDemonstrator.rightLineData(end+1) = nanmean(setOfOutcomes(BpodSystem.Data.SideRecord(lowerWin:numTrialsDone)==1));
+                   BpodSystem.GUIData.PerformancePlotDemonstrator.leftLineData(end+1) = nanmean(setOfOutcomes(BpodSystem.Data.ResponseSide(lowerWin:numTrialsDone)==0));
+                   BpodSystem.GUIData.PerformancePlotDemonstrator.rightLineData(end+1) = nanmean(setOfOutcomes(BpodSystem.Data.ResponseSide(lowerWin:numTrialsDone)==1));
                    BpodSystem.GUIData.PerformancePlotDemonstrator.xaxis(end+1) = numTrialsDone - displayInterval; %Append onto the Xaxis
                    
                    %Change the line properties

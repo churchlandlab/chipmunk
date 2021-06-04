@@ -72,6 +72,10 @@ switch plotMethod
         if currentTrial<1 %Somewhat obsolete check
             currentTrial = 1;
         end
+        
+        %Dirty hack for now
+        %nTrialsToShow = 50;
+        
         % recompute xlim
         [mn, mx] = rescaleX(AxesHandle,currentTrial,nTrialsToShow);
 

@@ -31,8 +31,8 @@ flash(locs) = 1; %...and only use these ones to switch on the LED. The more time
 
 visualStimSignal = [];
 for i = 1:length(interStimulusIntervalList)-1
-    visualStimSignal = [visualStimSignal zeros(1, interStimulusIntervalList(i)*SamplingFreq) flash];
+    visualStimSignal = [visualStimSignal zeros(1, round(interStimulusIntervalList(i)*SamplingFreq)) flash];
 end
- visualStimSignal = [visualStimSignal zeros(1, interStimulusIntervalList(end)*SamplingFreq)]; %The last interval is between the last stimulus and the end of the train
+ visualStimSignal = [visualStimSignal zeros(1, round(interStimulusIntervalList(end)*SamplingFreq))]; %The last interval is between the last stimulus and the end of the train
  
 end

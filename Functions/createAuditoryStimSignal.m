@@ -52,7 +52,7 @@ auditoryStimSignal = [];
 for i = 1:length(interStimulusIntervalList)-1
     auditoryStimSignal = [auditoryStimSignal zeros(1,round(interStimulusIntervalList(i)*SamplingFreq)) soundpart];
 end
-auditoryStimSignal = [auditoryStimSignal zeros(1,interStimulusIntervalList(end)*SamplingFreq)]; %The last interval is the silence between last stimulus and end of the train
+auditoryStimSignal = [auditoryStimSignal zeros(1,round(interStimulusIntervalList(end)*SamplingFreq))]; %The last interval is the silence between last stimulus and end of the train
 
     
 %Add a smaller amplitude white noise to the signal

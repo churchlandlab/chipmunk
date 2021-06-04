@@ -31,13 +31,13 @@ switch plotMethod
         %Intialize the visual stimulus panel first
         axes(AxesHandleVisual)
         set(AxesHandleVisual, 'XLim',[0 1]) %What is the ylimit?
-        BpodSystem.GUIHandles.StimulusPlotVisualLine = line([NaN],[NaN], 'LineStyle','-','color',plottingColors(1,:));
+        BpodSystem.GUIHandles.StimulusPlotVisualLine = line(NaN, NaN, 'LineStyle','-','color',plottingColors(1,:));
         %hold(AxesHandleVisual,'on')
         
          %Now the auditory stimulus plot
         axes(AxesHandleAuditory)
         set(AxesHandleAuditory, 'XLim',[0 1]) %What is the ylimit?
-        BpodSystem.GUIHandles.StimulusPlotAuditoryLine = line([NaN],[NaN], 'LineStyle','-','color',plottingColors(2,:));
+        BpodSystem.GUIHandles.StimulusPlotAuditoryLine = line(NaN, NaN, 'LineStyle','-','color',plottingColors(2,:));
         %hold(AxesHandleAuditory,'on')
         
         %Store the Xdata

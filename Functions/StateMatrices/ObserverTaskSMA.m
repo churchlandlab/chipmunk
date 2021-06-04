@@ -1,5 +1,5 @@
-function [sma, taskDelays] = ObserverTaskSMA(correctSideOnCurrent);
-% [sma, taskDelays] = ObserverTaskSMA(correctSideOnCurrent);
+function [sma, taskDelays, reviseChoiceFlag] = ObserverTaskSMA(correctSideOnCurrent);
+% [sma, taskDelays, reviseChoiceFlag] = ObserverTaskSMA(correctSideOnCurrent);
 %
 % SMA assemly function for the ObserverTask condition. In this condition the
 % observer mouse initiates a trial for the demonstrator by breaking the beam
@@ -71,8 +71,8 @@ trialStartDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelay
 preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
 
 %Check for the wait time
-if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
-postStimDelay = generate_random_delay(1/0.1, 0.01, 1) %set lambda such that the mean is 0.1 : mean = 1/lambda
+if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential');
+postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the mean is 0.1 : mean = 1/lambda
 waitTime = 1 + postStimDelay; %Add the delay to the 1 s of stimulus
 else 
   waitTime = BpodSystem.ProtocolSettings.minWaitTime;
@@ -162,6 +162,10 @@ sma = AddState(sma, 'Name', 'FinishTrial','Timer',0, ...
     'StateChangeConditions', {'Tup','>exit'},...
     'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255, 'PWM4',255 });
 
+%--------------------------------------------------------------------------
+%% Define whether demonstrator can revise choice
+
+reviseChoiceFlag = false; 
 end
 
 

@@ -55,14 +55,14 @@ switch plotMethod
         %%     Add the new data
     case 'refresh'
         
-        numTrialsDone = length(BpodSystem.Data.CompletedTrials); %Do not only rely on completed trials here
+        numTrialsDone = length(BpodSystem.Data.ValidTrials); %Do not only rely on completed trials here
         
         %Random x spacing of the individual dots, retain position of them
         BpodSystem.GUIData.WaitTimeDiffPlotDemonstrator.randomShifts(numTrialsDone) = rand*(-0.3); %add a random spacing to the current wait time dot
         Xdata = BpodSystem.GUIData.WaitTimeDiffPlotDemonstrator.randomShifts;
         
         %Calculate the next point
-        BpodSystem.GUIData.WaitTimeDiffPlotDemonstrator.waitTimeDiff(numTrialsDone) = BpodSystem.Data.fixationTime(numTrialsDone) - (BpodSystem.Data.tragetFixationTime(numTrialsDone) + BpodSystem.Data.preStimDelay(numTrialsDone));
+        BpodSystem.GUIData.WaitTimeDiffPlotDemonstrator.waitTimeDiff(numTrialsDone) = BpodSystem.Data.ActualWaitTime(numTrialsDone) - (BpodSystem.Data.SetWaitTime(numTrialsDone) + BpodSystem.Data.PreStimDelay(numTrialsDone) + BpodSystem.Data.PostStimDelay(numTrialsDone));
         Ydata = BpodSystem.GUIData.WaitTimeDiffPlotDemonstrator.waitTimeDiff;
         
         %Set the color properties

@@ -351,9 +351,9 @@ switch figMethod
         BpodSystem.GUIHandles.LabelsVal.earlyWithdrawals.String = num2str(sum(BpodSystem.Data.EarlyWithdrawal));
         BpodSystem.GUIHandles.LabelsVal.noChoiceTrials.String = num2str(sum(BpodSystem.Data.DidNotChoose));
         
-        BpodSystem.GUIHandles.LabelsVal.leftSideReward.String = num2str(BpodSystem.Data.LeftSideRewardAmount);
-        BpodSystem.GUIHandles.LabelsVal.rightSideReward.String = num2str(BpodSystem.Data.RightSideRewardAmount);
-        BpodSystem.GUIHandles.LabelsVal.totalReward.String = num2str(BpodSystem.Data.LeftSideRewardAmount + BpodSystem.Data.LeftSideRewardAmount);
+        BpodSystem.GUIHandles.LabelsVal.leftSideReward.String = num2str(sum(BpodSystem.Data.LeftRewardAmount));
+        
+        
         %------------------------------------------------------------------
         
         %%

@@ -1,8 +1,8 @@
-function [sma, taskDelays, reviseChoiceFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
-% [sma, taskDelays, reviseChoiceFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
+function [sma, taskDelays, reviseChoiceFlag] = DemonstratorSelfInitiatedTaskSMA(correctSideOnCurrent);
+% [sma, taskDelays, reviseChoiceFlag] = DemonstratorSelfInitiatedTaskSMA(correctSideOnCurrent);
 %
-% SMA assemly function for the DemonstratorTask. In this condition a
-% demonstrator can self-initiate trials by poking into the center port and
+% SMA assembler function for the rate task self-initiated by the demonstrator.
+% In this condition it cantrials by poking into the center port and
 % the choices will either be rewarded or punished with a sound and timeout.
 %
 % INPUTS (optional): -correctSideOnCurrent: The side designated to be
@@ -62,6 +62,7 @@ postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the
 waitTime = 1 + postStimDelay; %Add the delay to the 1 s of stimulus
 else 
   waitTime = BpodSystem.ProtocolSettings.minWaitTime; %This is to be consisten with previous versions.
+  postStimDelay = 0;
 end
 
 % Creat the struct to hold the task delays
