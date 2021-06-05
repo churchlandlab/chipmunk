@@ -24,6 +24,7 @@ global BpodSystem
 
 %Add the path to the external functions for chipmunk
 addpath(genpath(fullfile(BpodSystem.Path.ProtocolFolder,'chipmunk','Functions')));
+warning('off','all') %Switch off unnecessary warnings
 
 %% Initialize the protocol
 %Load the settings for the respective experiment and start the protocol
@@ -40,6 +41,9 @@ BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 
 SamplingFreq = 192000; %The frequency of the (Fenix) sound card
 
+%%%-----------Only include demonstrator now----------%%%%%%%%%%%%%%%
+subjectFolder = fileparts(BpodSystem.Path.CurrentDataFile{1});
+%%%-----------%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----------%%%%%%%%%%%%%%
 %--------------------------------------------------------------------------
 %% Start labcams
 % if there is a labcam address field and it is not empty start labcams
@@ -81,17 +85,19 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
             fgetl(udpObj);
         end
     catch
+        warning('on') %Enable the display of essential warning messages
         warning('A problem occurred with labcams, no video will be recorded')
+        warning('off','all')
     end
 end
 
 %--------------------------------------------------------------------------
 %% Get the polynomial coefficients of the sound calibration
-%load(fullfile(BpodSystem.Path.BpodRoot,'Calibration Files','SoundCalibration.mat') %loading from external calibration file
-%S.soundCalibrationModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
+load(fullfile(BpodSystem.Path.LocalDir,'Calibration Files','WhiteNoiseCalibration.mat')) %loading from external calibration file
+S.soundCalibrationModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
 %The dirty workaround here
-load('C:\Users\Lukas Oesch\Documents\MATLAB\Bpod Local\Data\FakeSubject\chipmunk\Session Settings\TaskTest.mat','standardSettings');
-S.soundCalibrationModelParams = standardSettings.WhiteNoiseLinearModelParams;
+%load('C:\Users\Lukas Oesch\Documents\MATLAB\Bpod Local\Data\FakeSubject\chipmunk\Session Settings\TaskTest.mat','standardSettings');
+%S.soundCalibrationModelParams = standardSettings.WhiteNoiseLinearModelParams;
 
 %--------------------------------------------------------------------------
 %% Task control sounds and static task parameters
@@ -483,7 +489,11 @@ for currentTrial = 1:maxTrialNum
             retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,reviseChoiceFlag, ModalityRecord,...
                 stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList);           
         else
+            if BpodSystem.Status.BeingUsed == 1 %Do not show this warning if the session is ending
+            warning('on')
             warning('There were no events recorded for this trial!')
+            warning('off','all')
+            end
         end
         
         %--------------------------------------------------------------------------
@@ -521,39 +531,46 @@ if BpodSystem.Status.BeingUsed == 0
     end
     PsychToolboxSoundServer('Close');
     
-    %Now copy the saved file over to the server
+        %Now copy the saved file over to the server
     if ~isempty(BpodSystem.ProtocolSettings.serverPath) %Only copy to a server when one is specified
         if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
             %Do not copy fake subject or virtual (no demonstrator present)
             if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
-                mkdir BpodSystem.ProtocolSettings.serverPath BpodSystem.ProtocolSettings.demonID
+                mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
             end
             splitPath = strsplit(BpodSystem.Path.CurrentDataFile{1},filesep);
-            mkdir BpodSystem.ProtocolSettings.fullfile(serverPath,BpodSystem.ProtocolSettings.demonID) splitPath{end-2} % Create a folder for the session date and time
+            mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2})) % Create a folder for the session date and time
             
-            [copyStatus(1), copyErrorMsg{1}] = copyfile(BpodSystem.Path.CurrentDataFile{1}, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2},splitPath{end-1}),'f');
+            sourceFolder = fileparts(BpodSystem.Path.CurrentDataFile{1});    
+            [copyStatus(1), copyErrorMsg{1}] = copyfile(sourceFolder, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2},splitPath{end-1}),'f');
             %Now copy the entire chipunk folder into the created server
             %folders
         end
         
         if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
             if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
-            if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
-                mkdir BpodSystem.ProtocolSettings.serverPath BpodSystem.ProtocolSettings.obsID
-            end
-            splitPath = strsplit(BpodSystem.Path.CurrentDataFile{2},filesep);
-            mkdir fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID) splitPath{end-2} % Create a folder for the session date and time
-            
-            [copyStatus(2), copyErrorMsg{2}] = copyfile(BpodSystem.Path.CurrentDataFile{2}, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2},splitPath{end-1}),'f');
+                if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
+                     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
+                end
+                splitPath = strsplit(BpodSystem.Path.CurrentDataFile{2},filesep);
+                mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2}))% Create a folder for the session date and time
+                
+                sourceFolder = fileparts(BpodSystem.Path.CurrentDataFile{2});
+            [copyStatus(1), copyErrorMsg{1}] = copyfile(sourceFolder, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2},splitPath{end-1}),'f');
             %Now copy the entire chipunk folder into the created server
             %folders
             end
         end
         
-        if sum(copyStatus) > 0 %Check for errors
-            warning(sprintf('%s\n',copyErrorMsg{:}))
+        if exist('copyStatus') % In case the session features no observer and the demonstrator is FakeSubject
+            if sum(copyStatus) == 0 %Check for errors
+                warning('on')
+                warning(sprintf('%s\n',copyErrorMsg{:}))
+                warning('off','all')
+            end
         end
     end
+
     clear BpodSystem.GUIHandles.ParamEdit
     display('*********************************************************************')
     display('chipmunk ended')
@@ -606,7 +623,9 @@ end
    %-----------------------------------------------------------------------
    %% Make sure to keep the data if an error occurs
    catch ME
+       warning('on')
        warning('chipmunk encounered an error and will save the data and end...')
+       warning('off','all')
     % Close video object
     if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
         if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
@@ -633,12 +652,13 @@ end
         if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
             %Do not copy fake subject or virtual (no demonstrator present)
             if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
-                mkdir BpodSystem.ProtocolSettings.serverPath BpodSystem.ProtocolSettings.demonID
+                mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
             end
             splitPath = strsplit(BpodSystem.Path.CurrentDataFile{1},filesep);
-            mkdir fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID) splitPath{end-2} % Create a folder for the session date and time
+            mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2})) % Create a folder for the session date and time
             
-            [copyStatus(1), copyErrorMsg{1}] = copyfile(BpodSystem.Path.CurrentDataFile{1}, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2},splitPath{end-1}),'f');
+            sourceFolder = fileparts(BpodSystem.Path.CurrentDataFile{1});
+            [copyStatus(1), copyErrorMsg{1}] = copyfile(sourceFolder, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2},splitPath{end-1}),'f');
             %Now copy the entire chipunk folder into the created server
             %folders
         end
@@ -646,19 +666,24 @@ end
         if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
             if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
                 if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
-                    mkdir BpodSystem.ProtocolSettings.serverPath BpodSystem.ProtocolSettings.obsID
+                     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
                 end
                 splitPath = strsplit(BpodSystem.Path.CurrentDataFile{2},filesep);
-                mkdir fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID) splitPath{end-2} % Create a folder for the session date and time
+                mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2}))% Create a folder for the session date and time
                 
-                [copyStatus(2), copyErrorMsg{2}] = copyfile(BpodSystem.Path.CurrentDataFile{2}, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2},splitPath{end-1}),'f');
-                %Now copy the entire chipunk folder into the created server
-                %folders
+                sourceFolder = fileparts(BpodSystem.Path.CurrentDataFile{2});
+            [copyStatus(1), copyErrorMsg{1}] = copyfile(sourceFolder, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2},splitPath{end-1}),'f');
+            %Now copy the entire chipunk folder into the created server
+            %folders
             end
         end
         
-        if sum(copyStatus) > 0 %Check for errors
-            warning(sprintf('%s\n',copyErrorMsg{:}))
+        if exist('copyStatus')
+            if sum(copyStatus) == 0 %Check for errors
+                warning('on')
+                warning(sprintf('%s\n',copyErrorMsg{:}))
+                warning('off','all')
+            end
         end
     end
     BpodSystem.Status.BeingUsed = 0; %Switch the Bpod off
