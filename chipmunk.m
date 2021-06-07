@@ -148,7 +148,7 @@ prevPropLeft = S.propLeft; %store this value to update the sides list if necessa
 %% Dummy state matrix
 % Initialize the state matrix associated with this experiment for the
 % display on the plot. If no additional
-eval(['[sma, ~, reviseChoiceFlag, pacedFlag = ' BpodSystem.ProtocolSettings.smaAssembler '();']); 
+eval(['[sma, ~, reviseChoiceFlag, pacedFlag] = ' BpodSystem.ProtocolSettings.smaAssembler '();']); 
 
 %--------------------------------------------------------------------------
 % % %% Initialize variables used for display. These variables 
