@@ -1,9 +1,10 @@
-function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorSelfInitiatedTaskSMA(correctSideOnCurrent);
-% [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorSelfInitiatedTaskSMA(correctSideOnCurrent);
+function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorPacedFixationTrainingSMA(correctSideOnCurrent);
+% [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorPacedFixationTrainingSMA(correctSideOnCurrent);
 %
-% SMA assembler function for the rate task self-initiated by the demonstrator.
-% In this condition it can initiate trials by poking into the center port and
-% the choices will either be rewarded or punished with a sound and timeout.
+% SMA assembler function for a demonstrator learning to fixate at the center
+% port. In this version the the demonstrator can revise its choice and
+% trials are triggered after a randomly generated trial start delay. for the rate task paced externally without the
+% presence of an observer. 
 %
 % INPUTS (optional): -correctSideOnCurrent: The side designated to be
 %                                           rewarded during the current trial
@@ -28,22 +29,17 @@ global BpodSystem
 if exist('correctSideOnCurrent') && ~isempty(correctSideOnCurrent) %input check
     rewardedSide = correctSideOnCurrent;
     if rewardedSide == 0 %the case for left side correct
-        LeftPortAction = 'DemonReward';
         RewardValve = 2^0; %left-hand port represents port#0, therefore valve value is 2^0
         rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.leftRewardVolume, 1); %second value is Bpod index for the valve
-        RightPortAction = 'DemonWrongChoice';
-        
+        incorrectPortLED = 'PWM3';
     elseif rewardedSide == 1 %the case for right side correct
-        RightPortAction = 'DemonReward';
         RewardValve = 2^2; %left-hand port represents port#0, therefore valve value is 2^0
         rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.rightRewardVolume, 3);
-        LeftPortAction = 'DemonWrongChoice';
-        
+        incorrectPortLED = 'PWM1';
     end
 
 else %The dummy case assuming left
     LeftPortAction = 'DemonReward';
-    RightPortAction = 'DemonWrongChoice';
     RewardValve = 2^0;
     rewardValveTime = 0;
 end
@@ -79,53 +75,71 @@ taskDelays.postStimDelay = postStimDelay;
 
 sma = NewStateMatrix(); %generate a new empty state matrix
 
-sma = AddState(sma, 'Name', 'DemonTrialStart', 'Timer', 0,...
-    'StateChangeConditions', {'Port2In', 'DemonInitFixation'},...
-    'OutputActions', {});
+sma = AddState(sma, 'Name', 'ObsInitFixation', ...
+    'Timer', trialStartDelay, ...
+    'StateChangeCondition', {'Tup','DemonTrialStart'},...
+    'OutputActions',{'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
+
+sma = AddState(sma, 'Name', 'DemonTrialStart','Timer',BpodSystem.ProtocolSettings.initiationWindow, ...
+    'StateChangeConditions', {'Tup','DemonDidNotInitiate', 'Port2In', 'DemonInitFixation'},...
+    'OutputActions', {'SoftCode', 2,'PWM4',255});
 
 sma = AddState(sma, 'Name', 'DemonInitFixation','Timer', preStimDelay, ...
     'StateChangeConditions', {'Tup','PlayStimulus', 'Port2Out', 'DemonEarlyWithdrawal'},...
-    'OutputActions', {});
+    'OutputActions', {'PWM4',255});
 
 sma = AddState(sma, 'Name', 'PlayStimulus','Timer', 0, ...
     'StateChangeConditions', {'Tup','DemonCenterFixationPeriod', 'Port2Out', 'DemonEarlyWithdrawal'},...
-    'OutputActions', {'SoftCode',1});
+    'OutputActions', {'SoftCode',1,'PWM4',255});
 
 sma = AddState(sma, 'Name', 'DemonCenterFixationPeriod','Timer',waitTime, ...
     'StateChangeConditions', {'Tup','DemonGoCue', 'Port2Out', 'DemonEarlyWithdrawal'},...
-    'OutputActions', {});
+    'OutputActions', {'PWM4',255});
 
 sma = AddState(sma, 'Name', 'DemonGoCue','Timer',0, ...
     'StateChangeConditions', {'Tup','DemonWaitForResponse'},...
-    'OutputActions', {'SoftCode',3});
+    'OutputActions', {'SoftCode',3,'PWM4',255});
 
+if correctSideOnCurrent == 0 %The left side
 sma = AddState(sma, 'Name', 'DemonWaitForResponse','Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
-    'StateChangeConditions', {'Port1In', LeftPortAction, 'Port3In', RightPortAction,'Tup','DemonDidNotChoose'},...
-    'OutputActions', {});
+    'StateChangeConditions', {'Port1In', 'DemonReward','Tup','DemonDidNotChoose'},...
+    'OutputActions', {'PWM4',255});
+elseif correctSideOnCurrent == 1 %The right side
+    sma = AddState(sma, 'Name', 'DemonWaitForResponse','Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
+    'StateChangeConditions', {'Port3In', 'DemonReward','Tup','DemonDidNotChoose'},...
+    'OutputActions', {'PWM4',255});
+end
 
 sma = AddState(sma, 'Name', 'DemonReward','Timer',0, ...
-    'StateChangeConditions', {'Tup','FinishTrial'},...
-    'OutputActions', {'ValveState', RewardValve}); 
+    'StateChangeConditions', {'Tup','DemonRewardHarvest'},...
+    'OutputActions', {'ValveState', RewardValve,'PWM2',255,IncorrectPortLED,255,'PWM4',255}); % Switch on the lights on the center and the incorrect port.
 
-sma = AddState(sma, 'Name', 'DemonWrongChoice','Timer',BpodSystem.ProtocolSettings.wrongPunishTimeout, ...
+if correctSideOnCurrent == 0 %The left side
+sma = AddState(sma, 'Name', 'DemonRewardHarvest','Timer',0, ...
+    'StateChangeConditions', {'Port1Out','FinsishTrial'},...
+    'OutputActions', {'PWM2',255,IncorrectPortLED,255,'PWM4',255}); 
+elseif correctSideOnCurrent == 1
+    sma = AddState(sma, 'Name', 'DemonRewardHarvest','Timer',0, ...
+    'StateChangeConditions', {'Port3Out','FinsishTrial'},...
+    'OutputActions', {'PWM2',255,IncorrectPortLED,255,'PWM4',255});
+end
+ 
+sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal','Timer',BpodSystem.ProtocolSettings.EarlyPunishTimeout, ...
     'StateChangeConditions', {'Tup','FinishTrial'},...
-    'OutputActions', {'SoftCode', 5});
-
-sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal','Timer',0, ...
-    'StateChangeConditions', {'Tup','DemonEarlyWithdrawalPunishment'},...
-    'OutputActions', {'SoftCode', 255});
-
-sma = AddState(sma, 'Name', 'DemonEarlyWithdrawalPunishment','Timer',BpodSystem.ProtocolSettings.earlyPunishTimeout, ...
-    'StateChangeConditions', {'Tup','FinishTrial'},...
-    'OutputActions', {'SoftCode', 4}); 
+    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255}); 
 
 sma = AddState(sma, 'Name', 'DemonDidNotChoose','Timer',0, ...
     'StateChangeConditions', {'Tup','FinishTrial'},...
-    'OutputActions', {}); %Here no sound indicating that no choice has been made
+    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
+
+sma = AddState(sma, 'Name', 'DemonDidNotInitiate','Timer',0, ...
+    'StateChangeConditions', {'Tup','FinishTrial'},...
+    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
 
 sma = AddState(sma, 'Name', 'FinishTrial','Timer',0, ...
     'StateChangeConditions', {'Tup','>exit'},...
-    'OutputActions', {});
+    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255, 'PWM4',255 });
+
 
 %--------------------------------------------------------------------------
 %% Set whether the choice can be revised

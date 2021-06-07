@@ -40,6 +40,9 @@ BpodSystem.Data = AddTrialEvents(BpodSystem.Data, RawEvents);
 %struct. These include the trial settings, state machine info, events and
 %states
 
+%Add the settings used for this trial
+BpodSystem.Data.TrialSettings(TrialsDone) = BpodSystem.ProtocolSettings;
+
 %Go first thorugh the demonstrator data
 %The side and outcome info
 BpodSystem.Data.CorrectSide(TrialsDone) = TrialSidesList(TrialsDone);

@@ -2,7 +2,7 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorSelfInitia
 % [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorSelfInitiatedTaskSMA(correctSideOnCurrent);
 %
 % SMA assembler function for the rate task self-initiated by the demonstrator.
-% In this condition it can initiate trials by poking into the center port and
+% In this condition it can inititrials by poking into the center port and
 % the choices will either be rewarded or punished with a sound and timeout.
 %
 % INPUTS (optional): -correctSideOnCurrent: The side designated to be
@@ -130,8 +130,5 @@ sma = AddState(sma, 'Name', 'FinishTrial','Timer',0, ...
 %--------------------------------------------------------------------------
 %% Set whether the choice can be revised
 reviseChoiceFlag = false;
-
-%% Set whether the demonstrator trials are paced
-pacedFlag = false;
 
 end

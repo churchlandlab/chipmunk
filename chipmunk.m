@@ -148,7 +148,7 @@ prevPropLeft = S.propLeft; %store this value to update the sides list if necessa
 %% Dummy state matrix
 % Initialize the state matrix associated with this experiment for the
 % display on the plot. If no additional
-eval(['sma = ' BpodSystem.ProtocolSettings.smaAssembler '();']); 
+eval(['[sma, ~, reviseChoiceFlag, pacedFlag = ' BpodSystem.ProtocolSettings.smaAssembler '();']); 
 
 %--------------------------------------------------------------------------
 % % %% Initialize variables used for display. These variables 
@@ -211,7 +211,13 @@ else
     return %Peacefully stop execution if the Bpod was switched off up to here.
 end
 
-%--------------------------------------------------------------------------
+if pacedFlag %When the trials are paced by an observer or virtually  switch on LEDs that indicate no initiation possible
+ManualOVerride('OP',1); %Switch on LED on port 1,...
+ManualOVerride('OP',2);
+ManualOVerride('OP',3);
+ManualOVerride('OP',4);
+end
+    %--------------------------------------------------------------------------
 %% Start saving labcams if connected
 if exist('udpObj','var')
     fwrite(udpObj,'softtrigger=0')
@@ -450,24 +456,27 @@ for currentTrial = 1:maxTrialNum
         PsychToolboxSoundServer('Load', 1, stimTrainSignals); %Upload the signal
         
         %--------------------------------------------------------------------------
-        %% Display preparation time
+        %% Assemble and the state matrix for the trial
+        
+        [sma, trialDelays, reviseChoiceFlag, pacedFlag]  = eval([BpodSystem.ProtocolSettings.smaAssembler '(' sprintf('%d',TrialSidesList(currentTrial)) ');']);
+        % Get the state matrix, the random delays generated inside the assembler
+        % function and a logical value that indicates whether the animals can revise
+        % wrong choices and whether trials are self-initiated.
+        %For more info check the respective SMA function.
+        
+        SendStateMatrix(sma); %Send to Bpod
+        
+        %------------------------------------------------------------------
+         %% Display preparation time
         
         % After all is prepared check the time to prepare
         if currentTrial > 1 %Only display updating time from the second trial on
             display(sprintf('Time to retrieve data, update plots and prepare trial number %d: %d seconds',round(currentTrial),toc(preparationTime)));
             display(sprintf('----------------------------------------------------------------------------\n'));
         end
+        
         %--------------------------------------------------------------------------
-        %% Assemble and run the state matrix for the trial and report prep time
-        
-        [sma, trialDelays, reviseChoiceFlag]  = eval([BpodSystem.ProtocolSettings.smaAssembler '(' sprintf('%d',TrialSidesList(currentTrial)) ');']);
-        % Get the state matrix, the random delays generated inside the assembler
-        % function and a logical value that indicates whether the animals can revise
-        % wonrg chocies. For more info check the respective SMA function.
-        
-        SendStateMatrix(sma); %Send to Bpod
-        
-        % Add to the camera log
+        %% Add to the camera log and run the state machine
         if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
             if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
                 fwrite(udpObj,sprintf('log=trial_start: %d',currentTrial))
@@ -476,8 +485,14 @@ for currentTrial = 1:maxTrialNum
         
         RawEvents = RunStateMatrix; %Finally run the state matrix
         
+        if pacedFlag %Make sure to switch the LEDs on again if the trials are paced!
+        ManualOverride('OP',1); %Switch on LED on port 1,...
+        ManualOverride('OP',2);
+        ManualOverride('OP',3);
+        ManualOverride('OP',4);
+        end
         %--------------------------------------------------------------------------
-        %% Retrieve the trial information to save them
+        %% Retrieve the trial information to save it
         
         preparationTime = tic; %Start measuring the time to extract, save and prepare
         TrialsDone = TrialsDone + 1; %increment number of trials done
