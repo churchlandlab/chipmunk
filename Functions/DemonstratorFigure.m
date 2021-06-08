@@ -366,9 +366,9 @@ end
 %Finally adjust the font size on the entire figure
 
 %Set the font size on the figure
-screenParam = get(0,'screensize'); %retrieve info about the pixels
-fontScaling = screenParam(4)*(8.8/720); %determine Font size based on the height of the screen and a ratio tested before
-set(findall(BpodSystem.GUIHandles.Figures.DemonFigure,'-property','FontSize'),'FontSize',fontScaling) %do the scaling
+% screenParam = get(0,'screensize'); %retrieve info about the pixels
+% fontScaling = screenParam(4)*(8.8/720); %determine Font size based on the height of the screen and a ratio tested before
+% set(findall(BpodSystem.GUIHandles.Figures.DemonFigure,'-property','FontSize'),'FontSize',fontScaling) %do the scaling
 
 end
 

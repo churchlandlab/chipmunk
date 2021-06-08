@@ -137,11 +137,8 @@ else %The case where wrong choices are punished
 end
 
 BpodSystem.Data.ResponseSide(TrialsDone) = ResponseSideRecord;
-if ~isnan(ResponseSideRecord)
+if 
 BpodSystem.Data.CorrectResponse(TrialsDone) = ResponseSideRecord == TrialSidesList(TrialsDone);
-else
-BpodSystem.Data.CorrectResponse(TrialsDone) = 0;
-end
 BpodSystem.Data.ValidTrials(TrialsDone) = ~isnan(ResponseSideRecord);
 
 %Also generate a composite outcome vector containing categorical values

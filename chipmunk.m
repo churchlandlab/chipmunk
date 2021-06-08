@@ -148,7 +148,7 @@ prevPropLeft = S.propLeft; %store this value to update the sides list if necessa
 %% Dummy state matrix
 % Initialize the state matrix associated with this experiment for the
 % display on the plot. If no additional
-eval(['[sma, ~, reviseChoiceFlag, pacedFlag] = ' BpodSystem.ProtocolSettings.smaAssembler '();']); 
+[sma, ~, reviseChoiceFlag, pacedFlag] = eval([BpodSystem.ProtocolSettings.smaAssembler '();']); 
 
 %--------------------------------------------------------------------------
 % % %% Initialize variables used for display. These variables 
@@ -211,11 +211,8 @@ else
     return %Peacefully stop execution if the Bpod was switched off up to here.
 end
 
-if pacedFlag %When the trials are paced by an observer or virtually  switch on LEDs that indicate no initiation possible
-ManualOVerride('OP',1); %Switch on LED on port 1,...
-ManualOVerride('OP',2);
-ManualOVerride('OP',3);
-ManualOVerride('OP',4);
+if pacedFlag
+    LEDswitch()%When the trials are paced by an observer or virtually  switch on LEDs that indicate no initiation possible
 end
     %--------------------------------------------------------------------------
 %% Start saving labcams if connected
@@ -483,13 +480,14 @@ for currentTrial = 1:maxTrialNum
             end
         end
         
+        if pacedFlag 
+        LEDswitch() %Switch off and let the state control LEDs
+        end
+        
         RawEvents = RunStateMatrix; %Finally run the state matrix
         
-        if pacedFlag %Make sure to switch the LEDs on again if the trials are paced!
-        ManualOverride('OP',1); %Switch on LED on port 1,...
-        ManualOverride('OP',2);
-        ManualOverride('OP',3);
-        ManualOverride('OP',4);
+        if pacedFlag 
+        LEDswitch() %Make sure to switch the LEDs on again if the trials are paced!
         end
         %--------------------------------------------------------------------------
         %% Retrieve the trial information to save it
@@ -545,6 +543,10 @@ if BpodSystem.Status.BeingUsed == 0
         save(BpodSystem.Path.CurrentDataFile{2},'SessionData') %If there is an observer, save to her/his folder as well wit hthe .obsmat suffix
     end
     PsychToolboxSoundServer('Close');
+    
+    if pacedFlag
+        LEDswitch()%switch off at the end
+    end
     
         %Now copy the saved file over to the server
     if ~isempty(BpodSystem.ProtocolSettings.serverPath) %Only copy to a server when one is specified
@@ -662,6 +664,9 @@ end
     end
     PsychToolboxSoundServer('Close');
     
+    if pacedFlag
+        LEDswitch()%switch off at the end
+    end
     %Now copy the saved file over to the server
     if ~isempty(BpodSystem.ProtocolSettings.serverPath) %Only copy to a server when one is specified
         if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
