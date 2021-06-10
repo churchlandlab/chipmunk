@@ -165,9 +165,9 @@ BpodSystem.Data.Rewarded = 0;
 BpodSystem.Data.EarlyWithdrawal = 0;
 BpodSystem.Data.DidNotChoose = 0;
 BpodSystem.Data.DidNotInitiate = 0;
-BpodSystem.Data.ResponseSideRecord = NaN;
+BpodSystem.Data.ResponseSide = NaN;
 BpodSystem.Data.Modality = NaN;
-BpodSystem.Data.CorrectSideRecord = NaN;
+BpodSystem.Data.CorrectSide = NaN;
 BpodSystem.Data.ValidTrials = 0;
 BpodSystem.Data.LeftSideRewardAmount = 0; %The cumulatively harvested amount of water on the left side, a scalar
 BpodSystem.Data.RightSideRewardAmount = 0;
@@ -176,7 +176,9 @@ BpodSystem.Data.CorrectResponse = NaN;
 %refreshing the figures whereas the NaN containing variables are yet
 %undefined
 
-BpodSystem.Data.TaskPase = BpodSystem.ProtocolSettings.experimentName;
+BpodSystem.Data.TaskPhase = BpodSystem.ProtocolSettings.experimentName;
+BpodSystem.Data.ReviseChoiceFlag = reviseChoiceFlag;
+BpodSystem.Data.PacedFlag = pacedFlag;
 %--------------------------------------------------------------------------
 %% Initialize GUI and plots
 

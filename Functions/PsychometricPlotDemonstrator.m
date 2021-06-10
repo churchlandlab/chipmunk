@@ -53,9 +53,9 @@ switch plotMethod
         %Lift legend a bit and fit to left side or right depending on the high rate side
        BpodSystem.GUIHandles.PsychometricPlotLegend.Position(2) = 0.44; %Lift it up a bit
         if strcmpi(BpodSystem.ProtocolSettings.highRateSide,'R')
-            BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.016;
+            BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.035;
         else
-            BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.126;
+            BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.17;
         end
  
         hold(AxesHandle,'on') %Make sure to keep the axes properties

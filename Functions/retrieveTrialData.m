@@ -85,6 +85,9 @@ end
 if isfield(trialDelays,'trialStartDelay')
     BpodSystem.Data.TrialStartDelay(TrialsDone) = trialDelays.trialStartDelay;
 end
+if isfield(trialDelays,'interTrialInterval')
+     BpodSystem.Data.InterTrialInterval = trialDelays.interTrialInterval;
+end
 BpodSystem.Data.PreStimDelay(TrialsDone) = trialDelays.preStimDelay;
 BpodSystem.Data.SetWaitTime(TrialsDone) = trialDelays.waitTime; %This value may update during every loop.
 BpodSystem.Data.TotalStimDuration(TrialsDone) = stimTrainDuration;

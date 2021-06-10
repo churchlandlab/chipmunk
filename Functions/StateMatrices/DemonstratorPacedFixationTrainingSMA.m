@@ -52,6 +52,10 @@ end
 %--------------------------------------------------------------------------
 %% Generate the variable trial timers etc.
 
+%Generate a random time delay between trials to account for the observer
+%harvesting its own reward and initiate again
+interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTrialDurLambda, BpodSystem.ProtocolSettings.interTrialDurMin, BpodSystem.ProtocolSettings.interTrialDurMax);
+
 %The delay when the observer pokes until the demonstrator task starts -
 %drawn from the same distribution as the pre-stimulus delay
 trialStartDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
@@ -74,10 +78,16 @@ taskDelays.trialStartDelay = trialStartDelay;
 taskDelays.preStimDelay = preStimDelay;
 taskDelays.waitTime = waitTime;
 taskDelays.postStimDelay = postStimDelay;
+taskDelays.interTrialInterval = interTrialInterval;
 %--------------------------------------------------------------------------
 %% Assemble the state matrix
 
 sma = NewStateMatrix(); %generate a new empty state matrix
+
+sma = AddState(sma, 'Name', 'ObsTrialStart', ...
+    'Timer', interTrialInterval, ...
+    'StateChangeCondition', {'Tup','DemonTrialStart'},...
+    'OutputActions',{'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
 
 sma = AddState(sma, 'Name', 'ObsInitFixation', ...
     'Timer', trialStartDelay, ...
@@ -101,8 +111,12 @@ sma = AddState(sma, 'Name', 'DemonCenterFixationPeriod','Timer',waitTime, ...
     'OutputActions', {'PWM4',255});
 
 sma = AddState(sma, 'Name', 'DemonGoCue','Timer',0, ...
-    'StateChangeConditions', {'Tup','DemonWaitForResponse'},...
+    'StateChangeConditions', {'Tup','DemonWaitForWithdrawalFromCenter'},...
     'OutputActions', {'SoftCode',3,'PWM4',255});
+
+sma = AddState(sma, 'Name', 'DemonWaitForWithdrawalFromCenter','Timer',0, ...
+    'StateChangeConditions', {'Tup','DemonWaitForResponse'},...
+    'OutputActions', {'PWM4',255});
 
 if rewardedSide == 0 %The left side
     sma = AddState(sma, 'Name', 'DemonWaitForResponse','Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
