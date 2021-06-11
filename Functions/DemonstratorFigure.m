@@ -156,7 +156,8 @@ switch figMethod
         
         %Here first the state logic plot
         BpodSystem.GUIHandles.StateLogic = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl,...
-            'Units', 'Normal', 'Position', [0.05, 0.45, 0.9, 0.5]);
+            'Units', 'Normal', 'Position', [0.05, 0.45, 0.9, 0.5],'NextPlot','add');
+        BpodSystem.GUIHandles.StateLogic.XAxis.Visible = 'off';BpodSystem.GUIHandles.StateLogic.YAxis.Visible = 'off';
         title(BpodSystem.ProtocolSettings.smaAssembler)
         
         %Set the different Task control panels
@@ -365,7 +366,7 @@ switch figMethod
         
         BpodSystem.GUIHandles.LabelsVal.leftSideReward.String = num2str(BpodSystem.Data.LeftSideRewardAmount);
         BpodSystem.GUIHandles.LabelsVal.rightSideReward.String = num2str(BpodSystem.Data.RightSideRewardAmount);
-        BpodSystem.GUIHandles.LabelsVal.totalReward.String = num2str(BpodSystem.Data.LeftSideRewardAmount + BpodSystem.Data.LeftSideRewardAmount);
+        BpodSystem.GUIHandles.LabelsVal.totalReward.String = num2str(BpodSystem.Data.LeftSideRewardAmount + BpodSystem.Data.RightSideRewardAmount);
         %------------------------------------------------------------------
         
         %%

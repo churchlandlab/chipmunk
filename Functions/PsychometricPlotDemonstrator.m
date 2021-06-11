@@ -65,9 +65,9 @@ switch plotMethod
     case 'refresh'
         %Check back whether the side record is still correct
          if strcmpi(BpodSystem.ProtocolSettings.highRateSide,'R') &&  BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) ~= 0.016
-            BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.016;
+            BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.035;
          elseif strcmpi(BpodSystem.ProtocolSettings.highRateSide,'L') &&  BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) ~= 0.126
-            BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.126;
+            BpodSystem.GUIHandles.PsychometricPlotLegend.Position(1) = 0.17;
          end
         
         numTrialsDone = length(BpodSystem.Data.ValidTrials); %Get the number of completed trial to decide on the plotting
