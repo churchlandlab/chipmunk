@@ -89,6 +89,7 @@ switch plotMethod
         %Plot past trials
         if currentTrial > 1 %Only needed when the current trial is at least the second one
             indxToPlot = mn:currentTrial-1;
+
             %Plot Error, unpunished
             EarlyWithdrawalTrialsIndx = (OutcomeRecord(indxToPlot) == -1);
             Xdata = indxToPlot(EarlyWithdrawalTrialsIndx); Ydata = TrialSidesList(Xdata);

@@ -119,7 +119,7 @@ stimTrainDuration = 1;
 %Generate a random list of trial sides based on the porportion of left
 %choices in the settings.
 maxTrialNum = 5000; %Constrain the number of trials but at rather high value
-TrialSidesList = double(rand(1,maxTrialNum) > (1-S.propLeft)); %Right side trials will be assigned 1 and left trials 0
+TrialSidesList = double(rand(1,maxTrialNum) > S.propLeft); %Right side trials will be assigned 1 and left trials 0
 % IMPORTANT: get as double so that it does not mess up other functions
 
 %Prealocate variables for the anti bias functions
@@ -171,7 +171,7 @@ BpodSystem.Data.CorrectSide = NaN;
 BpodSystem.Data.ValidTrials = 0;
 BpodSystem.Data.LeftSideRewardAmount = 0; %The cumulatively harvested amount of water on the left side, a scalar
 BpodSystem.Data.RightSideRewardAmount = 0;
-BpodSystem.Data.CorrectResponse = NaN;
+BpodSystem.Data.CorrectResponse = 0;
 %Arrays with a zero do alreay contain information that is read out by
 %refreshing the figures whereas the NaN containing variables are yet
 %undefined
@@ -267,7 +267,7 @@ for currentTrial = 1:maxTrialNum
         
         if prevPropLeft ~= S.propLeft
             remainingTrialNum = maxTrialNum - TrialsDone;
-            TrialSidesList(currentTrial:maxTrialNum) = rand(1,remainingTrialNum) < S.propLeft; %Redraw the sides
+            TrialSidesList(currentTrial:maxTrialNum) = double(rand(1,remainingTrialNum) > S.propLeft); %Redraw the sides
             prevPropLeft = S.propLeft; %Retain this left side probability to compare the next time
             outcomePlotLimits = OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'refresh',...
                 currentTrial,TrialSidesList,BpodSystem.Data.OutcomeRecord); %Update the display if changed
@@ -289,15 +289,15 @@ for currentTrial = 1:maxTrialNum
                     %This is to discard no-initiation trials and early withdrawals (-2 & -1)
                     %and no-choice (2) trials.
                     if S.antiBiasStrength > 0
-                    pLeft = getAntiBiasPleft(trialHistoryBiases, trialModalityBiases, ModalityRecord(currentTrial), ...
-                        S.antiBiasStrength, BpodSystem.Data.ResponseSideRecord(TrialsDone), BpodSystem.Data.OutcomeRecord(TrialsDone));
+                    pLeft = getAntiBiasPLeft(trialHistoryBiases, modalityBiases, ModalityRecord(currentTrial), ...
+                        S.antiBiasStrength, BpodSystem.Data.ResponseSide(TrialsDone), BpodSystem.Data.OutcomeRecord(TrialsDone));
                     %Get the new left side probability. CurrentTrial refers to
                     %the upcoming not yet completed trial, while trials done
                     %is the index of the last completed one.
-                    TrialSidesList(currentTrial) = double(rand < pLeft); %Changed from original more complicated: rand > (1-S.propLeft);
+                    TrialSidesList(currentTrial) = double(rand > pLeft); %Changed from original more complicated: rand > (1-S.propLeft);
                
                     outcomePlotLimits = OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'refresh',...
-                currentTrial,TrialSidesList,BpodSystem.Data.OutcomeRecord(TrialsDone)); %Update the display if changed
+                currentTrial,TrialSidesList,BpodSystem.Data.OutcomeRecord); %Update the display if changed
                     end
                 end
             end
