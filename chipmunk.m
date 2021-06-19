@@ -607,7 +607,7 @@ end
     elseif strcmpi(S.minWaitTime,'Exp') && S.minWaitTimeStep ~= 0
         S.minWaitTimeStep = 0;
     else %Increase the wait times only when the mouse has been waiting successfully
-        if ~BpodSystem.Data.EarlyWithdrawal(TrialsDone) || ~BpodSystem.Data.DidNotInitiate(TrialsDone)
+        if BpodSystem.Data.OutcomeRecord(TrialsDone) > -1 % If the last trial was initiated and the animal waited long enough
             S.minWaitTime = S.minWaitTime + S.minWaitTimeStep;
         end
     end
