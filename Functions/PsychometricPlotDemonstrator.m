@@ -74,7 +74,7 @@ switch plotMethod
         %Go through the different modalities. First, get the completed
         %trials of the respective modality.
         %Visual
-        completedVisualTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==1); %check all the trials so far
+        completedVisualTrials = BpodSystem.Data.ResponseSide(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==1); %check all the trials so far
         visualFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==1);
         Xdata = unique(visualFrequencies); %find the different frequencies that used so far
         if ~isempty(Xdata) %check whether there are actually data
@@ -85,7 +85,7 @@ switch plotMethod
         end
         
         %Auditory
-        completedAuditoryTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==2);
+        completedAuditoryTrials = BpodSystem.Data.ResponseSide(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==2);
         auditoryFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==2);
         Xdata = unique(auditoryFrequencies); %find the different frequencies that used so far
         if ~isempty(Xdata)
@@ -96,7 +96,7 @@ switch plotMethod
         end
         
         %Multi-sensory
-        completedMultiSensoryTrials = BpodSystem.Data.OutcomeRecord(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==3);
+        completedMultiSensoryTrials = BpodSystem.Data.ResponseSide(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==3);
         multiSensoryFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==3);
         Xdata = unique(multiSensoryFrequencies); %find the different frequencies that used so far
         if ~isempty(Xdata)
