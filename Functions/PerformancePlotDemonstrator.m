@@ -100,8 +100,8 @@ numTrialsDone = length(BpodSystem.Data.OutcomeRecord); %Get the number of comple
                    setOfOutcomes(setOfOutcomes > 1) = NaN; %Reomove info of non-completed trials
                    setOfOutcomes(setOfOutcomes < 0) = NaN;
                    BpodSystem.GUIData.PerformancePlotDemonstrator.overallLineData(end+1) = nanmean(setOfOutcomes); %overall performance
-                   BpodSystem.GUIData.PerformancePlotDemonstrator.leftLineData(end+1) = nanmean(setOfOutcomes(BpodSystem.Data.ResponseSide(lowerWin:numTrialsDone)==0));
-                   BpodSystem.GUIData.PerformancePlotDemonstrator.rightLineData(end+1) = nanmean(setOfOutcomes(BpodSystem.Data.ResponseSide(lowerWin:numTrialsDone)==1));
+                   BpodSystem.GUIData.PerformancePlotDemonstrator.leftLineData(end+1) = nanmean(setOfOutcomes(BpodSystem.Data.CorrectSide(lowerWin:numTrialsDone)==0));
+                   BpodSystem.GUIData.PerformancePlotDemonstrator.rightLineData(end+1) = nanmean(setOfOutcomes(BpodSystem.Data.CorrectSide(lowerWin:numTrialsDone)==1));
                    BpodSystem.GUIData.PerformancePlotDemonstrator.xaxis(end+1) = numTrialsDone - displayInterval; %Append onto the Xaxis
                    
                    %Change the line properties
