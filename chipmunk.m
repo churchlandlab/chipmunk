@@ -76,7 +76,7 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
             end
 
             videoDataPath = subjectFolder;
-[~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile);
+[~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{1});
             fwrite(udpObj,['expname=' videoDataPath filesep bhvFile])
             fgetl(udpObj);
             fwrite(udpObj,'manualsave=0')
