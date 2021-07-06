@@ -601,7 +601,7 @@ end
     %  the outcome of the trial that was just completed.
     
     % If previous trial was not an early withdrawal, increase wait duration
-    if strcmpi(S.minWaitTime,'Exp') && S.minWaitTimeStep ~= 0
+    if strcmpi(S.minWaitTime,'Exp') %There are no more wait time steps once the exponential delay mode has been reached.
        S.minWaitTimeStep = 0;
     elseif S.minWaitTime >=1.1
         S.minWaitTimeStep = 0;
