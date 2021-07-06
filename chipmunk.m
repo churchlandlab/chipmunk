@@ -601,11 +601,11 @@ end
     %  the outcome of the trial that was just completed.
     
     % If previous trial was not an early withdrawal, increase wait duration
-    if S.minWaitTime >=1.1
+    if strcmpi(S.minWaitTime,'Exp') && S.minWaitTimeStep ~= 0
+       S.minWaitTimeStep = 0;
+    elseif S.minWaitTime >=1.1
         S.minWaitTimeStep = 0;
         S.minWaitTime = 1.1;
-    elseif strcmpi(S.minWaitTime,'Exp') && S.minWaitTimeStep ~= 0
-        S.minWaitTimeStep = 0;
     else %Increase the wait times only when the mouse has been waiting successfully
         if BpodSystem.Data.OutcomeRecord(TrialsDone) > -1 % If the last trial was initiated and the animal waited long enough
             S.minWaitTime = S.minWaitTime + S.minWaitTimeStep;
