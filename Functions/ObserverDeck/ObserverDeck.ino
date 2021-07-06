@@ -54,13 +54,10 @@ void setup() {
   int previousBeamState = 0; // Detect change in the beam state compared to prior state
   bool doCounting = 0; // Boolean to check whether events need to be counted
 
-void loop() {
-  // Check for input bytes and execute respective action according to the info.
-  nBytes = Serial1.available();
-  if (nBytes > 0) { // If a byte arrived from the state machine
-     serialInputInfo = Serial1COM.readByte(); // For some reason one needs to refer to SerialCOM1 here rather than Serial1.
-     
-     ////--------Checking---------/////
+void serialEvent1(){
+// Only try reading bytes when they are available 
+serialInputInfo = Serial1COM.readByte(); // For some reason one needs to refer to SerialCOM1 here rather than Serial1.
+////--------Checking---------/////
      Serial.print("serialInputInfo: ");
      Serial.println(serialInputInfo); //If connected via USB report the input info in the serial viewer
      Serial.print("\n");
@@ -69,13 +66,16 @@ void loop() {
      switch (serialInputInfo) { // Check the input information
             case SEND_MODULE_INFO:
             returnModuleInfo();
+            break;
   
             case START_COUNTING:
             doCounting = 1;
             countUnbroken = 0; //This is important because stuff might happen before...
+            break;
 
             case STOP_COUNTING:
             doCounting = 0;
+            break;
 
             case REPORT_COUNT:
               if (countUnbroken == 0) { // Send either success or fail back to Bpod
@@ -90,11 +90,14 @@ void loop() {
               Serial.print("\n");
               ////------------------////
 
+              break;
+              
               default:
               break;
       }
-    }
+}
 
+void loop() {
     // Check for changes in the beam state
     beamState = digitalRead(BeamBreakReadoutPin); //Get the current beam break state
     if (beamState != previousBeamState) {
