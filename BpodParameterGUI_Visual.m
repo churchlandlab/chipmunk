@@ -15,7 +15,7 @@ switch Op
         nValues = length(ParamNames);
         ParamValues = struct2cell(Params);
         
-        Vsize = 5+(23*nValues);
+        Vsize = 5+(20*nValues);
         BpodSystem.GUIHandles.Figures.ParamFig = figure('Position', [200 0 230 Vsize],'name','Live Params','numbertitle','off', 'MenuBar', 'none', 'Resize', 'on');
         uicontrol('Style', 'text', 'String', 'Parameter', 'Position', [10 Vsize-30 120 20], 'FontWeight', 'bold', 'FontSize', 11, 'FontName', 'Arial');
         uicontrol('Style', 'text', 'String', 'Value', 'Position', [140 Vsize-30 80 20], 'FontWeight', 'bold', 'FontSize', 11, 'FontName', 'Arial');
@@ -34,10 +34,10 @@ switch Op
             end
             eval(['BpodSystem.GUIHandles.ParameterGUI.LabelsHandle(x) = uicontrol(''Style'', ''text'', ''String'', ''' ParamNames{x} ''', ''Position'', [10 ' num2str(Pos) ' 120 15], ''FontWeight'', ''normal'', ''FontSize'', 9, ''FontName'', ''Arial'');']);
             eval(['BpodSystem.GUIHandles.ParameterGUI.ParamValHandle(x) = uicontrol(''Style'', ''edit'', ''String'', ''' num2str(ParamValues{x}) ''', ''Position'', [140 ' num2str(Pos) ' 80 20], ''FontWeight'', ''normal'', ''FontSize'', 9, ''FontName'', ''Arial'');']);
-            Pos = Pos - 18; %20
+            Pos = Pos - 16; %20
         end
-        cont = uicontrol('Style', 'pushbutton', 'String', 'Start', 'Position', [40 120 150 18], 'Callback', {@update_settings_callback});
-        uicontrol('Style', 'pushbutton', 'String', 'Save settings', 'Position', [40 100 150 18], 'Callback', {@save_settings_callback});
+        cont = uicontrol('Style', 'pushbutton', 'String', 'Start', 'Position', [40 60 150 18], 'Callback', {@update_settings_callback});
+        uicontrol('Style', 'pushbutton', 'String', 'Save settings', 'Position', [40 80 150 18], 'Callback', {@save_settings_callback});
         
         
     case 'update'

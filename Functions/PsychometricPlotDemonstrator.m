@@ -75,7 +75,7 @@ switch plotMethod
         %trials of the respective modality.
         %Visual
         completedVisualTrials = BpodSystem.Data.ResponseSide(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==1); %check all the trials so far
-        visualFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==1);
+        visualFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==1,1); %First column is visual freq
         Xdata = unique(visualFrequencies); %find the different frequencies that used so far
         if ~isempty(Xdata) %check whether there are actually data
             for k = 1:length(Xdata)
@@ -86,7 +86,7 @@ switch plotMethod
         
         %Auditory
         completedAuditoryTrials = BpodSystem.Data.ResponseSide(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==2);
-        auditoryFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==2);
+        auditoryFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==2,2); %Second column is auditory stimuli
         Xdata = unique(auditoryFrequencies); %find the different frequencies that used so far
         if ~isempty(Xdata)
             for k = 1:length(Xdata)
@@ -97,8 +97,8 @@ switch plotMethod
         
         %Multi-sensory
         completedMultiSensoryTrials = BpodSystem.Data.ResponseSide(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==3);
-        multiSensoryFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==3);
-        Xdata = unique(multiSensoryFrequencies); %find the different frequencies that used so far
+        multiSensoryFrequencies = BpodSystem.Data.StimulusRate(BpodSystem.Data.ValidTrials==1 & BpodSystem.Data.Modality==3,1); %For multi-sensory take the visual frequency...
+        Xdata = unique(multiSensoryFrequencies); %find the different frequencies used so far
         if ~isempty(Xdata)
             for k = 1:length(Xdata)
                 Ydata(k) = mean(completedMultiSensoryTrials(multiSensoryFrequencies == Xdata(k))); %Get the average number of right choices for the respective frequency
