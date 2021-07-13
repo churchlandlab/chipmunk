@@ -115,9 +115,9 @@ switch figMethod
         uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0,2/3,0.2],'style', 'text', 'String','No reward retrieved:','HorizontalAlignment','right');
         
         BpodSystem.GUIHandles.LabelsVal.obsTrialsDone = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.75,1/3,0.2],'style', 'text', 'String','0');
-        BpodSystem.GUIHandles.LabelsVal.obsCompletedTrials = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.5,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsCompletedTrials)));
-        BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.25,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsEarlyWithdrawals)));
-        BpodSystem.GUIHandles.LabelsVal.obsNoRewardRetrieved = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsDidNotHarvest)));
+        BpodSystem.GUIHandles.LabelsVal.obsCompletedTrials = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.5,1/3,0.2],'style', 'text', 'String',num2str());
+        BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.25,1/3,0.2],'style', 'text', 'String','0');
+        BpodSystem.GUIHandles.LabelsVal.obsNoRewardRetrieved = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0,1/3,0.2],'style', 'text', 'String','0');
         %---------
         %Observer reward summary display panel
         uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0,-0.1,2/3,1],'style', 'text', 'String','Total reward:','HorizontalAlignment','right');
