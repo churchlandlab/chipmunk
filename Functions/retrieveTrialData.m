@@ -48,7 +48,13 @@ BpodSystem.Data.TrialSettings(TrialsDone) = BpodSystem.ProtocolSettings;
 BpodSystem.Data.CorrectSide(TrialsDone) = TrialSidesList(TrialsDone);
 BpodSystem.Data.Rewarded(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonReward(1));
 BpodSystem.Data.EarlyWithdrawal(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1));
-BpodSystem.Data.DidNotChoose(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonDidNotChoose(1));
+
+BpodSystem.Data.DidNotChoose(TrialsDone) = 0; %Assume default false
+if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States,'DemonDidNotInitiate') %In the observer fixation training this state does not exist
+    if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonDidNotChoose(1));
+        BpodSystem.Data.DidNotChoose = 0;
+    end
+end
 
 BpodSystem.Data.DidNotInitiate(TrialsDone) = 0; %Assume default false
 if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States,'DemonDidNotInitiate') %In the paced version check whether the demonstrator did the trial
@@ -96,12 +102,20 @@ BpodSystem.Data.ExtraStimDuration(TrialsDone) = BpodSystem.ProtocolSettings.extr
 
 %Compute time spent in center for  each trial with one nose poke in
 %and out of the center port.
-BpodSystem.Data.ActualWaitTime(TrialsDone) = nan;
-if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2Out') && isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2In')
-    if (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out)== 1) && (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In) == 1)
-        BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In;
+BpodSystem.Data.ActualWaitTime(TrialsDone) = NaN;
+if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1)) %A wait time only exists when the demonstrator initiates
+    if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonWaitForResponse(1))
+        BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonWaitForResponse(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
+    elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1))
+        BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
     end
 end
+% 
+% if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2Out') && isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2In')
+%     if (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out)== 1) && (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In) == 1)
+%         BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In;
+%     end
+% end
 
 ResponseSideRecord = NaN; %Pre-set the response to NaN and change if the trial was valid
 if reviseChoiceFlag %Check for the actual response side if the animal can revise its decision
@@ -174,6 +188,6 @@ end
 
 %And now we check the data for the observer...
 if isfield(BpodSystem.ProtocolSettings,'obsID')
-    %Code here
+
 end
 end

@@ -74,7 +74,7 @@ switch plotMethod
         
         %Fit distribution if enough trials are acquired
         if doFitFlag
-            if numTrialsDone >= minNumToFit
+            if numTrialsDone >= minNumToFit && sum(~isnan(Ydata)) > 5
                 distribObj = fitdist(Ydata',distName); %Needs a column vector of Ydata
                 Xdata = (-1.1:0.05:0.5)';
                 YdataFit = pdf(distribObj,Xdata); %Generate the fitting line

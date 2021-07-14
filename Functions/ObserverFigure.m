@@ -18,7 +18,9 @@ switch figMethod
     %% Initialize figure
     case 'init'
         %Generate figure
-        BpodSystem.GUIHandles.Figures.ObsFigure = figure('Units','Normal','Position',[0, 0.06, 0.499, 0.45],...
+        screenParam = get(0,'screensize');
+        
+        BpodSystem.GUIHandles.Figures.ObsFigure = figure('Units','Pixels','Position',[screenParam(1)+10, screenParam(2)+50, 680,350],...
             'Name',[BpodSystem.ProtocolSettings.experimentName ' - ' BpodSystem.ProtocolSettings.obsID ' - Observer'],...
             'NumberTitle','off','MenuBar','none');
         
@@ -81,7 +83,7 @@ switch figMethod
         BpodSystem.GUIHandles.ParamEdit.simulatedEarlyWithdrawalRate = uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,...
             'Units', 'normal', 'Position',[0.85,0.25,0.15,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.simulatedEarlyWithdrawalRate);
         BpodSystem.GUIHandles.ParamEdit.simultaneousRewardDelivery = uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,...
-            'Units', 'normal', 'Position',[0.85,0,0.15,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.simultaneousRewardDelivery);
+            'Units', 'normal', 'Position',[0.85,0,0.15,0.25],'style', 'edit', 'String',num2str(BpodSystem.ProtocolSettings.simultaneousRewardDelivery));
         
         %---------
         %Observer virtual demonstrator panel
@@ -116,7 +118,7 @@ switch figMethod
         
         BpodSystem.GUIHandles.LabelsVal.obsTrialsDone = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.75,1/3,0.2],'style', 'text', 'String','0');
         BpodSystem.GUIHandles.LabelsVal.obsCompletedTrials = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.5,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsCompletedTrials)));
-        BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.25,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsEarlyWithdrawals)));
+        BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.25,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsEarlyWithdrawal)));
         BpodSystem.GUIHandles.LabelsVal.obsNoRewardRetrieved = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsDidNotHarvest)));
         %---------
         %Observer reward summary display panel
@@ -129,7 +131,7 @@ switch figMethod
     case 'refresh'
         BpodSystem.GUIHandles.LabelsVal.obsTrialsDone.String = num2str(length(BpodSystem.Data.ObsOutcomeRecord));
         BpodSystem.GUIHandles.LabelsVal.obsCompletedTrials.String = num2str(sum(BpodSystem.Data.ObsCompletedTrials));
-        BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals.String = num2str(sum(BpodSystem.Data.ObsEarlyWithdrawals));
+        BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals.String = num2str(sum(BpodSystem.Data.ObsEarlyWithdrawal));
         BpodSystem.GUIHandles.LabelsVal.obsNoRewardRetrieved.String = num2str(sum(BpodSystem.Data.ObsDidNotHarvest));
         
         %%

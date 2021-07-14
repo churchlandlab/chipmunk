@@ -118,10 +118,16 @@ taskDelays.reportingTime = reportingTime;
 % the observer has to learn to ignore if it performs the observer task.
 
 if rand < BpodSystem.ProtocolSettings.simulatedEarlyWithdrawalRate
+    if BpodSystem.ProtocolSettings.minObsTime > 2
     earlyWithdrawalTime = 2 - generate_random_delay(lambdaVirtualEarlyWithdrawalTime, minVirtualEarlyWithdrawalTime, maxVirtualEarlyWithdrawalTime);
     %Draw a random time point for the early withdrawal and assume one
     %second for the demonstrator to initiate the trial. Make a later
     %withdrawal more likely.
+    else % When the animals are not yet waiting long enough
+        earlyWithdrawalTime = rand * waitTime;
+    end
+    
+    trialOutcome = 'DemonReward'; %Let's just assume the mouse would choose correctly if it stayed
 else
     if rand > BpodSystem.ProtocolSettings.simulatedCorrectRate
         trialOutcome = 'DemonWrongChoice';
@@ -142,14 +148,14 @@ sma = AddState(sma, 'Name', 'ObsTrialStart', ...
     'OutputActions',{'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
 %ObserverDeck1_1 refers to the beam on the observer deck being broken
 
-if isnan(earlyWithdrawalTime)    
+if ~isnan(earlyWithdrawalTime)    
 sma = AddState(sma, 'Name', 'DemonInitFixation','Timer',earlyWithdrawalTime, ...
     'StateChangeConditions', {'Tup','DemonEarlyWithdrawal'},...
     'OutputActions', {'SoftCode', 2, 'PWM4',255, 'ObserverDeck1',30}); %Send the trial initiaton cue and tell teensy to start looking at observer beam break
 else
     sma = AddState(sma, 'Name', 'DemonInitFixation','Timer',waitTime, ...
-    'StateChangeConditions', {'Tup',DemonGoCue},...
-    'OutputActions', {'PWM4',255,'ObserverDeck1',30});
+    'StateChangeConditions', {'Tup','DemonGoCue'},...
+    'OutputActions', {'SoftCode',2,'PWM4',255,'ObserverDeck1',30});
 end
 
 sma = AddState(sma, 'Name', 'DemonGoCue','Timer',0, ...
@@ -176,14 +182,14 @@ sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal','Timer',0, ...
 % Play the punishment sound and send stop counting to teensy, switch on all
 % the LEDs.
 
-if simultaneousRewardDelivery % For training one may want to click the observer valve already to form an association
+if BpodSystem.ProtocolSettings.simultaneousRewardDelivery % For training one may want to click the observer valve already to form an association
     sma = AddState(sma, 'Name', 'ObsCheckFixationSuccess','Timer',0, ...
     'StateChangeConditions', {'ObserverDeck1_3','ObsRewardDelivery','ObserverDeck1_4','ObsEarlyWithdrawal'},...
     'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'ObserverDeck1',32});
 
 sma = AddState(sma, 'Name', 'ObsRewardDelivery','Timer',obsRewardValveTime, ...
     'StateChangeConditions', {'Tup','ObsWaitForRewardRetrieval'},...
-    'OutputActions', {'ValveState', ObsRewardValve,'PWM1',255,'PWM2',255,'PWM3',255});
+    'OutputActions', {'ValveState', obsRewardValve,'PWM1',255,'PWM2',255,'PWM3',255});
 
 sma = AddState(sma, 'Name', 'ObsWaitForRewardRetrieval','Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
     'StateChangeConditions', {'Port4In','ObsReward', 'Tup','FinishTrial'},...
@@ -208,13 +214,12 @@ sma = AddState(sma, 'Name', 'ObsWaitForRewardRetrieval','Timer',BpodSystem.Proto
 
 sma = AddState(sma, 'Name', 'ObsReward','Timer',obsRewardValveTime, ...
     'StateChangeConditions', {'Port4Out','FinishTrial'},...
-    'OutputActions', {'ValveState', ObsRewardValve,'PWM1',255,'PWM2',255,'PWM3',255});
+    'OutputActions', {'ValveState', obsRewardValve,'PWM1',255,'PWM2',255,'PWM3',255});
 end
 
  sma = AddState(sma, 'Name', 'ObsEarlyWithdrawal','Timer',0, ...
     'StateChangeConditions', {'Tup','FinishTrial'},...
     'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
-
 
 sma = AddState(sma, 'Name', 'FinishTrial','Timer',0, ...
     'StateChangeConditions', {'Tup','>exit'},...

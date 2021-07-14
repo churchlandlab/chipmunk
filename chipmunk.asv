@@ -154,11 +154,7 @@ prevPropLeft = S.propLeft; %store this value to update the sides list if necessa
 % % %% Initialize variables used for display. These variables 
 % % OutcomeRecord = nan(1,maxTrialNum); 
 ModalityRecord = nan(1,maxTrialNum);
-% % ResponseSideRecord = nan(1,maxTrialNum);
-LeftSideRewardAmount = 0;
-RightSideRewardAmount = 0;
 
-ObsReward = 0; % 
 %--------------------------------------------------------------------------
 %% Initialize arrays for storing values and display
 BpodSystem.Data.OutcomeRecord = NaN;
@@ -178,6 +174,7 @@ if isfield(S, 'obsID')
     BpodSystem.Data.ObsCompletedTrials = 0;
     BpodSystem.Data.ObsEarlyWithdrawal = 0;
     BpodSystem.Data.ObsDidNotHarvest = 0;
+    BpodSystem.Data.ObsReward = 0;
 end
 %Arrays with a zero do alreay contain information that is read out by
 %refreshing the figures whereas the NaN containing variables are yet
@@ -264,7 +261,9 @@ for currentTrial = 1:maxTrialNum
         %updated, for example the minWaitTime. Again, make sure to have the
         %observer if there is an observer.
         DemonstratorFigure('refresh', S); %Do this only after updating the user input to  avoid overriding it!
-        
+        if isfield(S, 'obsID')
+            ObserverFigure('refresh'); %Refresh the display of the trial outcomes 
+        end
         %----------------------------------------------------------------------
         %% Randomly select the stimulus modality for the current trial
         ModalityRecord(currentTrial) = drawStimModality;
@@ -620,6 +619,18 @@ end
             S.minWaitTime = S.minWaitTime + S.minWaitTimeStep;
         end
     end
+    
+    if isfield(BpodSystem.ProtocolSettings, 'obsID') %In
+        if S.minObsTimeStep > 0
+            if S.minObsTime >= S.simulatedMedianDemonTrialDur
+    S.minObsTimeStep = 0;
+            else
+                S.minObsTime = S.minObsTime + S.minObsTimeStep
+            end
+        end
+    end
+    
+    
     
     %Update the anti-bias arrays
     if BpodSystem.Data.ValidTrials(TrialsDone) %Only update biases if the trial has been valid, meaning a choice was made.

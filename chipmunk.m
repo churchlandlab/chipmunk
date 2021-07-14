@@ -620,6 +620,16 @@ end
         end
     end
     
+    if isfield(BpodSystem.ProtocolSettings, 'obsID') %Increase the wait time for the observer
+        if S.minObsTimeStep > 0
+            if S.minObsTime >= S.simulatedMedianDemonTrialDur
+                S.minObsTimeStep = 0;
+            else
+                S.minObsTime = S.minObsTime + S.minObsTimeStep;
+            end
+        end
+    end
+    
     %Update the anti-bias arrays
     if BpodSystem.Data.ValidTrials(TrialsDone) %Only update biases if the trial has been valid, meaning a choice was made.
         if sum(BpodSystem.Data.ValidTrials) > 1 %Make sure that there is a history to the choice
