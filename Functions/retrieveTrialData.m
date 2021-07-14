@@ -31,7 +31,7 @@ function retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,revis
 % -visualIsiList
 % -auditoryIsiList
 %
-% LO, 5/26/2021
+% LO, 5/26/2021, 7/13/2021
 %--------------------------------------------------------------------------
 global BpodSystem
 
@@ -92,7 +92,7 @@ if isfield(trialDelays,'trialStartDelay')
     BpodSystem.Data.TrialStartDelay(TrialsDone) = trialDelays.trialStartDelay;
 end
 if isfield(trialDelays,'interTrialInterval')
-     BpodSystem.Data.InterTrialInterval = trialDelays.interTrialInterval;
+ BpodSystem.Data.InterTrialInterval(TrialsDone) = trialDelays.interTrialInterval; %This is redundant in the case of an observer being present
 end
 BpodSystem.Data.PreStimDelay(TrialsDone) = trialDelays.preStimDelay;
 BpodSystem.Data.SetWaitTime(TrialsDone) = trialDelays.waitTime; %This value may update during every loop.
@@ -188,6 +188,35 @@ end
 
 %And now we check the data for the observer...
 if isfield(BpodSystem.ProtocolSettings,'obsID')
+  %Extract first the outcome information  
+    
+    % Set the default case
+    BpodSystem.Data.ObsCompletedTrials(TrialsDone) = 0;
+    BpodSystem.Data.ObsEarlyWithdrawal(TrialsDone) = 0;
+    BpodSystem.Data.ObsDidNotHarvest(TrialsDone) = 0;
+ if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsReward(1))
+     BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = 1;
+     BpodSystem.Data.ObsCompletedTrials(TrialsDone) = 1;
+     BpodSystem.Data.ObsRewardAmount = BpodSystem.Data.ObsRewardAmount + BpodSystem.ProtocolSettings.obsRewardVolume; %Add this here
+ elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsEarlyWithdrawal(1))
+     BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = -1;
+     BpodSystem.Data.ObsEarlyWithdrawal(TrialsDone) = 1;
+ elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsDidNotHarvest(1))
+     BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = 2;
+     BpodSystem.Data.ObsDidNotHarvest(TrialsDone) = 1;
+ end
 
-end
+ %Next check on the wait time
+ BpodSystem.Data.ObsSetWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsCheckFixationSuccess(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1); %This is the intervall, in which Teensy will count
+ BpodSystem.Data.ObsActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.ObserverDeck1_2(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.ObserverDeck1_2(1);
+ %Take the first breaking as the start and the first joining as the end of
+ %the observer fixation.
+
+ %Finally get the inter-trial intervals, this is important to be able to
+ %react when the observer holds up the demonstrator
+ if TrialsDone == 1
+        BpodSystem.Data.InterTrialInterval(TrialsDone) = NaN;
+ else
+     BpodSystem.Data.InterTrialInterval(TrialsDone) = BpodSystem.Data.TrialStartTimestamp(TrialsDone) - BpodSystem.Data.TrialStartTimestamp(TrialsDone-1);
+ end
 end

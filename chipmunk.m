@@ -41,9 +41,12 @@ BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 
 SamplingFreq = 192000; %The frequency of the (Fenix) sound card
 
-%%%-----------Only include demonstrator now----------%%%%%%%%%%%%%%%
-subjectFolder = fileparts(BpodSystem.Path.CurrentDataFile{1});
-%%%-----------%%%%%%%%%%%%%%%%%%%%%%%%%%%%%----------%%%%%%%%%%%%%%
+if isfield(BpodSystem.ProtocolSettings,'obsID') %If there is an observer it ill be the main subject and the videos will be saved to its folder
+[subjectFolder,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{2});
+else
+[subjectFolder,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{1});
+end
+
 %--------------------------------------------------------------------------
 %% Start labcams
 % if there is a labcam address field and it is not empty start labcams
@@ -76,7 +79,7 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
             end
 
             videoDataPath = subjectFolder;
-[~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{1});
+%[~,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{1});
             fwrite(udpObj,['expname=' videoDataPath filesep bhvFile])
             fgetl(udpObj);
             fwrite(udpObj,'manualsave=0')
@@ -174,7 +177,7 @@ if isfield(S, 'obsID')
     BpodSystem.Data.ObsCompletedTrials = 0;
     BpodSystem.Data.ObsEarlyWithdrawal = 0;
     BpodSystem.Data.ObsDidNotHarvest = 0;
-    BpodSystem.Data.ObsReward = 0;
+    BpodSystem.Data.ObsRewardAmount = 0;
 end
 %Arrays with a zero do alreay contain information that is read out by
 %refreshing the figures whereas the NaN containing variables are yet

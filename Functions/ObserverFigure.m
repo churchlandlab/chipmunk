@@ -124,7 +124,7 @@ switch figMethod
         %Observer reward summary display panel
         uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0,-0.1,2/3,1],'style', 'text', 'String','Total reward:','HorizontalAlignment','right');
         
-        BpodSystem.GUIHandles.LabelsVal.obsReward = uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[2/3,-0.1,1/3,1],'style', 'text', 'String','0');
+        BpodSystem.GUIHandles.LabelsVal.obsRewardAmount = uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[2/3,-0.1,1/3,1],'style', 'text', 'String',num2str(BpodSystem.Data.ObsRewardAmount));
         
         %--------------------------------------------------------------------------
         %%
@@ -134,6 +134,7 @@ switch figMethod
         BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals.String = num2str(sum(BpodSystem.Data.ObsEarlyWithdrawal));
         BpodSystem.GUIHandles.LabelsVal.obsNoRewardRetrieved.String = num2str(sum(BpodSystem.Data.ObsDidNotHarvest));
         
+        BpodSystem.GUIHandles.LabelsVal.obsRewardAmount.String = num2str(sum(BpodSystem.Data.ObsRewardAmount));
         %%
     case 'close'
         %simply close the figure
