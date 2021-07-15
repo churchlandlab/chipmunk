@@ -113,7 +113,7 @@ switch figMethod
         %Observer performance display panel
         uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.75,0.75,0.2],'style', 'text', 'String','Trials done:','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.5,0.75,0.2],'style', 'text', 'String','Completed trials:','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.25,0.75,0.2],'style', 'text', 'String','Early withdrawals:','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.25,0.75,0.2],'style', 'text', 'String','Withdrew early:','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0,0.75,0.2],'style', 'text', 'String','Not harvested:','HorizontalAlignment','right');
         
         BpodSystem.GUIHandles.LabelsVal.obsTrialsDone = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0.8,0.75,0.2,0.2],'style', 'text', 'String','0');
