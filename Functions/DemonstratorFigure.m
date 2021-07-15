@@ -37,6 +37,10 @@ switch figMethod
             'Name',[BpodSystem.ProtocolSettings.experimentName ' - ' BpodSystem.ProtocolSettings.demonID ' - Demonstrator'],...
             'NumberTitle','off','MenuBar','none');
         
+        %Erase prior parameter edits to be able to switch from observer to
+        %demonstrator tasks.
+        BpodSystem.GUIHandles.ParamEdit = [];
+        
         %Create the tab structure on the figure
         BpodSystem.GUIHandles.DemonFigTabs = uitabgroup('Parent', BpodSystem.GUIHandles.Figures.DemonFigure, 'TabLocation', 'left');
         BpodSystem.GUIHandles.DemonTabGroup.StimPerform = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'Stimuli & performance');
