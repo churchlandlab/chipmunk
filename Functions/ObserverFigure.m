@@ -37,17 +37,17 @@ switch figMethod
             'Position', [0.725, 0.05, 0.225, 0.12],'Title','Observer weight','FontWeight','bold');
         
         BpodSystem.GUIHandles.ObsPerformancePanel = uipanel('Parent', BpodSystem.GUIHandles.Figures.ObsFigure, 'Units', 'Normal',...
-            'Position', [0.725, 0.64, 0.25, 0.3],'Title','Performance summary','FontWeight','bold');
+            'Position', [0.775, 0.64, 0.175, 0.3],'Title','Performance summary','FontWeight','bold');
         BpodSystem.GUIHandles.ObsRewardSummaryPanel = uipanel('Parent', BpodSystem.GUIHandles.Figures.ObsFigure, 'Units', 'Normal',...
-            'Position', [0.725, 0.53, 0.25, 0.11],'Title','Reward summary','FontWeight','bold');
+            'Position', [0.775, 0.53, 0.175, 0.11],'Title','Reward summary','FontWeight','bold');
         
-        BpodSystem.GUIHandles.InterTiralInterval = axes('Parent', BpodSystem.GUIHandles.Figures.ObsFigure,...
-            'Units', 'Normal', 'Position', [0.075, 0.53, 0.375, 0.4],'tickdir','out','NextPlot','add');
+        BpodSystem.GUIHandles.InterTrialIntervalPlotObserver = axes('Parent', BpodSystem.GUIHandles.Figures.ObsFigure,...
+            'Units', 'Normal', 'Position', [0.075, 0.53, 0.3, 0.4],'tickdir','out','NextPlot','add');
         xlabel('Trial number'); ylabel('Interval between trial initiations (s)'); title('Inter trial intervals');
         box off;
-        BpodSystem.GUIHandles.ObsTimeDistribution = axes('Parent', BpodSystem.GUIHandles.Figures.ObsFigure,...
-            'Units', 'Normal', 'Position', [0.525, 0.53, 0.175, 0.4],'tickdir','out','NextPlot', 'add');
-        xlabel('Estimated count'); ylabel('Wait times (s)'); title('Obs wait time distrib');
+        BpodSystem.GUIHandles.WaitTimePlotObserver = axes('Parent', BpodSystem.GUIHandles.Figures.ObsFigure,...
+            'Units', 'Normal', 'Position', [0.45, 0.53, 0.3, 0.4],'tickdir','out','NextPlot', 'add');
+        xlabel('Estimated count'); ylabel('Wait times (s)'); title('Observer wait time');
         box off; grid on;
         %---------
 %         %Observer pre-observation panel
@@ -111,21 +111,26 @@ switch figMethod
             'Units', 'normal', 'Position',[2/3+0.025,0,1/3-0.025,1],'style', 'edit', 'String',BpodSystem.ProtocolSettings.obsWeight);
         %---------
         %Observer performance display panel
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.75,2/3,0.2],'style', 'text', 'String','Trials done:','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.5,2/3,0.2],'style', 'text', 'String','Completed trials:','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.25,2/3,0.2],'style', 'text', 'String','Early withdrawals:','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0,2/3,0.2],'style', 'text', 'String','No reward retrieved:','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.75,0.75,0.2],'style', 'text', 'String','Trials done:','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.5,0.75,0.2],'style', 'text', 'String','Completed trials:','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0.25,0.75,0.2],'style', 'text', 'String','Early withdrawals:','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0,0,0.75,0.2],'style', 'text', 'String','Not harvested:','HorizontalAlignment','right');
         
-        BpodSystem.GUIHandles.LabelsVal.obsTrialsDone = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.75,1/3,0.2],'style', 'text', 'String','0');
-        BpodSystem.GUIHandles.LabelsVal.obsCompletedTrials = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.5,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsCompletedTrials)));
-        BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0.25,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsEarlyWithdrawal)));
-        BpodSystem.GUIHandles.LabelsVal.obsNoRewardRetrieved = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[2/3,0,1/3,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsDidNotHarvest)));
+        BpodSystem.GUIHandles.LabelsVal.obsTrialsDone = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0.8,0.75,0.2,0.2],'style', 'text', 'String','0');
+        BpodSystem.GUIHandles.LabelsVal.obsCompletedTrials = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0.8,0.5,0.2,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsCompletedTrials)));
+        BpodSystem.GUIHandles.LabelsVal.obsEarlyWithdrawals = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0.8,0.25,0.2,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsEarlyWithdrawal)));
+        BpodSystem.GUIHandles.LabelsVal.obsNoRewardRetrieved = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0.8,0,0.2,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsDidNotHarvest)));
         %---------
         %Observer reward summary display panel
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0,-0.1,2/3,1],'style', 'text', 'String','Total reward:','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0,-0.1,0.75,1],'style', 'text', 'String','Total reward:','HorizontalAlignment','right');
         
-        BpodSystem.GUIHandles.LabelsVal.obsRewardAmount = uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[2/3,-0.1,1/3,1],'style', 'text', 'String',num2str(BpodSystem.Data.ObsRewardAmount));
+        BpodSystem.GUIHandles.LabelsVal.obsRewardAmount = uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0.8,-0.1,0.2,1],'style', 'text', 'String',num2str(BpodSystem.Data.ObsRewardAmount));
         
+        
+        %Set the font size on the figure here
+        fontScaling = BpodSystem.GUIHandles.LabelsVal.obsTrialsDone.FontSize;
+        set(findall(BpodSystem.GUIHandles.Figures.ObsFigure,'-property','FontSize'),'FontSize',fontScaling) %do the scaling
+
         %--------------------------------------------------------------------------
         %%
     case 'refresh'
@@ -141,9 +146,8 @@ switch figMethod
         close(BpodSystem.GUIHandles.Figures.ObsFigure)
 end
 
-%Set the font size on the figure
-% screenParam = get(0,'screensize'); %retrieve info about the pixels
-% fontScaling = screenParam(4)*(8.8/720); %determine Font size based on the height of the screen and a ratio tested before
+% %Set the font size on the figure
+% fontScaling = BpodSystem.GUIHandles.LabelsVal.obsTrialsDone.FontSize;
 % set(findall(BpodSystem.GUIHandles.Figures.ObsFigure,'-property','FontSize'),'FontSize',fontScaling) %do the scaling
 
 end

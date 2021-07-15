@@ -1,23 +1,9 @@
+%**************************************************************************
 
 
-% My first protocol for Bpod
-% David Raposo, Kachi Odoemene Sep 2014
-% Based on RateDiscrimination (by Kachi)
 
-% Modification history
-% 26-Sep-2014 by KO: Separate rewards for each port
-%                    Event rate list
-% 10-Oct-2014 by KO: Added Matt Kaufman's antibias code
-% 30-Oct-2014 by KO: Changed category boundary to 12 events/s, such that 12
-%                    evts/s is randomly rewarded. Changed ">" or "<" before categoryBoundary
-%                    to ">=" or "<=" categoryBoundary
-% 04-Jan-2015 by KO: Incorporated Matt Kaufman's antibias function
-%                    Added option for center port reward
-% 14-Jan-2015 by KO: Added functionality to plot psychometric function
-%                    Added extra stimulus
-% 28-Jan-2015 by KO: Added LED reward port cue
-% 11-Dec-2015 by KO: Added auto-run configuration. useful for test recording sessions
 
+%**************************************************************************
 function chipmunk
 
 global BpodSystem
@@ -204,6 +190,12 @@ StateMachineLogicPlot(sma, BpodSystem.GUIHandles.StateLogic);
 if isfield(S, 'obsID')
     %Set up the observer display
     ObserverFigure('init');
+    
+    %Initialize the plots on the observer figure
+    InterTrialIntervalPlotObserver(BpodSystem.GUIHandles.InterTrialIntervalPlotObserver,'init');
+    WaitTimePlotObserver(BpodSystem.GUIHandles.WaitTimePlotObserver, 'init', outcomePlotLimits);
+    %Make sure to have run OutcomePlotDemonstrator first to get the display
+    %limits!
 end
 
 %--------------------------------------------------------------------------
@@ -660,6 +652,12 @@ end
     PsychometricPlotDemonstrator(BpodSystem.GUIHandles.PsychometricPlotDemonstrator,'refresh');
     WaitTimeDiffPlotDemonstrator(BpodSystem.GUIHandles.WaitTimeDiffPlotDemonstrator,'refresh',true);
 
+    
+   if isfield(BpodSystem.ProtocolSettings,'obsID')
+    InterTrialIntervalPlotObserver(BpodSystem.GUIHandles.InterTrialIntervalPlotObserver,'refresh');
+    WaitTimePlotObserver(BpodSystem.GUIHandles.WaitTimePlotObserver, 'refresh', outcomePlotLimits);
+   end
+   
    %-----------------------------------------------------------------------
    %% Make sure to keep the data if an error occurs
    catch ME
