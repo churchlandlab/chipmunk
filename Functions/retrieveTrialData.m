@@ -52,7 +52,7 @@ BpodSystem.Data.EarlyWithdrawal(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.T
 BpodSystem.Data.DidNotChoose(TrialsDone) = 0; %Assume default false
 if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States,'DemonDidNotInitiate') %In the observer fixation training this state does not exist
     if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonDidNotChoose(1));
-        BpodSystem.Data.DidNotChoose = 0;
+        BpodSystem.Data.DidNotChoose(TrialsDone) = 1;
     end
 end
 
