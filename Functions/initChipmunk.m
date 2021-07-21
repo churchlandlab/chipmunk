@@ -62,6 +62,7 @@ uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.1,1/3-0.1,0.4,1/3],'s
 uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.1,0-0.1,0.4,1/3],'style', 'text', 'String','Server path','HorizontalAlignment','left');
 
 uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.1,2/3-0.1,0.4,1/3],'style', 'text', 'String','Labcams address','HorizontalAlignment','left');
+uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.1,1/3-0.1,0.4,1/3],'style', 'text', 'String','Select cameras','HorizontalAlignment','left');
 
 %Generating the edit fileds for user input
 %Check all conditions that feature a real demonstrator or performer and
@@ -82,6 +83,8 @@ ha.researcher = uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.55,1/
 ha.serverPath = uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.55,0,0.4,1/3],'style', 'edit','String',BpodSystem.ProtocolSettings.serverPath);
 
 ha.labcamsAddress = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.55,2/3,0.4,1/3],'style', 'edit','String',BpodSystem.ProtocolSettings.labcamsAddress);
+ha.cameraSelection = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit','String','0 1 2');
+
 %Generate the button and link to the callback
 pb = uicontrol('Parent', initPanel, 'Units', 'normal', 'Position', [2/3+0.1, 0.08, 1/3-0.2, 0.1],'Style','pushbutton','String','Initialize',...
     'Callback',{@initializeButton,ha,initPanel});
@@ -102,6 +105,7 @@ BpodSystem.ProtocolSettings.rigNo = userInput.rigNo;
 BpodSystem.ProtocolSettings.researcher = userInput.researcher;
 BpodSystem.ProtocolSettings.serverPath = userInput.serverPath;
 BpodSystem.ProtocolSettings.labcamsAddress = userInput.labcamsAddress;
+BpodSystem.ProtocolSettings.cameraSelection = userInput.cameraSelection;
 
 %--------------------------------------------------------------------------
 %Find the subjects in the data directory and generate folder structure for
