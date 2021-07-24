@@ -105,7 +105,7 @@ BpodSystem.Data.ExtraStimDuration(TrialsDone) = BpodSystem.ProtocolSettings.extr
 BpodSystem.Data.ActualWaitTime(TrialsDone) = NaN;
 if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1)) %A wait time only exists when the demonstrator initiates
     if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonWaitForResponse(1))
-        BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonWaitForResponse(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
+        BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonWaitForWithdrawalFromCenter(2) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
     elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1))
         BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
     end
