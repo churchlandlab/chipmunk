@@ -19,7 +19,7 @@ else:
     print("No COM port available. Please check teensy connection")
     
 #%%-----Create a file and write a header---------
-rootDirectory = "C:/Users/Anne/Documents/Data"
+rootDirectory = "C:/Users/Anne/Documents/Bpod Local/Data"
 
 animalID = input("Please specify the animal name: ")
 fileTime = strftime("%Y%m%d_%H%M%S", gmtime())
