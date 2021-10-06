@@ -111,6 +111,7 @@ void serialEvent() {
 
   //Write the pin specs to the header
   Serial.printf("Reset frame and trial count. Miniscope channels is: %d and Bpod channel is: %d\n", MINISCOPE, BPOD);
+  Serial.println("channel, eventNumber, teensyTime"); //println automatically inserts a line break at the end of the string
   initialized = 1;
   } else if (serialMessage == 48) {
     initialized = 0;

@@ -23,7 +23,6 @@ rootDirectory = "C:/Users/Anne/Documents/Bpod Local/Data"
 
 animalID = input("Please specify the animal name: ")
 fileTime = strftime("%Y%m%d_%H%M%S", gmtime())
-
 #Find the respective directory
 logFileName = (animalID + "_" + fileTime + "_miniscope.mscopelog")
 logFileDirectory = os.path.join(rootDirectory, animalID, fileTime, "miniscope")
@@ -57,10 +56,9 @@ try:
         teensyCOM.reset_output_buffer()
         #teensyCOM.flushOutput()
         #teensyCOM.reset_input_buffer() #Make sure to clear the buffer for new data
-        
         #counter = counter+1
         #if counter == 10000:
-            #    sporadicReport = sporadicReport+1
+            #    sporadicReport = sporadicReport
             #    print("Received", sporadicReport*counter, "individual bytes")
             #    counter = 0
 except KeyboardInterrupt:
