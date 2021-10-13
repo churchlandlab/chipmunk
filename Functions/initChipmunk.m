@@ -124,7 +124,7 @@ if ~strcmp(userInput.demonID,'Virtual') || ~strcmp(userInput,'Dummy') %For the m
     mkdir(fullfile(BpodSystem.Path.DataFolder,userInput.demonID,sessionSpecifier,'chipmunk')); %create a folder the chipmunk task info
     
     BpodSystem.Path.CurrentDataFile{1} = fullfile(BpodSystem.Path.DataFolder,userInput.demonID,sessionSpecifier,'chipmunk',...
-        [userInput.demonID '_chipmunk_' experimentName '_' sessionSpecifier '.mat']);
+        [userInput.demonID '_' sessionSpecifier '_chipmunk_' experimentName '.mat']);
     
 end
 
@@ -138,7 +138,7 @@ if isfield(userInput,'obsID')
     mkdir(fullfile(BpodSystem.Path.DataFolder,userInput.obsID,sessionSpecifier,'chipmunk')); %create a folder for the chipmunk data
     
     BpodSystem.Path.CurrentDataFile{2} = fullfile(BpodSystem.Path.DataFolder,userInput.obsID,sessionSpecifier,'chipmunk',...
-        [userInput.obsID '_chipmunk_' experimentName '_' sessionSpecifier '.obsmat']);
+        [userInput.obsID '_' sessionSpecifier '_chipmunk_' experimentName '.obsmat']);
 end
 %--------------------------------------------------------------------------
 % % %% Load and check the settings for this experiment
