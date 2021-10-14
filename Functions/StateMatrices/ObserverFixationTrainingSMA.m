@@ -7,10 +7,12 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTraini
 % the demonstrator. Use the minObsTime and -Step to slowly increase the
 % fixation time. Above the medianDemonstratorTrialDur the wait duration is 
 % randomly generated similar to the wait time for the evidence accumulation.
-% Here, the demonstrator trial structure sounds are also played with the go
-% cue occuring at a random time after the demon trial start cue. The rate
-% of occurence of the different outcomes is defined by
+% Observer early withdrawals are punished with a pink noise tone and a
+% a timeout. Here, the demonstrator trial structure sounds are also played
+% with the go cue occuring at a random time after the demon trial start cue.
+% The rate of occurence of the different outcomes is defined by
 % "simulatedCorrectRate" and "simulatedEarlyWithdrawalRate".
+%
 % NOTE that this assembler makes a set of assumptions about plausible trial
 % delays that are not passed as arguments but that are defined inside this
 % function (see first section). 
@@ -28,7 +30,7 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTraini
 %                      by an observer or virtually (pacedFlag = true) or
 %                      whether it can self initiate (pacedFlag = false).
 %
-% LO, 7/8/2021
+% LO, 7/8/2021, 10/13/2021
 %-------------------------------------------------------------------------
 global BpodSystem
 
@@ -153,7 +155,7 @@ sma = AddState(sma, 'Name', 'ObsInitFixation', ...
     'StateChangeCondition', {'Tup','DemonInitFixation'},...
     'OutputActions',{'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
 
-if ~isnan(earlyWithdrawalTime)    
+if ~isnan(earlyWithdrawalTime) %Refering to the time to early withdrawal of a simulated demonstrator   
 sma = AddState(sma, 'Name', 'DemonInitFixation','Timer',earlyWithdrawalTime, ...
     'StateChangeConditions', {'Tup','DemonEarlyWithdrawal'},...
     'OutputActions', {'SoftCode', 2, 'PWM4',255, 'ObserverDeck1',30}); %Send the trial initiaton cue and tell teensy to start looking at observer beam break
@@ -226,9 +228,9 @@ sma = AddState(sma, 'Name', 'ObsReward','Timer',obsRewardValveTime, ...
     'OutputActions', {'ValveState', obsRewardValve,'PWM1',255,'PWM2',255,'PWM3',255});
 end
 
- sma = AddState(sma, 'Name', 'ObsEarlyWithdrawal','Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
-    'StateChangeConditions', {'Port4In','FinishTrial','Tup','FinishTrial'},...
-    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255});
+ sma = AddState(sma, 'Name', 'ObsEarlyWithdrawal','Timer',BpodSystem.ProtocolSettings.obsEarlyPunishTimeout, ...
+    'StateChangeConditions', {'Tup','FinishTrial'},...
+    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
 
 sma = AddState(sma, 'Name', 'ObsDidNotHarvest','Timer',0, ...
     'StateChangeConditions', {'Tup','FinishTrial'},...

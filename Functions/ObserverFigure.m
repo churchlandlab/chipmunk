@@ -65,6 +65,8 @@ switch figMethod
         %Observer training panel
         uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0.75-0.05,0.33,0.25],'style', 'text', 'String','minObsTime','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0.5-0.05,0.33,0.25],'style', 'text', 'String','minObsTimeStep','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0.23-0.05,0.33,0.25],'style', 'text', 'String','obsEarlyPunishLoudness','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0-0.05,0.33,0.25],'style', 'text', 'String','obsEarlyPunishTimeout','HorizontalAlignment','right');
         
         uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0.51,0.75,0.33,0.25],'style', 'text', 'String',sprintf('simulatedMedian\nDemonTrialDur'),'HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0.51,0.5,0.33,0.25],'style', 'text', 'String',sprintf('simulatedCorrect\nRate'),'HorizontalAlignment','right');
@@ -75,6 +77,10 @@ switch figMethod
             'Units', 'normal', 'Position',[0.34,0.75,0.15,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.minObsTime);
         BpodSystem.GUIHandles.ParamEdit.minObsTimeStep = uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,...
             'Units', 'normal', 'Position',[0.34,0.5,0.15,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.minObsTimeStep);
+        BpodSystem.GUIHandles.ParamEdit.minObsTimeStep = uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,...
+            'Units', 'normal', 'Position',[0.34,0.25,0.15,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.obsEarlyPunishLoudness);
+        BpodSystem.GUIHandles.ParamEdit.minObsTimeStep = uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,...
+            'Units', 'normal', 'Position',[0.34,0,0.15,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.obsEarlyPunishTimeout);
         
         BpodSystem.GUIHandles.ParamEdit.simulatedMedianDemonTrialDur = uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,...
             'Units', 'normal', 'Position',[0.85,0.75,0.15,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.simulatedMedianDemonTrialDur);

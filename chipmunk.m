@@ -97,8 +97,13 @@ S.soundCalibrationModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log1
 % to the soundcard (not the stimuli though). In this implementation the
 % trial start cue and the go cue after fixation are generated at the same
 % loudness (S.goCueLoudness).
+if isfield(S, 'obsID') %Add a separate early withdrawal punishment sound during observer fixation training.
+    generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
+    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
+else
 generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams)
+end
 
 % Fixed stimulus properties that remain unchanged
 stimTrainDuration = 1;
