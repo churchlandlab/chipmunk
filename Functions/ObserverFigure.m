@@ -65,8 +65,8 @@ switch figMethod
         %Observer training panel
         uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0.75-0.05,0.33,0.25],'style', 'text', 'String','minObsTime','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0.5-0.05,0.33,0.25],'style', 'text', 'String','minObsTimeStep','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0.23-0.05,0.33,0.25],'style', 'text', 'String','obsEarlyPunishLoudness','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0-0.05,0.33,0.25],'style', 'text', 'String','obsEarlyPunishTimeout','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0.25,0.33,0.25],'style', 'text', 'String',sprintf('obsEarlyPunish\nLoudness'),'HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0,0,0.33,0.25],'style', 'text', 'String',sprintf('obsEarlyPunish\nTimeout'),'HorizontalAlignment','right');
         
         uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0.51,0.75,0.33,0.25],'style', 'text', 'String',sprintf('simulatedMedian\nDemonTrialDur'),'HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.ObsTrainPanel,'Units', 'normal', 'Position',[0.51,0.5,0.33,0.25],'style', 'text', 'String',sprintf('simulatedCorrect\nRate'),'HorizontalAlignment','right');

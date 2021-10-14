@@ -48,7 +48,7 @@ goCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* cueLoudness + s
 goCueSound = [zeros(1,size(goCueWaveform,2)); goCueWaveform];
 
 % Punishment for incorrect choice
-wrongPunishWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* wrongPunishLoudness + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, 15000, wrongPunishTimeout);
+wrongPunishWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* wrongPunishLoudness + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, punishSoundFreq, wrongPunishTimeout);
 wrongPunishSound = [zeros(1,size(wrongPunishWaveform,2)); wrongPunishWaveform];
 
 % Punishment for early withdrawals
@@ -56,12 +56,14 @@ earlyPunishAmplitude = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* earlyPun
 earlyPunishSound = [zeros(1,earlyPunishTimeout*samplingFreq); 2*earlyPunishAmplitude * rand(1, earlyPunishTimeout * samplingFreq)- earlyPunishAmplitude];
 
 % Punishment for early withdrawals for the observer (pink noise signal,
-% requires audio toolbox)
+% requires audio toolbox) if needed
+if exist('obsEarlyPunishLoudness', 'var') || ~isempty(obsEarlyPunishLoudness)
 obsEarlyPunishAmplitude = earlyPunishAmplitude * 0.5; % The 0.5*scalingFactor equalizes the power of the pink noise
 %relatively well to the one of the white noise.
-obsEarlyPunishSound = [zeros(1,obsEarlyPunishTimeout * samplingFreq); (pinknoise(obsEarlyPunishTimeout * samplingFreq)/0.1) * obsEarlyPunishAmplitude];
+obsEarlyPunishSound = [zeros(1,obsEarlyPunishTimeout * samplingFreq); (pinknoise(obsEarlyPunishTimeout * samplingFreq)'/0.1) * obsEarlyPunishAmplitude];
 %Dividing the signal by 0.1 standardizes it (see the amplitude
 %distribution: https://www.mathworks.com/help/audio/ref/pinknoise.html and
+end
 
 % Upload sounds to sound server. Channel 1 reserved for stimuli
 PsychToolboxSoundServer('Load', 2, startTrialCueSound);

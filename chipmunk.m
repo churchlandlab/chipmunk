@@ -251,8 +251,13 @@ for currentTrial = 1:maxTrialNum
             
             %Re-compute the the task sounds when updating. This is the only
             %static element that can be user-modified.
-            generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-                S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams)
+            if isfield(S, 'obsID') %Add a separate early withdrawal punishment sound during observer fixation training.
+                generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
+                    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
+            else
+                generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
+                    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams)
+            end
             
             update = 0; %Finish updating
         end
@@ -625,7 +630,9 @@ end
             if S.minObsTime >= S.simulatedMedianDemonTrialDur
                 S.minObsTimeStep = 0;
             else
+                if BpodSystem.Data.ObsOutcomeRecord == 1
                 S.minObsTime = S.minObsTime + S.minObsTimeStep;
+                end
             end
         end
     end
