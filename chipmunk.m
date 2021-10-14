@@ -102,7 +102,7 @@ if isfield(S, 'obsID') %Add a separate early withdrawal punishment sound during 
     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
 else
 generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams)
+    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, [],[])
 end
 
 % Fixed stimulus properties that remain unchanged
@@ -256,7 +256,7 @@ for currentTrial = 1:maxTrialNum
                     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
             else
                 generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-                    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams)
+                    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, [],[])
             end
             
             update = 0; %Finish updating

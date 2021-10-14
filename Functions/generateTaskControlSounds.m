@@ -57,7 +57,7 @@ earlyPunishSound = [zeros(1,earlyPunishTimeout*samplingFreq); 2*earlyPunishAmpli
 
 % Punishment for early withdrawals for the observer (pink noise signal,
 % requires audio toolbox) if needed
-if exist('obsEarlyPunishLoudness', 'var') || ~isempty(obsEarlyPunishLoudness)
+if ~isempty(obsEarlyPunishLoudness)
 obsEarlyPunishAmplitude = earlyPunishAmplitude * 0.5; % The 0.5*scalingFactor equalizes the power of the pink noise
 %relatively well to the one of the white noise.
 obsEarlyPunishSound = [zeros(1,obsEarlyPunishTimeout * samplingFreq); (pinknoise(obsEarlyPunishTimeout * samplingFreq)'/0.1) * obsEarlyPunishAmplitude];
@@ -70,5 +70,9 @@ PsychToolboxSoundServer('Load', 2, startTrialCueSound);
 PsychToolboxSoundServer('Load', 3, goCueSound);
 PsychToolboxSoundServer('Load', 4, earlyPunishSound);
 PsychToolboxSoundServer('Load', 5, wrongPunishSound);
+
+if ~isempty(obsEarlyPunishLoudness) %only if there is an observer
 PsychToolboxSoundServer('Load', 6, obsEarlyPunishSound);
+end
+
 end
