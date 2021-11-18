@@ -128,9 +128,9 @@ switch figMethod
         BpodSystem.GUIHandles.LabelsVal.obsNoRewardRetrieved = uicontrol('Parent', BpodSystem.GUIHandles.ObsPerformancePanel,'Units', 'normal', 'Position',[0.8,0,0.2,0.2],'style', 'text', 'String',num2str(sum(BpodSystem.Data.ObsDidNotHarvest)));
         %---------
         %Observer reward summary display panel
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0,-0.1,0.75,1],'style', 'text', 'String','Total reward:','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0,-0.1,0.65,1],'style', 'text', 'String','Total reward:','HorizontalAlignment','right');
         
-        BpodSystem.GUIHandles.LabelsVal.obsRewardAmount = uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0.8,-0.1,0.2,1],'style', 'text', 'String',num2str(BpodSystem.Data.ObsRewardAmount));
+        BpodSystem.GUIHandles.LabelsVal.obsRewardAmount = uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardSummaryPanel,'Units', 'normal', 'Position',[0.7,-0.1,0.3,1],'style', 'text', 'String',num2str(BpodSystem.Data.ObsRewardAmount));
         
         
         %Set the font size on the figure here
