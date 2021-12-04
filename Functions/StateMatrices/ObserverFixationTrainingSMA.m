@@ -37,15 +37,15 @@ global BpodSystem
 %% Assign parameters that need to be estimated from actual animal data
 % This version here is some rough estimate and the parameters will need to
 % be refined in the future.
-minVirtualReportingTime = 0.8; %The minimum time assumed it takes an animal to report its choice after the go cue
-maxVirtualReportingTime = 1.6; %The maximum time set the animal requires to report choice
-lambdaVirtualReportingTime = 1; %Shape parameter of the exponential distribution to draw the reporting time from
+% minVirtualReportingTime = 0.8; %The minimum time assumed it takes an animal to report its choice after the go cue
+% maxVirtualReportingTime = 1.6; %The maximum time set the animal requires to report choice
+% lambdaVirtualReportingTime = 1; %Shape parameter of the exponential distribution to draw the reporting time from
 
 %medianDemonstratorTrialDur = 3.5; %Median duration from start trial cue to choice report for the demonstrator as estimated from good animals
-
-minVirtualEarlyWithdrawalTime = 0.01; %Parameters for drawing the early withdrawal times
-maxVirtualEarlyWithdrawalTime = 1;
-lambdaVirtualEarlyWithdrawalTime = 1/0.8;
+% 
+% minVirtualEarlyWithdrawalTime = 0.01; %Parameters for drawing the early withdrawal times
+% maxVirtualEarlyWithdrawalTime = 1 + BpodSystem.ProtocolSettings.initiationWindow; %The window during which the demonstrator can show early withdrawals
+% lambdaVirtualEarlyWithdrawalTime = 1/0.8;
 
 %---------------------------------------------------------------------------
 %% Valve time and LED assignment
@@ -82,27 +82,33 @@ obsRewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.obsRewardVolume, 
 % Delay 
 trialStartDelay = 0; %Possibility to introduce a delay when the observer fixates,
 % one may use the pre-stim delay paramters to randomly generate this delay.
-interTrialInterval = 0; %No extra time imposed between trials here.
+
+interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTrialDurLambda, BpodSystem.ProtocolSettings.interTrialDurMin, BpodSystem.ProtocolSettings.interTrialDurMax);
+% Impose a random interval between the trials. This is thought to be
+% instructive for the observer 
 
 % The delay between demonstrator poking and stimulus playing
-preStimDelay = 0; %No poking in the virtual demonstrator task
+preStimDelay = 0; %The demonstrator preStimDelay is replaced in the observer
+% task by the time to the observer needs to initiate.
 
-% Assign the wait- and reporting time of a virtual demonstrator
-if BpodSystem.ProtocolSettings.minObsTime  > 1.6 %Add a relatively realistic time to report the choice
-    reportingTime = generate_random_delay(lambdaVirtualReportingTime, minVirtualReportingTime, maxVirtualReportingTime);
-    if BpodSystem.ProtocolSettings.minObsTime >= BpodSystem.ProtocolSettings.simulatedMedianDemonTrialDur
-    %If one hits the median demonstrator trial duration make the wait time
-    %stochastic.
-    waitTime = BpodSystem.ProtocolSettings.minObsTime-minVirtualReportingTime;
-    else
-    waitTime = BpodSystem.ProtocolSettings.minObsTime - reportingTime; %Wait time here refers to the virtual demonstrator
-    end
+% Assign the wait- and reporting time of a virtual demonstrator. This is to
+% find the appropriate timing of the go-cue.
+if BpodSystem.ProtocolSettings.minObsTime  > 1.1 %If the minimal wait time is bigger than the stimulus presentation plus delay time
+   postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the mean is 0.1 : mean = 1/lambda
+   waitTime = 1 + postStimDelay; %To mimick the regular wait time with the go-cue
+   %This version is different than the previous one in the sense that the
+   %go-cue will always occur after 1-1.1 s once the observer has reached
+   %wait times greater than 1.1 seconds.
+   
 else %In case the wait time is shorter than the maximal reporting time deliver the  demonstrator go cue randomly
     waitTime =  rand * BpodSystem.ProtocolSettings.minObsTime;
-    reportingTime = BpodSystem.ProtocolSettings.minObsTime - waitTime;
+    postStimDelay = 0;
 end
-postStimDelay = 0;
-    
+reportingTime = BpodSystem.ProtocolSettings.minObsTime - waitTime;
+%The difference between the set minimal observation time and the set wait
+%time is designated as the simulated demonstrator reporting time.
+
+
 % Create the struct to hold the task delays
 taskDelays = struct();
 taskDelays.trialStartDelay = trialStartDelay;
@@ -120,15 +126,11 @@ taskDelays.reportingTime = reportingTime;
 % the observer has to learn to ignore if it performs the observer task.
 
 if rand < BpodSystem.ProtocolSettings.simulatedEarlyWithdrawalRate
-    if BpodSystem.ProtocolSettings.minObsTime > 2
-    earlyWithdrawalTime = 2 - generate_random_delay(lambdaVirtualEarlyWithdrawalTime, minVirtualEarlyWithdrawalTime, maxVirtualEarlyWithdrawalTime);
-    %Draw a random time point for the early withdrawal and assume one
-    %second for the demonstrator to initiate the trial. Make a later
-    %withdrawal more likely.
-    else % When the animals are not yet waiting long enough
-        earlyWithdrawalTime = rand * waitTime;
-    end
-    
+        earlyWithdrawalTime = (1 - generate_random_delay(10, 0.01, 1)) * waitTime;
+        %Randomly draw times of early withdrawal according to how long the
+        %virtual demonstrator is supposed to wait. Make withdrawals just at
+        %the end of the wait time more likely.
+               
     trialOutcome = 'DemonReward'; %Let's just assume the mouse would choose correctly if it stayed
 else
     if rand > BpodSystem.ProtocolSettings.simulatedCorrectRate
@@ -146,14 +148,65 @@ sma = NewStateMatrix(); %generate a new empty state matrix
 
 sma = AddState(sma, 'Name', 'TrialStart', ...
     'Timer', 0, ...
-    'StateChangeCondition', {'ObserverDeck1_1','ObsInitFixation'},...
-    'OutputActions',{'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
-%ObserverDeck1_1 refers to the beam on the observer deck being broken
-
-sma = AddState(sma, 'Name', 'ObsInitFixation', ...
-    'Timer', 0, ...
     'StateChangeCondition', {'Tup','DemonInitFixation'},...
-    'OutputActions',{'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
+    'OutputActions',{'PWM1',255,'PWM3',255,'PWM4',255});
+%Switch on the side LEDs only to indicate that the demonstrator can
+%initiate a trial now. Transition here directly to the demonstrator
+%initiating instead of waiting for it to happen...
+
+sma = AddState(sma, 'Name', 'DemonInitFixation','Timer',BpodSystem.ProtocolSettings.obsInitiationWindow, ...
+    'StateChangeConditions', {'Tup','ObsDidNotInitiate', 'Observer_Deck1_1', 'PlayStimulus'},...
+    'OutputActions', {'SoftCode', 2, 'PWM1', 255, 'PWM3', 255, 'PWM4', 255,'ObserverDeck1',30});
+%This state is the demonstrator waiting for the observer to initiate. The
+%observer has the time obsInitationWindow to break the beam on the observer
+%deck otherwise no initiation will be registered. If the observer does it
+%successuflly the statemachine moves on to PlayStimulus. Note
+%that in this paradigm PlayStimulus is just a placeholder, so that the
+%analysis generalizes from the Demonstrator tasks. As outputs the initiation tone
+% is played to inform the observer that fixation is now possible, the two side LEDs
+%and the observer LED are kept on and teensy gets the signal to count
+%the observer deck beam breaks.
+
+sma = AddState(sma, 'Name', 'ObsDidNotInitiate','Timer',0, ...
+    'StateChangeConditions', {'Tup','PlayStimulus'},...
+    'OutputActions', {'PWM4', 255,'ObserverDeck1',33});
+%Register that the observer did not initiate in the correct time window to
+%evaluate observer fixation success later. Bit 33 to teensy signals
+%non-initiation and will be treated like unsucessful fixation without
+%punishment. Switch off the side LEDs to indicate that stimulus
+%presentation starts.
+
+sma = AddState(sma, 'Name', 'PlayStimulus','Timer', 0, ...
+    'StateChangeConditions', {'Tup','DemonCenterFixationPeriod'},...
+    'OutputActions', {'PWM4',255});
+%Placeholder for the corresponding state in the demonstrator and observer
+%tasks with an actual demonstrator.
+
+if ~isnan(earlyWithdrawalTime) %If this trial has been designated a demonstrator early withdrawal
+sma = AddState(sma, 'Name', 'DemonCenterFixationPeriod','Timer',earlyWithdrawalTime, ...
+    'StateChangeConditions', {'Tup','DemonEarlyWithdrawal'},...
+    'OutputActions', {'PWM4',255});
+else
+sma = AddState(sma, 'Name', 'DemonCenterFixationPeriod','Timer',waitTime, ...
+    'StateChangeConditions', {'Tup','DemonGoCue'},...
+    'OutputActions', {'PWM4',255});
+end
+%Period of simulated demonstrator fixation. If successfull move on to go
+%cue or get early withdrawal otherwise. Keep the LED in the observer side
+%one still.
+
+
+if ~isnan(earlyWithdrawalTime) %Refering to the time to early withdrawal of a simulated demonstrator   
+sma = AddState(sma, 'Name', 'DemonInitFixation','Timer',earlyWithdrawalTime, ...
+    'StateChangeConditions', {'Tup','DemonEarlyWithdrawal'},...
+    'OutputActions', {'SoftCode', 2, 'PWM4',255, 'ObserverDeck1',30}); %Send the trial initiaton cue and tell teensy to start looking at observer beam break
+else
+    sma = AddState(sma, 'Name', 'DemonInitFixation','Timer',BpodSystem.ProtocolSettings.obsInitiationWindow, ...
+    'StateChangeConditions', {'Tup','DemonGoCue'},...
+    'OutputActions', {'SoftCode',2,'PWM4',255,'ObserverDeck1',30});
+end
+
+
 
 if ~isnan(earlyWithdrawalTime) %Refering to the time to early withdrawal of a simulated demonstrator   
 sma = AddState(sma, 'Name', 'DemonInitFixation','Timer',earlyWithdrawalTime, ...
