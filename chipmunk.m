@@ -630,7 +630,7 @@ end
             if S.minObsTime >= S.simulatedMedianDemonTrialDur
                 S.minObsTimeStep = 0;
             else
-                if BpodSystem.Data.ObsOutcomeRecord == 1
+                if BpodSystem.Data.ObsOutcomeRecord(TrialsDone) == 1
                 S.minObsTime = S.minObsTime + S.minObsTimeStep;
                 end
             end
