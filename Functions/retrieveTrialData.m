@@ -194,6 +194,7 @@ if isfield(BpodSystem.ProtocolSettings,'obsID')
     BpodSystem.Data.ObsCompletedTrials(TrialsDone) = 0;
     BpodSystem.Data.ObsEarlyWithdrawal(TrialsDone) = 0;
     BpodSystem.Data.ObsDidNotHarvest(TrialsDone) = 0;
+    BpodSystem.Data.ObsDidNotInitiate(TrialsDone) = 0;
  if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsReward(1))
      BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = 1;
      BpodSystem.Data.ObsCompletedTrials(TrialsDone) = 1;
@@ -204,12 +205,17 @@ if isfield(BpodSystem.ProtocolSettings,'obsID')
  elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsDidNotHarvest(1))
      BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = 2;
      BpodSystem.Data.ObsDidNotHarvest(TrialsDone) = 1;
+ elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsDidNotInitiate(1))
+  BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = -2;
+  BpodSystem.Data.ObsDidNotInitiate(TrialsDone) = 1;
  end
 
  %Next check on the wait time
  BpodSystem.Data.ObsSetWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsCheckFixationSuccess(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1); %This is the intervall, in which Teensy will count
- if isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsDidNotInitiate(1))
+ if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1))
  BpodSystem.Data.ObsActualWaitTime(TrialsDone) = min(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.ObserverDeck1_2(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.ObserverDeck1_2 > BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1))) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1);
+ else
+ BpodSystem.Data.ObsActualWaitTime(TrialsDone) = NaN;    
  end
  %Take the first breaking as the start and the first joining as the end of
  %the observer fixation.

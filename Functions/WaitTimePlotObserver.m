@@ -23,6 +23,7 @@ global BpodSystem
 %Assign colors
 plottingColors(1,:) = [0.35 0.8 0.1]; %Green for successful fixations with reward retrieved, Green open circle for now reward retrieved
 plottingColors(2,:) = [0.79 0.2 0.1]; %Red for early withdrawals of the observer
+plottingColors(3,:) = [0.5, 0.5, 0.5]; %Gray open circles for non-initiated trials
 
 switch plotMethod
     %%
@@ -35,7 +36,8 @@ switch plotMethod
        BpodSystem.GUIHandles.ObsSuccessCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(1,:),'MarkerFace',plottingColors(1,:), 'MarkerSize',6);
        BpodSystem.GUIHandles.ObsDidNotHarvestCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(1,:),'MarkerFace',[1 1 1], 'MarkerSize',6);       
        BpodSystem.GUIHandles.ObsEarlyWithdrawalCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(2,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
-
+       BpodSystem.GUIHandles.ObsDidNotInitiateCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(3,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
+       
        hold(AxesHandle,'on') %Make sure to keep the axes properties
        
        %-------------------------------------------------------------------
@@ -62,6 +64,15 @@ switch plotMethod
         if ~isempty(didNotHarvestIdx)
             Xdata = didNotHarvestIdx; Ydata = BpodSystem.Data.ObsActualWaitTime(Xdata);
             set(BpodSystem.GUIHandles.ObsDidNotHarvestCircle, 'xdata',[Xdata Xdata],'ydata',[Ydata Ydata]);
+        end
+        
+        didNotInitiateIdx = find(BpodSystem.Data.ObsOutcomeRecord == -2);
+        if ~isempty(didNotInitiateIdx)
+            Xdata = didNotInitiateIdx; 
+            Ydata = zeros(1,length(Xdata));
+            %Since there is no real wait time (NaN) we just set it to zero
+            %for display reasons.
+            set(BpodSystem.GUIHandles.ObsDidNotInitiateCircle, 'xdata',[Xdata Xdata],'ydata',[Ydata Ydata]);
         end
 end
 
