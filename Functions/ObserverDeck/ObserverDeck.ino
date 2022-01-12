@@ -77,6 +77,7 @@ serialInputInfo = Serial1COM.readByte(); // For some reason one needs to refer t
             case START_COUNTING:
             doCounting = 1;
             countUnbroken = 0; //This is important because stuff might happen before...
+            notInitiated = 0; //Reset this variable at each new trial
             break;
 
             case STOP_COUNTING:

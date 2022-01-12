@@ -208,7 +208,9 @@ if isfield(BpodSystem.ProtocolSettings,'obsID')
 
  %Next check on the wait time
  BpodSystem.Data.ObsSetWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsCheckFixationSuccess(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1); %This is the intervall, in which Teensy will count
+ if isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsDidNotInitiate(1))
  BpodSystem.Data.ObsActualWaitTime(TrialsDone) = min(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.ObserverDeck1_2(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.ObserverDeck1_2 > BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1))) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1);
+ end
  %Take the first breaking as the start and the first joining as the end of
  %the observer fixation.
 
