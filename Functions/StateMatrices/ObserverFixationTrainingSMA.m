@@ -35,7 +35,7 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTraini
 %                      by an observer or virtually (pacedFlag = true) or
 %                      whether it can self initiate (pacedFlag = false).
 %
-% LO, 7/8/2021, 10/13/2021
+% LO, 7/8/2021, 10/13/2021, 1/11/2022
 %-------------------------------------------------------------------------
 global BpodSystem
 

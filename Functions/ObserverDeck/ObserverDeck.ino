@@ -17,12 +17,14 @@ ArCOM Serial1COM(Serial1); // UART serial port
 #define START_COUNTING 30 // Define the serial input messages for different bytes
 #define STOP_COUNTING 31
 #define REPORT_COUNT 32
+#define NO_INITIATION_RECORDED 33 //Observer initiation window has passed
 #define SEND_MODULE_INFO 255
 
 #define BEAM_BROKEN 1 // Define the serial output messages for different bytes
 #define BEAM_JOINED 2
 #define OBSERVER_FIXATION_SUCCESS 3
 #define OBSERVER_FIXATION_FAIL 4
+#define OBSERVER_NO_INITIATION 5
 #define UNDEFINED_INPUT_SENT 15
 
 //---------Pin configuration--------------------//
@@ -41,6 +43,9 @@ void setup() {
   // not report the beam breaks anymore after the first one. Due to the PULLDOWN the input voltage
   // should be a bit higher. Here, rather than the 3.3 V power pin the direct USB/Ethernet 
   // power source is used that comes at ~5 V.
+  attachInterrupt(digitalPinToInterrupt(BeamBreakReadoutPin),beamBreakEvent, CHANGE);
+  // Set up the beam break readout pin as an interrupt that executes beamBreakEvent upne every change
+  // in the beam state.
   }
 
   // Set up the communication variables
@@ -48,11 +53,12 @@ void setup() {
   int serialInputInfo; // The input instruction
 
   // Readout and count
-  int beamJoined = 0; //Track the number of times the beam was unbroken!
-  int countUnbroken = 0; // Count how many times the beam was joined again after having been broken once (to initiate observation).
-  int beamState = 1;
-  int previousBeamState = 0; // Detect change in the beam state compared to prior state
-  bool doCounting = 0; // Boolean to check whether events need to be counted
+  //int beamJoined = 0; //Track the number of times the beam was unbroken!
+  volatile int countUnbroken = 0; // Count how many times the beam was joined again after having been broken once (to initiate observation).
+  volatile bool beamState = 1;
+  //int previousBeamState = 0; // Detect change in the beam state compared to prior state
+  volatile bool doCounting = 0; // Boolean to check whether events need to be counted
+  bool notInitiated = 0; // Boolean to see whether the observer initiated a trial
 
 void serialEvent1(){
 // Only try reading bytes when they are available 
@@ -77,13 +83,21 @@ serialInputInfo = Serial1COM.readByte(); // For some reason one needs to refer t
             doCounting = 0;
             break;
 
+            case NO_INITIATION_RECORDED:
+            notInitiated = 1;
+            break;
+
             case REPORT_COUNT:
+            if (notInitiated == 1) {
+              Serial1.write(OBSERVER_NO_INITIATION);
+            } else {
               if (countUnbroken == 0) { // Send either success or fail back to Bpod
                  Serial1.write(OBSERVER_FIXATION_SUCCESS);
               } else {
                   Serial1.write(OBSERVER_FIXATION_FAIL); 
               }
-
+            }
+            
               ////----Checking-------/////
               Serial.print("Number of times beam joined: ");
               Serial.println(countUnbroken); // If connectd to USB report number of unbreakings
@@ -98,7 +112,7 @@ serialInputInfo = Serial1COM.readByte(); // For some reason one needs to refer t
 }
 
 void loop() {
-    // Check for changes in the beam state
+  /*  // Check for changes in the beam state
     beamState = digitalRead(BeamBreakReadoutPin); //Get the current beam break state
     if (beamState != previousBeamState) {
       if (beamState == 0) {
@@ -116,11 +130,27 @@ void loop() {
       }
       previousBeamState = beamState;
       
-    }
+    } */
 }
 
+///-------------Interrupt function for the beam break events------------------///
+void beamBreakEvent(){
+  beamState = digitalRead(BeamBreakReadoutPin); //Get the current beam break state
+  if (beamState == 0) {
+        Serial1.write(BEAM_BROKEN);
+        Serial.print("Beam broken");
+        Serial.print("\n");
+      }   else if (beamState == 1) {
+        Serial1.write(BEAM_JOINED);
+        Serial.print("Beam joined");
+        Serial.print("\n");
+      if (doCounting == 1){
+        countUnbroken++; //Do the actual counting if required
+        }
+      }
+}
 
-//-------Define the module info return function----------------//
+///-------Define the module info return function----------------//
 void returnModuleInfo() {
   Serial1COM.writeByte(65); // Acknowledge
   Serial1COM.writeUint32(FirmwareVersion); // 4-byte firmware version
