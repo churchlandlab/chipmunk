@@ -71,10 +71,11 @@ preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLam
 
 %Check for the wait time
 if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
-postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the mean is 0.1 : mean = 1/lambda
-waitTime = 1 + postStimDelay; %Add the delay to the 1 s of stimulus
-else 
-  waitTime = BpodSystem.ProtocolSettings.minWaitTime; %This is to be consisten with previous versions.
+    postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the mean is 0.1 : mean = 1/lambda
+    waitTime = 1 + postStimDelay; %Add the delay to the 1 s of stimulus
+else
+    waitTime = BpodSystem.ProtocolSettings.minWaitTime; %This is to be consisten with previous versions.
+    postStimDelay = 0;
 end
 
 % Creat the struct to hold the task delays
@@ -174,11 +175,19 @@ sma = AddState(sma,'Name', 'DemonReward',...
 %reward port still on.
 
 sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal',...
+    'Timer',0, ...
+    'StateChangeConditions', {'Tup','DemonEarlyWithdrawalPunishment'},...
+    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255}); 
+%In the case of an early withdrawal by the demonstrator we first need to
+%terminate the stimulus presentation with SoftCode 255 before delivering
+%the punishment sound and timeout.
+
+sma = AddState(sma, 'Name', 'DemonEarlyWithdrawalPunishment',...
     'Timer',BpodSystem.ProtocolSettings.earlyPunishTimeout, ...
     'StateChangeConditions', {'Tup','FinishTrial'},...
-    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'SoftCode', 4}); 
-%Play early punishment sound and give the demonstrator a timeout if it
-%withdrew early from the center port.
+    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'SoftCode',4}); 
+%Deliver the punisment noise with SoftCode 4 and give the demonstrator a
+%timeout.
 
 sma = AddState(sma, 'Name', 'DemonDidNotChoose',...
     'Timer',BpodSystem.ProtocolSettings.timeToChoose, ...

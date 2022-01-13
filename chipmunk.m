@@ -606,7 +606,6 @@ if BpodSystem.Status.BeingUsed == 0
 
     clear BpodSystem.GUIHandles.ParamEdit
     display('*********************************************************************')
-    display('chipmunk ended')
     return;
 end
 
