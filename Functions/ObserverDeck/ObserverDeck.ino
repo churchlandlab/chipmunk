@@ -58,7 +58,8 @@ void setup() {
   volatile bool beamState = 1;
   //int previousBeamState = 0; // Detect change in the beam state compared to prior state
   volatile bool doCounting = 0; // Boolean to check whether events need to be counted
-  bool notInitiated = 0; // Boolean to see whether the observer initiated a trial
+  bool notInitiated = 1; // Boolean to see whether the observer initiated a trial,
+  //Start with true here, because if the demonstrator fails before the observer gets the chance that is also a non initiation.
 
 void serialEvent1(){
 // Only try reading bytes when they are available 
@@ -76,8 +77,8 @@ serialInputInfo = Serial1COM.readByte(); // For some reason one needs to refer t
   
             case START_COUNTING:
             doCounting = 1;
-            countUnbroken = 0; //This is important because stuff might happen before...
             notInitiated = 0; //Reset this variable at each new trial
+            countUnbroken = 0; //This is important because stuff might happen before...
             break;
 
             case STOP_COUNTING:
@@ -105,6 +106,7 @@ serialInputInfo = Serial1COM.readByte(); // For some reason one needs to refer t
               Serial.print("\n");
               ////------------------////
 
+              notInitiated = 1; //Assume again no initiation to be the default unless teensy is asked to start counting
               break;
               
               default:
