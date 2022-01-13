@@ -1,10 +1,10 @@
-function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
-% [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
+function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorFixationTrainingSMA(correctSideOnCurrent);
+% [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorFixationTrainingSMA(correctSideOnCurrent);
 %
-% SMA assemly function for the DemonstratorTask. In this condition a
-% demonstrator can self-initiate trials by poking into the center port after
-% a set inter trial interval
-% The choices will either be rewarded or punished with a sound and timeout.
+% SMA assemly function for the DemonstratorFixationTraining. In this
+% experiment the demonstrator learns to fixate for a given time and to
+% report its choice. Incorrect choices can be revised by poking into the
+% correct port.
 %
 % INPUTS (optional): -correctSideOnCurrent: The side designated to be
 %                                           rewarded during the current trial
@@ -19,7 +19,7 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(co
 %                      by an observer or virtually (pacedFlag = true) or
 %                      whether it can self initiate (pacedFlag = false).
 %
-% LO, 4/1/2021, LO, 1/13/2022
+% LO, 1/13/2022
 %-------------------------------------------------------------------------
 global BpodSystem
 
@@ -32,14 +32,10 @@ if exist('correctSideOnCurrent') && ~isempty(correctSideOnCurrent) %input check
         RewardValve = 2^0; %left-hand port represents port#0, therefore valve value is 2^0
         rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.leftRewardVolume, 1); %second value is Bpod index for the valve
         incorrectPortLED = 'PWM3';
-        leftPortAction = 'DemonReward';
-        rightPortAction = 'DemonWrongChoice';
     elseif rewardedSide == 1 %the case for right side correct
         RewardValve = 2^2; %left-hand port represents port#0, therefore valve value is 2^0
         rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.rightRewardVolume, 3);
         incorrectPortLED = 'PWM1';
-        leftPortAction = 'DemonWrongChoice';
-        rightPortAction = 'DemonReward';
     end
 
 else %The dummy case assuming left
@@ -47,8 +43,6 @@ else %The dummy case assuming left
     RewardValve = 2^0;
     rewardValveTime = 0;
     incorrectPortLED = 'PWM3';
-    leftPortAction = 'DemonReward';
-    rightPortAction = 'DemonWrongChoice';
 end
 
 %--------------------------------------------------------------------------
@@ -151,13 +145,24 @@ sma = AddState(sma, 'Name', 'DemonWaitForWithdrawalFromCenter',...
     'OutputActions', {'PWM4',255});
 %Reaction time until the demonstrator gets out of the center port. 
 
-sma = AddState(sma, 'Name', 'DemonWaitForResponse',...
-    'Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
-    'StateChangeConditions', {'Port1In',leftPortAction,'Port3In',rightPortAction,'Tup','DemonDidNotChoose'},...
-    'OutputActions', {'PWM4',255});
-%This is the period to report the choice by poking into one of the side
-%pokes. 
-
+%Introduce the condition that will allow the demonstrator to revise its
+%choice here. This will basically let Bpod disregard the pokes into the
+%port on the incorrect side and only advance when the mouse pokes into the
+%correct port.
+if rewardedSide == 0 %A left side trial
+    sma = AddState(sma, 'Name', 'DemonWaitForResponse',...
+        'Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
+        'StateChangeConditions', {'Port1In','DemonReward','Tup','DemonDidNotChoose'},...
+        'OutputActions', {'PWM4',255});
+    %This is the period to report the choice by poking into one of the side
+    %pokes.
+elseif rewardedSide == 1 %A right side trial
+    sma = AddState(sma, 'Name', 'DemonWaitForResponse',...
+        'Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
+        'StateChangeConditions', {'Port3In','DemonReward','Tup','DemonDidNotChoose'},...
+        'OutputActions', {'PWM4',255});
+end
+    
 sma = AddState(sma,'Name', 'DemonReward',...
     'Timer',rewardValveTime, ...
     'StateChangeConditions', {'Tup','FinishTrial'},...
@@ -168,19 +173,12 @@ sma = AddState(sma,'Name', 'DemonReward',...
 %that the observation phase is completed. Keep the LED at the observer
 %reward port still on.
 
-sma = AddState(sma, 'Name', 'DemonWrongChoice',...
-    'Timer',BpodSystem.ProtocolSettings.wrongPunishTimeout, ...
-    'StateChangeConditions', {'Tup','FinishTrial'},...
-    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'SoftCode', 5});
-%Wrong choice of the demonstrator leads to all LEDs being swithed on again
-%after terminating the stim signal. The punishment noise is played and a
-%timeout is given to the demonstrator.
- 
 sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal',...
     'Timer',BpodSystem.ProtocolSettings.earlyPunishTimeout, ...
     'StateChangeConditions', {'Tup','FinishTrial'},...
     'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'SoftCode', 4}); 
-%Finally, the same for an early withdrawal.
+%Play early punishment sound and give the demonstrator a timeout if it
+%withdrew early from the center port.
 
 sma = AddState(sma, 'Name', 'DemonDidNotChoose',...
     'Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
@@ -198,7 +196,7 @@ sma = AddState(sma, 'Name', 'FinishTrial',...
 
 %--------------------------------------------------------------------------
 %% Set whether the choice can be revised
-reviseChoiceFlag = false;
+reviseChoiceFlag = true;
 
 %--------------------------------------------------------------------------
 %% Set whether the demonstrator trials are paced

@@ -351,6 +351,6 @@ sma = AddState(sma, 'Name', 'FinishTrial',...
 reviseChoiceFlag = false;
 
 %% Set whether the demonstrator trials are paced
-pacedFlag = true;
+pacedFlag = false;
 
 end

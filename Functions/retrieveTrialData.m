@@ -88,6 +88,10 @@ else
 end
 
 % The delays and wait times
+%*****----New version-------**********
+BpodSystem.Data.TrialDelays = trialDelays;
+BpodSystem.Data.TrialDelays.ExtraStimulusDuration = BpodSystem.ProtocolSettings.extraStimDur;
+%*****-----Depreciated but retained for non-datajoint analyses
 if isfield(trialDelays,'trialStartDelay')
     BpodSystem.Data.TrialStartDelay(TrialsDone) = trialDelays.trialStartDelay;
 end
@@ -99,6 +103,7 @@ BpodSystem.Data.SetWaitTime(TrialsDone) = trialDelays.waitTime; %This value may 
 BpodSystem.Data.TotalStimDuration(TrialsDone) = stimTrainDuration;
 BpodSystem.Data.PostStimDelay(TrialsDone) = trialDelays.postStimDelay;
 BpodSystem.Data.ExtraStimDuration(TrialsDone) = BpodSystem.ProtocolSettings.extraStimDur;
+%****----------------------------------------------
 
 %Compute time spent in center for  each trial with one nose poke in
 %and out of the center port.
@@ -110,12 +115,6 @@ if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation
         BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
     end
 end
-% 
-% if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2Out') && isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events,'Port2In')
-%     if (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out)== 1) && (numel(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In) == 1)
-%         BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2Out - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port2In;
-%     end
-% end
 
 ResponseSideRecord = NaN; %Pre-set the response to NaN and change if the trial was valid
 if reviseChoiceFlag %Check for the actual response side if the animal can revise its decision

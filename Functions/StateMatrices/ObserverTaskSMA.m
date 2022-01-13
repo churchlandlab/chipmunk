@@ -139,9 +139,7 @@ sma = AddState(sma, 'Name', 'DemonInitFixation',...
 %play a sound to indicate possibility to fixate to the observer (SoftCode2). The
 %observer has the time obsInitationWindow to break the beam on the observer
 %deck otherwise no initiation will be registered. If the observer does it
-%successuflly the state machine moves on to PlayStimulus. Note
-%that in this paradigm PlayStimulus is just a placeholder, so that the
-%analysis generalizes from the Demonstrator tasks. As outputs the initiation tone
+%successuflly the state machine moves on to PlayStimulus. As outputs the initiation tone
 %is played to inform the observer that fixation is now possible, the two side LEDs
 %and the observer LED are kept on and teensy gets the signal to count
 %the observer deck beam breaks. If the demonstrator retracts during this
@@ -289,6 +287,6 @@ sma = AddState(sma, 'Name', 'FinishTrial',...
 reviseChoiceFlag = false;
 
 %% Set whether the demonstrator trials are paced
-pacedFlag = true;
+pacedFlag = false;
 
 end
