@@ -201,6 +201,7 @@ if isfield(S, 'obsID')
     WaitTimePlotObserver(BpodSystem.GUIHandles.WaitTimePlotObserver, 'init', outcomePlotLimits);
     %Make sure to have run OutcomePlotDemonstrator first to get the display
     %limits!
+    InitiationTimePlotObserver(BpodSystem.GUIHandles.InitiationTimePlotObserver,'init');
 end
 
 %--------------------------------------------------------------------------
@@ -668,6 +669,7 @@ end
    if isfield(BpodSystem.ProtocolSettings,'obsID')
     InterTrialIntervalPlotObserver(BpodSystem.GUIHandles.InterTrialIntervalPlotObserver,'refresh');
     WaitTimePlotObserver(BpodSystem.GUIHandles.WaitTimePlotObserver, 'refresh', outcomePlotLimits);
+    InitiationTimePlotObserver(BpodSystem.GUIHandles.InitiationTimePlotObserver,'refresh',1); %Add the flag to fit the distribution
    end
    
    %-----------------------------------------------------------------------

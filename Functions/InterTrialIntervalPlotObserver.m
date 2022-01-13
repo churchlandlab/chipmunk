@@ -22,7 +22,7 @@ yLimits = [0 30]; %Blantly assume some upper limit for the inter-trial interval
 
 initialXLimits = [1 50]; %The minimum display window
 barColor = [0.4 0.4 0.4]; %Pre-specify here
-barTransparency = 0.5;
+barTransparency = 0.3;
 
 switch plotMethod
     %% Set up the bar graph

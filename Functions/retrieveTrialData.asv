@@ -210,9 +210,7 @@ if isfield(BpodSystem.ProtocolSettings,'obsID')
   BpodSystem.Data.ObsDidNotInitiate(TrialsDone) = 1;
  end
 
- %Get the time it took the observer to initiate
- BpodSystem.Data.ObsInitiationTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(2) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
- 
+ %Get the time 
  %Next check on the wait time
  BpodSystem.Data.ObsSetWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsCheckFixationSuccess(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1); %This is the intervall, in which Teensy will count
  if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1))
