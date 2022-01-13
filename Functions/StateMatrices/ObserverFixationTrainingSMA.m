@@ -119,6 +119,13 @@ reportingTime = BpodSystem.ProtocolSettings.minObsTime - waitTime;
 %The difference between the set minimal observation time and the set wait
 %time is designated as the simulated demonstrator reporting time.
 
+%Define a brief delay between the outcome for the demonstrator and
+%revealing the fixation success to the observer.
+outcomeSeparation = 0.1;
+%Here, there are 100 ms before the observer port LED switches off if
+%fixated correctly or before the punishment pink noise is played to the
+%observer. This should is intended to separate the outcome information
+%slightly, so that the observer understands both outcomes.
 
 % Create the struct to hold the task delays
 taskDelays = struct();
@@ -128,6 +135,7 @@ taskDelays.waitTime = waitTime;
 taskDelays.postStimDelay = postStimDelay;
 taskDelays.interTrialInterval = interTrialInterval;
 taskDelays.reportingTime = reportingTime;
+taskDelays.outcomeSeparation = outcomeSeparation;
 
 %--------------------------------------------------------------------------
 %% Prepare the simulated outcomes of the demonstrator trial. The rate of correct
@@ -259,24 +267,24 @@ sma = AddState(sma,'Name', 'DemonReward',...
 %beam unbreakings.
 
 sma = AddState(sma, 'Name', 'DemonWrongChoice',...
-    'Timer',0, ...
+    'Timer',outcomeSeparation, ...
     'StateChangeConditions', {'Tup','ObsCheckFixationSuccess'},...
-    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255, 'SoftCode', 5, 'ObserverDeck1', 31});
+    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'SoftCode', 5, 'ObserverDeck1', 31});
 %Wrong choice of the demonstrator leads to all LEDs being swithed on again
 %after terminating the stim signal. The punishment noise is played and
 %teensy gets again the bit 31 to tell it to stop counting unbroken beam
 %events on the observer deck.
  
 sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal',...
-    'Timer',0, ...
+    'Timer',outcomeSeparation, ...
     'StateChangeConditions', {'Tup','ObsCheckFixationSuccess'},...
-    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255, 'SoftCode', 4, 'ObserverDeck1', 31}); 
+    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'SoftCode', 4, 'ObserverDeck1', 31}); 
 % Finally, the same for an early withdrawal.
 
 sma = AddState(sma, 'Name', 'DemonDidNotChoose',...
     'Timer',0, ...
     'StateChangeConditions', {'Tup','ObsCheckFixationSuccess'},...
-    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255,'ObserverDeck1', 31});
+    'OutputActions', {'SoftCode',255,'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'ObserverDeck1', 31});
 %This state here is unconnected and will never be visited. Yet, it is there
 %as a placeholder for the actual observer task.
     
@@ -285,7 +293,7 @@ sma = AddState(sma, 'Name', 'DemonDidNotChoose',...
 %seemed not to have been very important.
 
 sma = AddState(sma, 'Name', 'ObsCheckFixationSuccess',...
-    'Timer',0, ...
+    'Timer',outcomeSeparation, ...
     'StateChangeConditions', {'ObserverDeck1_3','ObsWaitForRewardRetrieval','ObserverDeck1_4','ObsEarlyWithdrawal','ObserverDeck1_5','ObsDidNotInitiate'},...
     'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'ObserverDeck1',32});
 %This is now the state where the observer's fixation success is going to be

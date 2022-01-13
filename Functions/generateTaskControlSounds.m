@@ -60,9 +60,13 @@ earlyPunishSound = [zeros(1,earlyPunishTimeout*samplingFreq); 2*earlyPunishAmpli
 if ~isempty(obsEarlyPunishLoudness)
 obsEarlyPunishAmplitude = earlyPunishAmplitude * 0.5; % The 0.5*scalingFactor equalizes the power of the pink noise
 %relatively well to the one of the white noise.
-obsEarlyPunishSound = [zeros(1,obsEarlyPunishTimeout * samplingFreq); (pinknoise(obsEarlyPunishTimeout * samplingFreq)'/0.1) * obsEarlyPunishAmplitude];
+% obsEarlyPunishSound = [zeros(1,obsEarlyPunishTimeout * samplingFreq); (pinknoise(obsEarlyPunishTimeout * samplingFreq)'/0.1) * obsEarlyPunishAmplitude];
 %Dividing the signal by 0.1 standardizes it (see the amplitude
 %distribution: https://www.mathworks.com/help/audio/ref/pinknoise.html and
+
+%Inserted to make more distinguishable from white noise
+cn = dsp.ColoredNoise('brown','SamplesPerFrame',obsEarlyPunishTimeout*samplingFreq);
+obsEarlyPunishSound = [zeros(1,obsEarlyPunishTimeout * samplingFreq); (cn()'/100) * obsEarlyPunishAmplitude];
 end
 
 % Upload sounds to sound server. Channel 1 reserved for stimuli
