@@ -9,23 +9,20 @@ function S = initChipmunk;
 %info about the subject and experiment and the third part checks the
 %settings for the experiment.
 %
+%Revision notes (1/14/2022): The function now includes a box for the
+%miniscope identifier and it lets the user load different labcams config
+%files instead of specifying cameras to record from.
+%
 %INPUTS: none
 %OUTPUT: -S: Struct containing the experimental settings. This variable is
 %            in sync with BpodSystems.ProtocolSettings most of the time
 %
-% LO, 4/19/2021
+% LO, 4/19/2021, LO 1/14/2022
 %--------------------------------------------------------------------------
 
 %% Start setting Bpod-related options
 global BpodSystem
-%add the path to the external functions first
-% addpath(fullfile(BpodSystem.Path.ProtocolFolder,'chipmunk','Functions'));
 
-% %Find sound card for stimuli
-% PsychToolboxSoundServer('init'); % Try and let this crash before all the other inputs are passed
-%
-% %Set soft code handler to trigger sounds
-% BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 %-----------------------------------------------------------------
 %% Gather additional user input and generate file structure
 %Extract the info about the experiment from the settings name (that has
@@ -45,10 +42,11 @@ ha = struct(); %define empty struct for ui handles
 userInput = struct();
 
 %Generating the different UI panels to group the user inputs
-Demon = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.75, 2/3, 0.25],'Title','Demonstarator','FontWeight','bold');
-Obs = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.5, 2/3, 0.25],'Title','Observer','FontWeight','bold');
-Setup = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.25, 2/3, 0.25],'Title','Setup','FontWeight','bold');
-Labcams = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0, 2/3, 0.25],'Title','Labcams','FontWeight','bold');
+Demon = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.8, 2/3, 0.2],'Title','Demonstarator','FontWeight','bold');
+Obs = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.6, 2/3, 0.2],'Title','Observer','FontWeight','bold');
+Setup = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.4, 2/3, 0.2],'Title','Setup','FontWeight','bold');
+Labcams = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.2, 2/3, 0.2],'Title','Labcams','FontWeight','bold');
+Miniscope = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0, 2/3, 0.2],'Title','Miniscope','FontWeight','bold');
 
 %Pasting the descriptions to the user input fields
 uicontrol('Parent', Demon,'Units', 'normal', 'Position',[0.1,2/3-0.1,0.4,1/3],'style', 'text', 'String','Demonstrator ID','HorizontalAlignment','left');
@@ -62,7 +60,9 @@ uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.1,1/3-0.1,0.4,1/3],'s
 uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.1,0-0.1,0.4,1/3],'style', 'text', 'String','Server path','HorizontalAlignment','left');
 
 uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.1,2/3-0.1,0.4,1/3],'style', 'text', 'String','Labcams address','HorizontalAlignment','left');
-uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.1,1/3-0.1,0.4,1/3],'style', 'text', 'String','Select cameras','HorizontalAlignment','left');
+uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.1,1/3-0.1,0.4,1/3],'style', 'text', 'String','Labcams config file','HorizontalAlignment','left');
+
+uicontrol('Parent', Miniscope,'Units', 'normal', 'Position',[0.1,2/3-0.1,0.4,1/3],'style','text','String','Miniscope ID','HorizontalAlignment','left');
 
 %Generating the edit fileds for user input
 %Check all conditions that feature a real demonstrator or performer and
@@ -83,7 +83,27 @@ ha.researcher = uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.55,1/
 ha.serverPath = uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.55,0,0.4,1/3],'style', 'edit','String',BpodSystem.ProtocolSettings.serverPath);
 
 ha.labcamsAddress = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.55,2/3,0.4,1/3],'style', 'edit','String',BpodSystem.ProtocolSettings.labcamsAddress);
-ha.cameraSelection = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit','String','0 1 2');
+%Check whether labcams is installed in the default location (C:\Users\Anne)
+%and use the file created by default when setting up labcams. Another file
+%can be selected by a button press later.
+if isdir('C:\Users\Anne\labcams')
+    ha.labcamsConfigDir = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0,0,0,0],'style', 'edit','String','C:\Users\Anne\labcams');
+    %Store the directory info in a hidden uicontrol, this is to not need to
+    %diplay the entire path along with the config file name, which would be
+    %annoying...
+    ha.labcamsConfigName = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit','String','default.json');
+else
+     ha.labcamsConfigDir = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0,0,0,0],'style', 'edit','String','');
+     ha.labcamsConfigName = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit','String','');
+end
+
+ha.miniscopeID = uicontrol('Parent', Miniscope,'Units', 'normal', 'Position',[0.55,2/3,0.4,1/3],'style', 'edit','String',BpodSystem.ProtocolSettings.miniscopeID);
+
+%Set up the ui for the button to let the user change the labcams
+%config file.
+sb = uicontrol('Parent', Labcams, 'Units', 'normal', 'Position', [0.55,0,0.4,1/3],'Style','pushbutton','String','Select config file',...
+    'Callback',{@selectConfigButton,ha});
+
 
 %Generate the button and link to the callback
 pb = uicontrol('Parent', initPanel, 'Units', 'normal', 'Position', [2/3+0.1, 0.08, 1/3-0.2, 0.1],'Style','pushbutton','String','Initialize',...
@@ -105,8 +125,8 @@ BpodSystem.ProtocolSettings.rigNo = userInput.rigNo;
 BpodSystem.ProtocolSettings.researcher = userInput.researcher;
 BpodSystem.ProtocolSettings.serverPath = userInput.serverPath;
 BpodSystem.ProtocolSettings.labcamsAddress = userInput.labcamsAddress;
-BpodSystem.ProtocolSettings.cameraSelection = userInput.cameraSelection;
-
+BpodSystem.ProtocolSettings.labcamsConfig = fullfile(userInput.labcamsConfigDir, userInput.labcamsConfigName);
+BpodSystem.ProtocolSettings.miniscopeID = userInput.miniscopeID;
 %--------------------------------------------------------------------------
 %Find the subjects in the data directory and generate folder structure for
 %storing data
@@ -140,48 +160,6 @@ if isfield(userInput,'obsID')
     BpodSystem.Path.CurrentDataFile{2} = fullfile(BpodSystem.Path.DataFolder,userInput.obsID,sessionSpecifier,'chipmunk',...
         [userInput.obsID '_' sessionSpecifier '_chipmunk_' experimentName '.obsmat']);
 end
-%--------------------------------------------------------------------------
-% % %% Load and check the settings for this experiment
-% % %Load experiment settings and check whether name and original settings are
-% % %consistent
-% % %Preallocate the outputs
-% % S = [];
-% % originalExperimentName = BpodSystem.ProtocolSettings.experimentName; %compare the experiment name stored inside the structure with the one of the file
-% % if ~strcmpi(experimentName, originalExperimentName) %Does the name match the original experiment name in the settings?
-% %     display(sprintf('The experimental settings file name is not consistent with the original file name.\nChipmunk will end.'))
-% % end
-% %
-% % % % %Add the user inputs to the experimental settings already loaded
-% % % % BpodSystem.ProtocolSettings.demonID = userInput.demonID;
-% % % % BpodSystem.ProtocolSettings.demonWeight = userInput.demonWeight;
-% % % % if isfield(userInput,'obsID')
-% % % %     BpodSystem.ProtocolSettings.obsID = userInput.obsID;
-% % % %     BpodSystem.ProtocolSettings.obsWeight = userInput.obsWeight;
-% % % % end
-% % % % BpodSystem.ProtocolSettings.rigNo = userInput.rigNo;
-% % % % BpodSystem.ProtocolSettings.researcher = userInput.researcher;
-% %
-% % %Compare the user-selected settings to the standard settings stored under
-% % %Experiments in chimunk
-% % load(fullfile(BpodSystem.Path.ProtocolFolder,'chipmunk','Experiments',[experimentName '.mat']),'standardSettings') %load the standard settings saved as standardSettings
-% % standardFieldNames = fieldnames(standardSettings);
-% % standardFieldVals = struct2cell(standardSettings);
-% % userSetFieldNames = fieldnames(BpodSystem.ProtocolSettings); %unfortunately still named after the protocol and not the experiment...
-% %
-% % %spot every field in the standard settings to make sure you include it
-% % for n=1:length(standardFieldNames)
-% %     foundField = false;
-% %     for j=1:length(userSetFieldNames)
-% %         if strcmpi(standardFieldNames{n},userSetFieldNames{j});
-% %             foundField = true;
-% %         end
-% %     end
-% %     if ~foundField
-% %         BpodSystem.ProtocolSettings.standardFieldNames{n} = standardFieldVals{n};
-% %     end
-% % end
-
-%--------------------------------------------------------------------------
 
 S = BpodSystem.ProtocolSettings; %update parameters
 
@@ -192,6 +170,12 @@ S = BpodSystem.ProtocolSettings; %update parameters
         for k=1:length(fNames)
             eval(['figHandles.UserData.' fNames{k} '= get(inputHandles.' fNames{k} ',''string'');']); %copy field values to newly created fields in figure handle
         end
+    end
+
+function selectConfigButton(src,event,inputHandles)
+    [fileName, pathName] = uigetfile('*.json', 'Select the labcams config file.');
+    inputHandles.labcamsConfigDir.String = pathName; %Store the directory and file name 
+    inputHandles.labcamsConfigName.String = fileName;
     end
 end
 

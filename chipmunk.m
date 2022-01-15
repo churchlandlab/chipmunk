@@ -52,7 +52,7 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
         else
             %
             disp(' -> starting labcams');
-            labcamsproc=System.Diagnostics.Process.Start('labcams.exe',['-w -c ' BpodSystem.ProtocolSettings.cameraSelection]);
+            labcamsproc=System.Diagnostics.Process.Start('labcams.exe',[BpodSystem.ProtocolSettings.labcamsConfig]);
             while true
                 fwrite(udpObj,'ping')
                 tmp = fgetl(udpObj);
