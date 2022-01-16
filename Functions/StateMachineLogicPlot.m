@@ -46,9 +46,9 @@ varargout{1} = digraph(adjMat, sma.StateNames); %create a directed graph object
 
 if ~exist('AxesHandle') || isempty(AxesHandle)
     figure
-    varargout{2} = plot(varargout{1});
+    varargout{2} = plot(varargout{1},'Layout','force','UseGravity','on');
 else
-    plot(varargout{1}, 'Parent', AxesHandle);
+    plot(varargout{1},'Layout','force','UseGravity','on','Parent', AxesHandle);
 end
 
 end
