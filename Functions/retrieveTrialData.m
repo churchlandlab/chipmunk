@@ -89,8 +89,8 @@ end
 
 % The delays and wait times
 %*****----New version-------**********
-BpodSystem.Data.TrialDelays = trialDelays;
-BpodSystem.Data.TrialDelays.ExtraStimulusDuration = BpodSystem.ProtocolSettings.extraStimDur;
+BpodSystem.Data.TrialDelays(TrialsDone) = trialDelays;
+BpodSystem.Data.TrialDelays.ExtraStimulusDuration(TrialsDone) = BpodSystem.ProtocolSettings.extraStimDur;
 %*****-----Depreciated but retained for non-datajoint analyses
 if isfield(trialDelays,'trialStartDelay')
     BpodSystem.Data.TrialStartDelay(TrialsDone) = trialDelays.trialStartDelay;
