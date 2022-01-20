@@ -104,9 +104,9 @@ switch figMethod
       
         
         BpodSystem.GUIHandles.ParamEdit.simulatedCorrectRate = uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,...
-            'Units', 'normal', 'Position',[0.88,0.5,0.12,0.5],'style', 'edit', 'String','');
+            'Units', 'normal', 'Position',[0.88,0.5,0.12,0.5],'style', 'edit', 'String',BpodSystem.ProtocolSettings.simulatedCorrectRate);
         BpodSystem.GUIHandles.ParamEdit.simulatedEarlyWithdrawalRate = uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,...
-            'Units', 'normal', 'Position',[0.88,0,0.12,0.5],'style', 'edit', 'String','');
+            'Units', 'normal', 'Position',[0.88,0,0.12,0.5],'style', 'edit', 'String',BpodSystem.ProtocolSettings.simulatedEarlyWithdrawalRate);
         %-----------
         %Observer reward panel
         uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardParamPanel,'Units', 'normal', 'Position',[0,-0.2,0.74,1],'style', 'text', 'String','obsRewardVolume','HorizontalAlignment','right');
