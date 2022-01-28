@@ -58,22 +58,22 @@ global BpodSystem
 if exist('correctSideOnCurrent') && ~isempty(correctSideOnCurrent) %input check
     rewardedSide = correctSideOnCurrent;
     if rewardedSide == 0 %the case for left side correct
-        RewardValve = 2^0; %left-hand port represents port#0, therefore valve value is 2^0
-        rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.leftRewardVolume, 1); %second value is Bpod index for the valve
+        %RewardValve = 2^0; %left-hand port represents port#0, therefore valve value is 2^0
+        %rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.leftRewardVolume, 1); %second value is Bpod index for the valve
         incorrectPortLED = 'PWM3';
         leftPortAction = 'DemonReward';
         rightPortAction = 'DemonWrongChoice';
     elseif rewardedSide == 1 %the case for right side correct
-        RewardValve = 2^2; %left-hand port represents port#0, therefore valve value is 2^0
-        rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.rightRewardVolume, 3);
+        %RewardValve = 2^2; %left-hand port represents port#0, therefore valve value is 2^0
+        %rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.rightRewardVolume, 3);
         incorrectPortLED = 'PWM1';
         leftPortAction = 'DemonWrongChoice';
         rightPortAction = 'DemonReward';
     end
 
 else %The dummy case assuming left
-    rewardedSide = 0;
-    RewardValve = 2^0;
+    %rewardedSide = 0;
+    %RewardValve = 2^0;
     rewardValveTime = 0;
     incorrectPortLED = 'PWM3';
 end
@@ -272,15 +272,15 @@ sma = AddState(sma, 'Name', 'DemonWaitForResponse',...
 %possible state: DemonReward or DemonWrongChoice.
 
 sma = AddState(sma,'Name', 'DemonReward',...
-    'Timer',rewardValveTime, ...
+    'Timer',outcomeSeparation, ...
     'StateChangeConditions', {'Tup','ObsCheckFixationSuccess'},...
-    'OutputActions', {'SoftCode',255,'ValveState', RewardValve,'PWM2',255, incorrectPortLED, 255,'PWM4',255,'ObserverDeck1',31});
+    'OutputActions', {'SoftCode',255,'PWM2',255, incorrectPortLED, 255,'PWM4',255,'ObserverDeck1',31});
 %Reward delivery to the demonstrator. First, switch off the stimulus if it
 %is still playing (when extraStimTime is big) and then switch the LEDs of
 %the incorrect port and the center on, so that the observer understands
 %that the observation phase is completed. Keep the LED at the observer
 %reward port still on. Finally, send bit 31 to teensy to stop counting the
-%beam unbreakings.
+%beam unbreakings. Ommit actual reward delivery for this training stage.
 
 
 sma = AddState(sma, 'Name', 'DemonWrongChoice',...
@@ -294,10 +294,10 @@ sma = AddState(sma, 'Name', 'DemonWrongChoice',...
 sma = AddState(sma, 'Name', 'DemonWrongChoicePunishment',...
     'Timer',outcomeSeparation, ...
     'StateChangeConditions', {'Tup','ObsCheckFixationSuccess'},...
-    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'SoftCode', 5});
+    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255});
 %Wrong choice punishment of the demonstrator leads to all LEDs being swithed on again
-%after terminating the stim signal. The punishment noise is played and a
-%timeout is given to the demonstrator.
+%after terminating the stim signal. Don't play punishment sound for the
+%training.
  
 sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal',...
     'Timer',0, ...
@@ -311,11 +311,13 @@ sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal',...
 sma = AddState(sma, 'Name', 'DemonEarlyWithdrawalPunishment',...
     'Timer',outcomeSeparation, ...
     'StateChangeConditions', {'Tup','ObsCheckFixationSuccess'},...
-    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255,'SoftCode',4}); 
+    'OutputActions', {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255}); 
 %Deliver the punisment noise with SoftCode 4. In the observer task
 %condition there is no extra timeout for the demonstrator, the mouse just
 %misses the chance to obtain reward. The delay added here serves to produce
 %a small gap between the outcome from the demonstrator and the observer.
+%Don't play the punishment noise here because the observer is only
+%training.
 
 sma = AddState(sma, 'Name', 'DemonDidNotChoose',...
     'Timer',0, ...
