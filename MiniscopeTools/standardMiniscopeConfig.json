@@ -1,0 +1,108 @@
+{    
+	"dataDirectory": "C:/Users/Anne/Documents/Bpod Local/Data/chipmunkSynchronizer/20220125_185736",
+   
+     "directoryStructure": [],
+   
+     "recordLengthinSeconds": 0,
+
+     "executableOnStartRecording": {
+        "enabled": false,
+        "filePath": "C:/FILL/OUT/THIS/PATH",
+        "arguments": ["arg1", "arg2"]
+    },
+    "executableOnStopRecording": {
+        "enabled": false,
+        "filePath": "C:/FILL/OUT/THIS/PATH",
+        "arguments": ["arg1", "arg2", "arg3"]
+    },
+    "behaviorTracker": {
+        "enabled": false,
+        "type": "DeepLabCut-Live",   
+	   "pyEnvPath": "ABSOLUTE/PATH/TO/PYTHON/ENVIRONMENT",
+    	   "modelPath": "ABSOLUTE/PATH/TO/DLC/MODEL",        		   	   "resize": 1,
+        "pCutoffDisplay": 0.3,
+        "windowX": 200,
+        "windowY": 100,
+        "windowScale": 0.75,
+	  "occupancyPlot": {
+            "enabled": true,
+            "numBinsX": 100,
+            "numBinsY": 100,
+            "poseIdxToUse": [0, 1, 2, 3, 4]
+        },
+        "poseIdxForTraceDisplay": ["0wh", "1w", "2w"],
+        "poseOverlay": {
+        "enabled": true,
+	   "type": "point",
+        "numOfPastPoses": 6,
+        "markerSize": 20,
+        "skeleton": {
+                "enabled": true,
+                 "connectedIndices": [
+                    [0, 1, 2, 3, 4, 5],
+                    [6, 7, 8, 9, 10, 11],
+                    [12, 13]
+                ]
+            }
+        }
+    }, 
+        "traceDisplay": {
+        "enabled": true,
+        "type": "scrolling",
+        "windowX": 100,
+        "windowY": 100,
+        "windowWidth": 600,
+        "windowHeight": 800
+    },
+
+    "devices": {
+                "miniscopes": {
+            	"miniscope": {
+                "deviceName": "PineNut",
+                "deviceType": "Miniscope_V4_BNO",
+                "headOrientation": true,
+				"headOrientation": {
+					"enabled": true,
+                    "filterBadData": true,
+                    "plotTrace": ["roll", "pitch", "yaw"]
+                },
+                "deviceID": 0,
+                "showSaturation": true,
+           	"ROI": {
+					"leftEdge": 0,
+					"topEdge": 0,
+					"width": 600,
+					"height": 600
+                },
+                "compression": "GREY",
+                "framesPerFile": 10000,
+                "windowScale": 0.75,
+                "windowX": 800,
+                "windowY": 100,
+                "gain": "Low",
+                "ewl": 50,
+                "led0": 10,
+                "frameRate": "20FPS"
+            }
+        },
+       "cameras": {
+            "cameraDeviceName":{
+                "deviceType": "WebCam-640x480",
+                "deviceID": 1,
+			"showSaturation": true,
+			"ROI": {
+     					"leftEdge": 0,
+					"topEdge": 0,
+					"width": 640,
+					"height": 480
+				},
+                "cameraCalibrationFileLocation": "",
+                "compression": "MJPG",
+                "framesPerFile": 1000,
+                "windowScale": 0.5,
+                "windowX": 800,
+                "windowY": 600
+            }
+       }
+    }
+}
