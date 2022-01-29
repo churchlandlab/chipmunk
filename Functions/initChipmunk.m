@@ -63,6 +63,7 @@ uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.1,2/3-0.1,0.4,1/3],
 uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.1,1/3-0.1,0.4,1/3],'style', 'text', 'String','Labcams config file','HorizontalAlignment','left');
 
 uicontrol('Parent', Miniscope,'Units', 'normal', 'Position',[0.1,2/3-0.1,0.4,1/3],'style','text','String','Miniscope ID','HorizontalAlignment','left');
+uicontrol('Parent', Miniscope,'Units', 'normal', 'Position',[0.1,1/3-0.1,0.4,1/3],'style','text','String','Miniscope computer address','HorizontalAlignment','left');
 
 %Generating the edit fileds for user input
 %Check all conditions that feature a real demonstrator or performer and
@@ -98,6 +99,7 @@ else
 end
 
 ha.miniscopeID = uicontrol('Parent', Miniscope,'Units', 'normal', 'Position',[0.55,2/3,0.4,1/3],'style', 'edit','String',BpodSystem.ProtocolSettings.miniscopeID);
+ha.miniscopeAddress = uicontrol('Parent', Miniscope,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit','String',BpodSystem.ProtocolSettings.miniscopeAddress);
 
 %Set up the ui for the button to let the user change the labcams
 %config file.
@@ -127,6 +129,7 @@ BpodSystem.ProtocolSettings.serverPath = userInput.serverPath;
 BpodSystem.ProtocolSettings.labcamsAddress = userInput.labcamsAddress;
 BpodSystem.ProtocolSettings.labcamsConfig = fullfile(userInput.labcamsConfigDir, userInput.labcamsConfigName);
 BpodSystem.ProtocolSettings.miniscopeID = userInput.miniscopeID;
+BpodSystem.ProtocolSettings.miniscopeAddress = userInput.miniscopeAddress;
 %--------------------------------------------------------------------------
 %Find the subjects in the data directory and generate folder structure for
 %storing data

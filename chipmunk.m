@@ -81,6 +81,48 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
 end
 
 %--------------------------------------------------------------------------
+%% Send animal and session info to the miniscope computer
+if ~isempty(BpodSystem.ProtocolSettings.miniscopeID) %Enforce that the user provides a name to
+    %miniscope that will be used.
+    if ~isempty(BpodSystem.ProtocolSettings.miniscopeAddress)
+        tmp = strsplit(BpodSystem.ProtocolSettings.miniscopeAddress,':'); %Retrieve the miniscope computer's name and port number
+        miniscopeServerName = tmp{1};
+        miniscopeServerPort = str2num(tmp{2});
+
+        miniscopeConnection = udp(miniscopeServerName, miniscopeServerPort); %Establish connection and open to write and read
+        fopen(miniscopeConnection);
+
+        tmp = strsplit(subjectFolder, filesep);
+        %Here the info of the folder structure can be used. The second last
+        %layer is the session and the third last layer the animal ID.
+
+        messageSent = [tmp{end-2} ',' tmp{end-1}, ',' BpodSystem.ProtocolSettings.miniscopeID];
+        fwrite(miniscopeConnection, messageSent);
+        %Send info separated by comma
+
+        acknowledgement = []; %Store the message returned from server
+        waitForServer = tic;
+        while isempty(acknowledgement) %Stop when a message arrives or latest after 5 s.
+            acknowledgement = fread(miniscopeConnection, length(messageSent));
+            if toc(waitForServer) > 5 %For some reason this can not be inside the while conditions...
+                break
+            end
+        end
+        messageReturned = string(native2unicode(acknowledgement')); %Flip this first to get a regular string back
+        if strcmp(messageReturned, messageSent) %Check whether the server understood correctly, throw error and return otherwise.
+            display('Successfully sent session information to miniscope computer!')
+        else
+            if strcmp(messageReturned,"") %See whether the acknowledgment is empty
+                error(sprintf('The connection attempt to the miniscope computer has timed-out\nMake sure to execute syncMiniscopeToBpod.py and check connection.'))
+            else
+                error(sprintf('Information was not accurately transmitted to the miniscope computer. The server echoed the following message:\n%s', messageReturned))
+            end
+        end       
+        fclose(miniscopeConnection) %Just to keep it clean
+    end
+end
+
+%--------------------------------------------------------------------------
 %% Get the polynomial coefficients of the sound calibration
 load(fullfile(BpodSystem.Path.LocalDir,'Calibration Files','WhiteNoiseCalibration.mat')) %loading from external calibration file
 S.soundCalibrationModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
