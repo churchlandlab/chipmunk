@@ -117,7 +117,7 @@ if ~isempty(BpodSystem.ProtocolSettings.miniscopeID) %Enforce that the user prov
                 error(sprintf('Information was not accurately transmitted to the miniscope computer. The server echoed the following message:\n%s', messageReturned))
             end
         end       
-        fclose(miniscopeConnection) %Just to keep it clean
+        fclose(miniscopeConnection); %Just to keep it clean
     end
 end
 
