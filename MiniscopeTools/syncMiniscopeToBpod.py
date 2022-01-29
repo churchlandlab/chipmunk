@@ -3,8 +3,15 @@ import serial
 import serial.tools.list_ports
 from time import strftime,gmtime
 import socket #To establish udp connection to the behavior computer
- 
+import json
+
+#%%-----Make sure to provide a directory containing a Data folder and a
+#       Protocols folder where chipmunk lives or change here
+
+root_directory = "C:/Users/Anne/Documents/Bpod Local"
+miniscope_software_directory = "C:/Users/Anne/Documents"
 #%%-----Find available teensy and establish connection---------
+
 ports = serial.tools.list_ports.comports(include_links=False)
 for port in ports :
     portsList = [port.device]
@@ -22,25 +29,47 @@ else:
 
 #%%----Establish connection with the behavior computer and fetch info about
 #      the animal, session name and miniscope.
-
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#Start a UDP socket. The SOCK_DGRAM specifies the UDP connection protocol
-
-server_socket.bind(('', 6003))
-#Make this socket listen to port 6003. Since this is the server that will
-#be contacted by a client one doesn't need to specify the IP address here.
-
-message = []
-client_address = []
-while len(client_address) == 0: #This loop listens until the client sends a message over
-    #clientsocket, cl_address = server_socket.accept()
-    message, client_address = server_socket.recvfrom(1024)  #Assign a maximum of 1024 bytes that can be read at once
-
-print("Received animal, session and minisope information. Sending acknowledgement back.")
+    
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #Start a UDP socket. The SOCK_DGRAM specifies the UDP connection protocol
+    
+    server_socket.bind(('', 6003))
+    #Make this socket listen to port 6003. Since this is the server that will
+    #be contacted by a client one doesn't need to specify the IP address here.
+    
+    message = []
+    client_address = []
+    while len(client_address) == 0: #This loop listens until the client sends a message over
+        #clientsocket, cl_address = server_socket.accept()
+        message, client_address = server_socket.recvfrom(1024)  #Assign a maximum of 1024 bytes that can be read at once
+    
+    print("Received animal, session and minisope information. Sending acknowledgement back.")
 
 #server_socket.sendto(str.encode("Fake news!"), client_address) #Test for non-matching message
 server_socket.sendto(message, client_address) #Acknowledge the message 
-    
+
+session_info = str.split(message.decode(), sep=',')
+
+#%%---Generate the config file to be used with the miniscope
+
+#Load a standard config file from  the MiniscopeTools folder in chipmunk
+standard_config = root_directory + "Protocols/chipmunk/MiniscopeTools/standardMiniscopeConfig.json"
+f = open(standard_config, 'r')
+miniscope_config = json.load(f)
+f.close()
+
+#Assign the correct directory, matching the animal id and the session
+data_directory = root_directory + "/Data/" + session_info[0] + "/" + session_info[1] #Store this for later
+
+miniscope_config['dataDirectory'] = data_directory
+miniscope_config['devices']['miniscopes']['miniscope']['deviceName'] = session_info[2]
+
+#Create a json file in the session's miniscope folder
+miniscope_config_out = data_directory + "/miniscope/" + session_info[0] + "_miniscopeConfig.json"
+with open(miniscope_config_out,'w') as dumped_info : 
+    json.dump(miniscope_config,dumped_info)
+
+
 #%%-----Create a file and write a header---------
 rootDirectory = "C:/Users/Anne/Documents/Bpod Local/Data"
 
