@@ -1,7 +1,7 @@
 import os
 import serial
 import serial.tools.list_ports
-from time import strftime,gmtime
+from time import strftime, gmtime, time
 import socket #To establish udp connection to the behavior computer
 import json
 
@@ -24,7 +24,7 @@ elif (len(portsList) > 1):
     teensyCOM = serial.Serial(teensyPortID, 9600) #Establish connection at matching rate!
     print("Connected to teensy on " + teensyPortID)
 else:
-    print("No COM port available. Please check teensy connection")
+    print("No COM port available. Please check teensy connection.")
     
 
 #%%----Establish connection with the behavior computer and fetch info about
@@ -49,6 +49,9 @@ else:
 server_socket.sendto(message, client_address) #Acknowledge the message 
 
 session_info = str.split(message.decode(), sep=',')
+animal_id = session_info[0]
+session_date_time = session_info[1]
+miniscope_id = session_info[2]
 
 #%%---Generate the config file to be used with the miniscope
 
@@ -58,33 +61,37 @@ f = open(standard_config, 'r')
 miniscope_config = json.load(f)
 f.close()
 
-#Assign the correct directory, matching the animal id and the session
-data_directory = root_directory + "/Data/" + session_info[0] + "/" + session_info[1] #Store this for later
+#Assign the correct directory, matching the animal and the session
+data_directory = root_directory + "/Data/" + animal_id + "/" + session_date_time #Store this for later
 
 miniscope_config['dataDirectory'] = data_directory
-miniscope_config['devices']['miniscopes']['miniscope']['deviceName'] = session_info[2]
+miniscope_config['devices']['miniscopes']['miniscope']['deviceName'] = miniscope_id
 
 #Create a json file in the session's miniscope folder
-miniscope_config_out = data_directory + "/miniscope/" + session_info[0] + "_miniscopeConfig.json"
+miniscope_config_out = data_directory + "/miniscope/" + animal_id + "_miniscopeConfig.json"
 with open(miniscope_config_out,'w') as dumped_info : 
     json.dump(miniscope_config,dumped_info)
 
 
-#%%-----Create a file and write a header---------
-rootDirectory = "C:/Users/Anne/Documents/Bpod Local/Data"
+#%%-----Create the mscopelog file file and write a header---------
+# rootDirectory = "C:/Users/Anne/Documents/Bpod Local/Data"
 
-animalID = input("Please specify the animal name: ")
-fileTime = strftime("%Y%m%d_%H%M%S", gmtime())
-#Find the respective directory
-logFileName = (animalID + "_" + fileTime + "_miniscope.mscopelog")
-logFileDirectory = os.path.join(rootDirectory, animalID, fileTime, "miniscope")
+# animalID = input("Please specify the animal name: ")
+# fileTime = strftime("%Y%m%d_%H%M%S", gmtime())
+# #Find the respective directory
+
+logFileName = (animal_id + "_" + session_date_time + "_miniscope.mscopelog")
+#logFileDirectory = os.path.join(rootDirectory, animalID, fileTime, "miniscope")
 
 #Check if directory exists and create otherwise
-if not os.path.exists(logFileDirectory):
-    os.makedirs(logFileDirectory)
+# if not os.path.exists(logFileDirectory):
+#     os.makedirs(logFileDirectory)
     
-logFilePath = os.path.join(logFileDirectory, logFileName)
+logFilePath = os.path.join(data_directory, logFileName)
 output_file = open(logFilePath, "w+")
+
+print("Prepared a config file for miniscope acquisition. Please start miniscope recording with the following file:")
+print(f"{miniscope_config_out}")
 
 #%%------Write file header info---------
 
@@ -93,19 +100,24 @@ output_file = open(logFilePath, "w+")
 #input("Press enter to start the acquisition. Press any key and enter to stop")
 
 #%%----Acquire messages from teensy and write to file
-teensyCOM.write(str.encode('1')) #Send a byte (49) to reset the counting of frames and start interrupts
+teensyCOM.write(str.encode('1')) #Send a byte (49) to reset the counting of frames and start interruptsand trials.
 
-#and trials.
-sporadicReport = 0; #Sporadically report that syncing is still on
-counter = 0;
-#goFlag = True
+acquisition_start= time(); #Keep track of the start of the acquisition
+last_report = 0; #Update time of the last reporting
+current_time = 0; #Store time 
+
 try:
     while True:
         signal = teensyCOM.read()
         entry = signal.decode("utf-8")
         output_file.write(entry);
-        print(entry)
+        #print(entry)
         teensyCOM.reset_output_buffer()
+        
+        current_time = time()
+        if (current_time - last_report) > 120: #Update every 2 min
+            print(f"Synchronization ran for {current_time - acquisition_start} s.")
+            last_report = current_time
         #teensyCOM.flushOutput()
         #teensyCOM.reset_input_buffer() #Make sure to clear the buffer for new data
         #counter = counter+1

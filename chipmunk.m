@@ -93,7 +93,7 @@ if ~isempty(BpodSystem.ProtocolSettings.miniscopeID) %Enforce that the user prov
 
         tmp = strsplit(subjectFolder, filesep);
         %Here the info of the folder structure can be used. The second last
-        %layer is the session and the third last layer the animal ID.
+        %layer is the session (tmp{end-1}) and the third last layer the animal ID (tmp{end-2}) .
 
         messageSent = [tmp{end-2} ',' tmp{end-1}, ',' BpodSystem.ProtocolSettings.miniscopeID];
         fwrite(miniscopeConnection, messageSent);
