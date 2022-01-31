@@ -30,20 +30,20 @@ else:
 #%%----Establish connection with the behavior computer and fetch info about
 #      the animal, session name and miniscope.
     
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #Start a UDP socket. The SOCK_DGRAM specifies the UDP connection protocol
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+ #Start a UDP socket. The SOCK_DGRAM specifies the UDP connection protocol
     
-    server_socket.bind(('', 6003))
+server_socket.bind(('', 6003))
     #Make this socket listen to port 6003. Since this is the server that will
     #be contacted by a client one doesn't need to specify the IP address here.
     
-    message = []
-    client_address = []
-    while len(client_address) == 0: #This loop listens until the client sends a message over
-        #clientsocket, cl_address = server_socket.accept()
-        message, client_address = server_socket.recvfrom(1024)  #Assign a maximum of 1024 bytes that can be read at once
+message = []
+client_address = []
+while len(client_address) == 0: #This loop listens until the client sends a message over
+      #clientsocket, cl_address = server_socket.accept()
+      message, client_address = server_socket.recvfrom(1024)  #Assign a maximum of 1024 bytes that can be read at once
     
-    print("Received animal, session and minisope information. Sending acknowledgement back.")
+print("Received animal, session and minisope information. Sending acknowledgement back.")
 
 #server_socket.sendto(str.encode("Fake news!"), client_address) #Test for non-matching message
 server_socket.sendto(message, client_address) #Acknowledge the message 
