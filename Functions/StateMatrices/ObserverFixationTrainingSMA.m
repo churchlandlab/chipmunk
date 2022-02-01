@@ -102,9 +102,13 @@ interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTria
 preStimDelay = 0; %The demonstrator preStimDelay is replaced in the observer
 % task by the time to the observer needs to initiate.
 
+% Introduce some randomness in the required wait time. Here this is
+% implemented as maximally 10% of the minimum observation time.
+minObsTime = BpodSystem.ProtocolSettings.minObsTime + generate_random_delay(12, 0, BpodSystem.ProtocolSettings.minObsTime*0.1);
+
 % Assign the wait- and reporting time of a virtual demonstrator. This is to
 % find the appropriate timing of the go-cue.
-if BpodSystem.ProtocolSettings.minObsTime  > 1.1 %If the minimal wait time is bigger than the stimulus presentation plus delay time
+if minObsTime  > 1.1 %If the minimal wait time is bigger than the stimulus presentation plus delay time
    postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the mean is 0.1 : mean = 1/lambda
    waitTime = 1 + postStimDelay; %To mimick the regular wait time with the go-cue
    %This version is different than the previous one in the sense that the
@@ -112,10 +116,10 @@ if BpodSystem.ProtocolSettings.minObsTime  > 1.1 %If the minimal wait time is bi
    %wait times greater than 1.1 seconds.
    
 else %In case the wait time is shorter than the maximal reporting time deliver the demonstrator go cue randomly
-    waitTime =  rand * BpodSystem.ProtocolSettings.minObsTime;
+    waitTime =  rand * minObsTime;
     postStimDelay = 0;
 end
-reportingTime = BpodSystem.ProtocolSettings.minObsTime - waitTime;
+reportingTime = minObsTime - waitTime;
 %The difference between the set minimal observation time and the set wait
 %time is designated as the simulated demonstrator reporting time.
 
