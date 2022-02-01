@@ -29,14 +29,16 @@ else:
 
 #%%----Establish connection with the behavior computer and fetch info about
 #      the animal, session name and miniscope.
-    
+port_number = 9998 #Degine this here for now
+
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
  #Start a UDP socket. The SOCK_DGRAM specifies the UDP connection protocol
     
-server_socket.bind(('', 6003))
+server_socket.bind(('', port_number))
     #Make this socket listen to port 6003. Since this is the server that will
     #be contacted by a client one doesn't need to specify the IP address here.
     
+print(f"Start listening to port {port_number} for chipmunk information...")
 message = []
 client_address = []
 while len(client_address) == 0: #This loop listens until the client sends a message over
@@ -56,21 +58,25 @@ miniscope_id = session_info[2]
 #%%---Generate the config file to be used with the miniscope
 
 #Load a standard config file from  the MiniscopeTools folder in chipmunk
-standard_config = root_directory + "Protocols/chipmunk/MiniscopeTools/standardMiniscopeConfig.json"
+standard_config = root_directory + "/Protocols/chipmunk/MiniscopeTools/standardMiniscopeConfig.json"
 f = open(standard_config, 'r')
 miniscope_config = json.load(f)
 f.close()
 
 #Assign the correct directory, matching the animal and the session
-data_directory = root_directory + "/Data/" + animal_id + "/" + session_date_time #Store this for later
+data_directory = os.path.join(root_directory, "Data", animal_id, session_date_time, "miniscope") #Assign and create the directory
+os.makedirs(data_directory)
 
-miniscope_config['dataDirectory'] = data_directory
+config_directory = os.path.join(root_directory, "Data", animal_id, session_date_time)
+#Since the miniscope software will create subdirectories of the one passed as input
+#we will pass the directory one level above as input to the DAQ software
+miniscope_config['dataDirectory'] = config_directory
 miniscope_config['devices']['miniscopes']['miniscope']['deviceName'] = miniscope_id
 
 #Create a json file in the session's miniscope folder
-miniscope_config_out = data_directory + "/miniscope/" + animal_id + "_miniscopeConfig.json"
-with open(miniscope_config_out,'w') as dumped_info : 
-    json.dump(miniscope_config,dumped_info)
+miniscope_config_out = data_directory + "/" + animal_id + "_miniscopeConfig.json"
+with open(miniscope_config_out,'w') as f : 
+    json.dump(miniscope_config, f)
 
 
 #%%-----Create the mscopelog file file and write a header---------
@@ -116,7 +122,7 @@ try:
         
         current_time = time()
         if (current_time - last_report) > 120: #Update every 2 min
-            print(f"Synchronization ran for {current_time - acquisition_start} s.")
+            print(f"Synchronization ran for {round(current_time - acquisition_start)} s.")
             last_report = current_time
         #teensyCOM.flushOutput()
         #teensyCOM.reset_input_buffer() #Make sure to clear the buffer for new data
@@ -130,5 +136,6 @@ except KeyboardInterrupt:
     #teensyCOM.write(str.encode('0')) #Send a byte (48) to stop the interrupts
     output_file.close()
     teensyCOM.close()
+    del server_socket
     print("Synchronization ended")
 
