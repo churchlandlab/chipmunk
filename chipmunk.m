@@ -273,7 +273,7 @@ if exist('udpObj','var')
     fgetl(udpObj);
 end
 
-pause(0.3) %Introduce a small break before starting the trials. This gives
+pause(0.5) %Introduce a small break before starting the trials. This gives
 %labcams enough time to get started and record at least one non-trial frame
 
 %--------------------------------------------------------------------------
