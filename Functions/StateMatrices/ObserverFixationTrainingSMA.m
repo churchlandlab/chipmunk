@@ -125,12 +125,10 @@ reportingTime = minObsTime - waitTime;
 
 %Define a brief delay between the outcome for the demonstrator and
 %revealing the fixation success to the observer.
-outcomeSeparation = 0.1;
-%Here, there are 100 ms before the observer port LED switches off if
-%fixated correctly or before the punishment pink noise is played to the
-%observer. This should is intended to separate the outcome information
-%slightly, so that the observer understands both outcomes.
-
+outcomeSeparation = 0;
+%In the observer training curretnly no outcomes are presented to the
+%observer, therefore we don't need to delay the early withdrawal
+%punishment.
 % Create the struct to hold the task delays
 taskDelays = struct();
 taskDelays.trialStartDelay = trialStartDelay;
