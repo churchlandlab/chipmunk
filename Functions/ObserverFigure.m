@@ -53,7 +53,7 @@ switch figMethod
         box off; BpodSystem.GUIHandles.InitiationTimePlotObserver.XTick = [];
         BpodSystem.GUIHandles.WaitTimePlotObserver = axes('Parent', BpodSystem.GUIHandles.Figures.ObsFigure,...
             'Units', 'Normal', 'Position', [0.675, 0.53, 0.3, 0.4],'tickdir','out','NextPlot', 'add');
-        xlabel('Estimated count'); ylabel('Wait times (s)'); title('Observer wait time');
+        xlabel('Trial number'); ylabel('Wait times (s)'); title('Observer wait time');
         box off; grid on;
         %---------
 %         %Observer pre-observation panel
