@@ -245,6 +245,8 @@ if isfield(S, 'obsID')
     InitiationTimePlotObserver(BpodSystem.GUIHandles.InitiationTimePlotObserver,'init');
 end
 
+%Initialize the notook to keep track of unexpected events, etc.
+BpodNotebook('init');
 %--------------------------------------------------------------------------
 %% Prepare the trial loop
 
@@ -569,6 +571,7 @@ for currentTrial = 1:maxTrialNum
             end
         end
         
+        BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data) %Store the notes with the session data
         %--------------------------------------------------------------------------
         %% Write the trial end to the labcams camlog
         
