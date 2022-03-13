@@ -48,12 +48,10 @@ switch plotMethod
         stimulusSignals = varargin{1}; %get the signals
         
         %First visual
-        axes(AxesHandleVisual) 
         set(BpodSystem.GUIHandles.StimulusPlotVisualLine,'xdata', BpodSystem.GUIData.StimulusPlotDemonstrator.Xdata,...
             'ydata', stimulusSignals(1,:)); %Visual waveform is in the first row
         
         %Second auditory
-        axes(AxesHandleAuditory) 
         set(BpodSystem.GUIHandles.StimulusPlotAuditoryLine,'xdata', BpodSystem.GUIData.StimulusPlotDemonstrator.Xdata,...
             'ydata', stimulusSignals(2,:)); %Auditroy waveform in the second row
         
