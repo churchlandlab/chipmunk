@@ -98,9 +98,8 @@ interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTria
 % observer can't yet fixate in the observer deck and instructs the observer
 % that it can only poke when the demonstrator is already fixating.
 
-% The delay between demonstrator poking and stimulus playing
-preStimDelay = 0; %The demonstrator preStimDelay is replaced in the observer
-% task by the time to the observer needs to initiate.
+% The delay observer initiating and stimulus playing
+preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax); %The demonstrator preStimDelay is replaced in the observer
 
 % Introduce some randomness in the required wait time. Here this is
 % implemented as maximally 10% of the minimum observation time.
@@ -208,17 +207,24 @@ sma = AddState(sma, 'Name', 'DemonInitFixation',...
 
 sma = AddState(sma, 'Name', 'ObsInitFixation',...
     'Timer',0,...
-    'StateChangeConditions', {'Tup','PlayStimulus'},...
-    'OutputActions', {'PWM4', 255,'ObserverDeck1',30});
+    'StateChangeConditions', {'Tup','PreStimPeriod'},...
+    'OutputActions', {'SoftCode', 255,'ObserverDeck1',30});
 %State that registers the fixation of the observer. To indicate successful
 %fixation the side LEDs in the demonstrator side are switched off. Bpod
 %sends byte 30 to teensy to start counting how often the observer deck beam
 %is unbroken.
 
+sma = AddState(sma, 'Name', 'PreStimPeriod',...
+    'Timer',preStimDelay,...
+    'StateChangeConditions', {'Tup','PlayStimulus'},...
+    'OutputActions', {'PWM4', 255});
+%Delay between the end of the observer init sound and the playing of the
+%stimulus
+
 sma = AddState(sma, 'Name', 'ObsDidNotInitiate',...
     'Timer',0, ...
-    'StateChangeConditions', {'Tup','PlayStimulus'},...
-    'OutputActions', {'PWM1', 255, 'PWM3', 255, 'PWM4', 255,'ObserverDeck1',33});
+    'StateChangeConditions', {'Tup','PreStimPeriod'},...
+    'OutputActions', {'SoftCode', 255,'ObserverDeck1',33});
 %Register that the observer did not initiate in the correct time window to
 %evaluate observer fixation success later. Bit 33 to teensy signals
 %non-initiation and will be treated like unsucessful fixation without

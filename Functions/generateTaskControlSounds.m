@@ -32,15 +32,22 @@ function generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunish
 % Adapted from generateAndUploadSound in the auxiliary functions of
 % Mudskipper2, 1/19/2021, 10/13/2021, LO
 %--------------------------------------------------------------------------
-
+global BpodSystem
 samplingFreq = 192000; %Match the sampling frequency the sound card was initialized with, hard-coded!
 
-startTrialCueFreq = 4000; %Set the frequency of the tiral initiation sound
+startTrialCueFreq = 2000; %Set the frequency of the tiral initiation sound
 goCueFreq = 7000; % Set the frequency of the goCue at the end of the demonstrator fixation
 punishSoundFreq = 15000; %Set the frequency for wrong choice punishments
 
-% The cue indicating the demonstrator to start the trial
-startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* cueLoudness + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, 0.1);% Sampling freq (hz), Sine frequency (hz), duration (s)
+% The cue indicating the observer to start poking. In the current
+% implementation the tone is played until the observer pokes or until the
+% end of the window, resulting in the stimulus train being played. In case
+% there is no observer take the maximum of the pre-stim delay.
+if isfield(BpodSystem.ProtocolSettings, 'obsInitiationWindow')
+    startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* (cueLoudness*0.85) + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, BpodSystem.ProtocolSettings.obsInitiationWindow);% Sampling freq (hz), Sine frequency (hz), duration (s)
+else
+    startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* (cueLoudness*0.85) + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, BpodSystem.ProtocolSettings.obsInitiationWindow);  %Use maximum pre-stimulus delay
+end
 startTrialCueSound = [zeros(1,size(startTrialCueWaveform,2)); startTrialCueWaveform];
 
 % Go cue at the end of demonstrator fixation

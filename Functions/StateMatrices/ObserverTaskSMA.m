@@ -77,9 +77,10 @@ interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTria
 % observer can't yet fixate in the observer deck and instructs the observer
 % that it can only poke when the demonstrator is already fixating.
 
-% The delay between demonstrator poking and stimulus playing
-preStimDelay = 0; %The demonstrator preStimDelay is replaced in the observer
-% task by the time to the observer needs to initiate.
+% The delay between demonstrator poking and stimulus playing. This happens
+% after the observer pokes.
+preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax); %The demonstrator preStimDelay is replaced in the observer
+
 
 %Check the wait time for the demonstrator and add a random independent
 %delay.
@@ -94,7 +95,7 @@ end
 %Define a brief delay between the outcome for the demonstrator and
 %revealing the fixation success to the observer.
 outcomeSeparation = 0.1;
-%This delay will only be used if the demonstrator is punished for wring
+%This delay will only be used if the demonstrator is punished for wrong
 %choice or early withdrawal. Introducing outcomeSeparation will make Bpod
 %idle in the respective states for the specified amount of time. In case
 %the demonstrator is rewarded the state already lasts several tens of
@@ -155,18 +156,26 @@ sma = AddState(sma, 'Name', 'DemonInitFixation',...
 
 sma = AddState(sma, 'Name', 'ObsInitFixation',...
     'Timer',0,...
-    'StateChangeConditions', {'Tup','PlayStimulus', 'Port2Out','DemonEarlyWithdrawal'},...
-    'OutputActions', {'PWM4', 255,'ObserverDeck1',30});
+    'StateChangeConditions', {'Tup','PreStimPeriod', 'Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', {'SoftCode', 255,'ObserverDeck1',30});
 %State that registers the fixation of the observer. To indicate successful
-%fixation the side LEDs in the demonstrator side are switched off. Bpod
+%fixation the side LEDs in the demonstrator side are switched off and the observer 
+%initiation cue i turned off. Bpod
 %sends byte 30 to teensy to start counting how often the observer deck beam
 %is unbroken. If the demonstrator breaks fixation here, immediately advance
 %to DemonEarlyWithdrawal.
 
+sma = AddState(sma, 'Name', 'PreStimPeriod',...
+    'Timer', preStimDelay,...
+    'StateChangeConditions', {'Tup','PlayStimulus', 'Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', {'PWM4', 255});
+%Introduces some separation between the continuous observer fixation cue
+%and the actual stimuls.
+
 sma = AddState(sma, 'Name', 'ObsNoInit_DemonContinue',...
     'Timer',0, ...
-    'StateChangeConditions', {'Tup','PlayStimulus','Port2Out','DemonEarlyWithdrawal'},...
-    'OutputActions', {'PWM1', 255, 'PWM3', 255, 'PWM4', 255,'ObserverDeck1',33});
+    'StateChangeConditions', {'Tup','PreStimPeriod','Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', {'SoftCode', 255,'ObserverDeck1',33});
 %Register that the observer did not initiate in the correct time window to
 %evaluate observer fixation success later. Bit 33 to teensy signals
 %non-initiation and will be treated like unsucessful fixation without
@@ -176,7 +185,7 @@ sma = AddState(sma, 'Name', 'ObsNoInit_DemonContinue',...
 sma = AddState(sma, 'Name', 'ObsNoInit_DemonEarlyWithdrawal',...
     'Timer',0, ...
     'StateChangeConditions', {'Tup','DemonEarlyWithdrawal'},...
-    'OutputActions', {'PWM1', 255, 'PWM3', 255, 'PWM4', 255,'ObserverDeck1',33});
+    'OutputActions', {'SoftCode', 255,'ObserverDeck1',33});
 %Register that the observer did not initiate in the correct time window to
 %evaluate observer fixation success later. Bit 33 to teensy signals
 %non-initiation and will be treated like unsucessful fixation without
