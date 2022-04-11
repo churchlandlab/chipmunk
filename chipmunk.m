@@ -296,15 +296,15 @@ for currentTrial = 1:maxTrialNum
             %have been initialized and it needs to exist. Otherwise the content
             %of the UIcontrols cannot be evaluated.
             
-            %Re-compute the the task sounds when updating. This is the only
-            %static element that can be user-modified.
-            if isfield(S, 'obsID') %Add a separate early withdrawal punishment sound during observer fixation training.
-                generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-                    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
-            else
-                generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-                    S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, [],[])
-            end
+%             %Re-compute the the task sounds when updating. This is the only
+%             %static element that can be user-modified.
+%             if isfield(S, 'obsID') %Add a separate early withdrawal punishment sound during observer fixation training.
+%                 generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
+%                     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, trialDelays, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
+%             else
+%                 generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
+%                     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, trialDelays,[],[])
+%             end
             
             update = 0; %Finish updating
         end
