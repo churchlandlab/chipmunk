@@ -1,5 +1,5 @@
-function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTrainingSMA(correctSideOnCurrent);
-% [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTrainingSMA(correctSideOnCurrent);
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTrainingSMA(correctSideOnCurrent);
+% [sma, trialDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTrainingSMA(correctSideOnCurrent);
 %
 % SMA assembler function for the fixation training of the observer. During
 % this training phase the observer learns to wait on the observer deck and
@@ -11,7 +11,7 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTraini
 % a timeout. Here, the demonstrator trial structure sounds are also played
 % with the go cue occuring at a random time after the demon trial start cue.
 % The rate of occurence of the different outcomes is defined by
-% "simulatedCorrectRate" and "simulatedEarlyWithdrawalRate".
+% "virtualDemonCorrectRate" and "virtualDemonEarlyWithdrawalRate".
 %
 % NOTE that this assembler makes a set of assumptions about plausible trial
 % delays that are not passed as arguments but that are defined inside this
@@ -35,7 +35,7 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverFixationTraini
 %                      by an observer or virtually (pacedFlag = true) or
 %                      whether it can self initiate (pacedFlag = false).
 %
-% LO, 7/8/2021, 10/13/2021, 1/11/2022
+% LO, 7/8/2021, 10/13/2021, 1/11/2022, 4/10/2022
 %-------------------------------------------------------------------------
 global BpodSystem
 
@@ -129,14 +129,14 @@ outcomeSeparation = 0;
 %observer, therefore we don't need to delay the early withdrawal
 %punishment.
 % Create the struct to hold the task delays
-taskDelays = struct();
-taskDelays.trialStartDelay = trialStartDelay;
-taskDelays.preStimDelay = preStimDelay;
-taskDelays.waitTime = waitTime;
-taskDelays.postStimDelay = postStimDelay;
-taskDelays.interTrialInterval = interTrialInterval;
-taskDelays.reportingTime = reportingTime;
-taskDelays.outcomeSeparation = outcomeSeparation;
+trialDelays = struct();
+trialDelays.trialStartDelay = trialStartDelay;
+trialDelays.preStimDelay = preStimDelay;
+trialDelays.waitTime = waitTime;
+trialDelays.postStimDelay = postStimDelay;
+trialDelays.interTrialInterval = interTrialInterval;
+trialDelays.reportingTime = reportingTime;
+trialDelays.outcomeSeparation = outcomeSeparation;
 
 %--------------------------------------------------------------------------
 %% Prepare the simulated outcomes of the demonstrator trial. The rate of correct
@@ -145,7 +145,10 @@ taskDelays.outcomeSeparation = outcomeSeparation;
 % they are associated with some sound delivered to the demonstrator that
 % the observer has to learn to ignore if it performs the observer task.
 
-if rand < BpodSystem.ProtocolSettings.simulatedEarlyWithdrawalRate
+%This is outdated in the current version (10/4/2022) where observers learn
+%to watch the empty box. 
+
+if rand < BpodSystem.ProtocolSettings.virtualDemonEarlyWithdrawalRate
         earlyWithdrawalTime = (1 - generate_random_delay(10, 0.01, 1)) * waitTime;
         %Randomly draw times of early withdrawal according to how long the
         %virtual demonstrator is supposed to wait. Make withdrawals just at
@@ -153,7 +156,7 @@ if rand < BpodSystem.ProtocolSettings.simulatedEarlyWithdrawalRate
                
     trialOutcome = 'DemonReward'; %Let's just assume the mouse would choose correctly if it stayed
 else
-    if rand > BpodSystem.ProtocolSettings.simulatedCorrectRate
+    if rand > BpodSystem.ProtocolSettings.virtualDemonCorrectRate
         trialOutcome = 'DemonWrongChoice';
     else
         trialOutcome = 'DemonReward';

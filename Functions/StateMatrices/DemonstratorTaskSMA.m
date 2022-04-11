@@ -1,5 +1,5 @@
-function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
-% [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
+% [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
 %
 % SMA assemly function for the DemonstratorTask. In this condition a
 % demonstrator can self-initiate trials by poking into the center port after
@@ -19,7 +19,7 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(co
 %                      by an observer or virtually (pacedFlag = true) or
 %                      whether it can self initiate (pacedFlag = false).
 %
-% LO, 4/1/2021, LO, 1/13/2022
+% LO, 4/1/2021, LO, 1/13/2022, 4/10/2022
 %-------------------------------------------------------------------------
 global BpodSystem
 
@@ -67,13 +67,18 @@ interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTria
 % observer can't yet fixate in the observer deck and instructs the observer
 % that it can only poke when the demonstrator is already fixating.
 
-%The delay between demonstrator poking and stimulus playing. This delay
-%serves 2 purposes: 1) The random delay until the stimulus presentation
-%start is supposed to mimick the time it would take an observer to fixate
-%at the observer deck; 2) It may help reducing anticipatory signals to the
+virtualObsInitDelay = generate_random_delay(BpodSystem.ProtocolSettings.virtualObsInitLambda, BpodSystem.ProtocolSettings.virtualObsInitMin, BpodSystem.ProtocolSettings.virtualObsInitMax);
+%The delay between demonstrator poking and virtual observer initiating.
+%This is separtely assigned because the tone needs to be terminated before
+%the trial can move on to the pre stimulus delay period. A pre/stimulus
+%period is still necessary because the continuous tone for the simulated
+%observer initation would allow the demonstrator to get a precise timing of
+%the stimlus onset.
+
+preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
+%This delay may help reducing anticipatory signals to the
 %stimulus (although in the poisson version the presentation of the first 
 %stimulus is not predictable by definition)
-preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
 
 %Check for the wait time
 if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
@@ -84,13 +89,14 @@ else
     postStimDelay = 0;
 end
 
-% Creat the struct to hold the task delays
-taskDelays = struct();
-taskDelays.trialStartDelay = trialStartDelay;
-taskDelays.preStimDelay = preStimDelay;
-taskDelays.waitTime = waitTime;
-taskDelays.postStimDelay = postStimDelay;
-taskDelays.interTrialInterval = interTrialInterval;
+%Create the struct to hold the task delays
+trialDelays = struct();
+trialDelays.trialStartDelay = trialStartDelay;
+trialDelays.preStimDelay = preStimDelay;
+trialDelays.waitTime = waitTime;
+trialDelays.postStimDelay = postStimDelay;
+trialDelays.interTrialInterval = interTrialInterval;
+trialDelays.virtualObsInitDelay = virtualObsInitDelay;
 
 %--------------------------------------------------------------------------
 %% Assemble the state matrix
@@ -121,12 +127,19 @@ sma = AddState(sma, 'Name', 'DemonWaitForCenterFixation', ...
 %into the center port.
 
 sma = AddState(sma, 'Name', 'DemonInitFixation',...
-    'Timer',preStimDelay, ...
-    'StateChangeConditions', {'Tup','PlayStimulus','Port2Out','DemonEarlyWithdrawal'},...
+    'Timer',virtualObsInitDelay, ...
+    'StateChangeConditions', {'Tup','PreStimPeriod','Port2Out','DemonEarlyWithdrawal'},...
     'OutputActions', {'SoftCode',2, 'PWM1', 255, 'PWM3', 255, 'PWM4', 255});
 %This state is the demonstrator waiting for the virtual observer to
 %initiate fixation at the observer deck before moving on to stimulus
 %presentation.
+
+sma = AddState(sma, 'Name', 'PreStimPeriod',...
+    'Timer',preStimDelay, ...
+    'StateChangeConditions', {'Tup','PlayStimulus','Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', {'PWM4', 255});
+%This state is the preStimulus delay where both animals are waiting for
+%action!
 
 sma = AddState(sma, 'Name', 'PlayStimulus',...
     'Timer', 0, ...

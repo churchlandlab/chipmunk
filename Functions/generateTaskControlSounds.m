@@ -1,17 +1,16 @@
-function generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunishTimeout, wrongPunishLoudness, wrongPunishTimeout, soundCalibrationModelParams, obsEarlyPunishLoudness, obsEarlyPunishTimeout)
-%generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunishTimeout, wrongPunishLoudness, wrongPunishTimeout, soundCalibrationModelParams)
-%generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunishTimeout, wrongPunishLoudness, wrongPunishTimeout, soundCalibrationModelParams, obsEarlyPunishLoudness, obsEarlyPunishTimeout)
+function generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunishTimeout, wrongPunishLoudness, wrongPunishTimeout, soundCalibrationModelParams, trialDelays, obsEarlyPunishLoudness, obsEarlyPunishTimeout)
+%generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunishTimeout, wrongPunishLoudness, wrongPunishTimeout, soundCalibrationModelParams, trialDelays, obsEarlyPunishLoudness, obsEarlyPunishTimeout)
+%generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunishTimeout, wrongPunishLoudness, wrongPunishTimeout, soundCalibrationModelParams, trialDelays)
 %
 %Generates the sounds that signal different stages of the task. These are:
-%a cue to indicate that the observer is ready and that the demonstrator can
-%initiate a trial, the go cue at the end of the demonstrator fixation, the
-%punishment for wrong choices and the early withdrawal punishment noise.
-%The frequencies and characteristics of these sounds are set at the
-%beginning of the function here, instead of them being passed as input
-%arguments.
+%A continuous tone that signals that initiation is possible for the
+%observer, a short beep that indicates the end of demonstrator fixation
+%after the stimulus period, a white noise for early withdrawals of the
+%demonstrator, a brown noise for early withdrawals of the observer and a
+%high pitched tone as a punshment for wrong choices of the demonstrator.
 %
-%-INPUTS: cueLoudness: The loudness for the start trial cue as well as for
-%                      the go cue.
+%-INPUTS: cueLoudness: The loudness for the observer initiation tone as 
+%                      well as for the go cue.
 %         earlyPunishLoudness: Arbitrary loudness value for early
 %                              punishment sound.
 %         earlyPunishTimeout: The timeouot period through which the
@@ -21,6 +20,9 @@ function generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunish
 %         soundCalibrationModelParams: Coefficients for the fitted
 %                                      polynomial relation between loudness
 %                                      values and sound pressure.
+%         trialDelays: Struct containing the delays assigned by the
+%                      sma-assembler, used to determine the length of the
+%                      observer initiation tone.
 %         obsEarlyPunishLoudness (optional): Loudness of the pink noise
 %                                            stimulus.
 %         obsEarlyPunishTimeout (optional): Timeout period for early
@@ -30,7 +32,7 @@ function generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunish
 %
 %
 % Adapted from generateAndUploadSound in the auxiliary functions of
-% Mudskipper2, 1/19/2021, 10/13/2021, LO
+% Mudskipper2, 1/19/2021, 10/13/2021, 10/4/2022, LO
 %--------------------------------------------------------------------------
 global BpodSystem
 samplingFreq = 192000; %Match the sampling frequency the sound card was initialized with, hard-coded!
@@ -44,9 +46,14 @@ punishSoundFreq = 15000; %Set the frequency for wrong choice punishments
 % end of the window, resulting in the stimulus train being played. In case
 % there is no observer take the maximum of the pre-stim delay.
 if isfield(BpodSystem.ProtocolSettings, 'obsInitiationWindow')
+    %When the main subject is the observer the tone can maximally last for
+    %as long as the observer has the chance to initiate.
     startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* (cueLoudness*0.85) + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, BpodSystem.ProtocolSettings.obsInitiationWindow);% Sampling freq (hz), Sine frequency (hz), duration (s)
 else
-    startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* (cueLoudness*0.85) + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, BpodSystem.ProtocolSettings.obsInitiationWindow);  %Use maximum pre-stimulus delay
+    %When the main subject is not the observer the initiation delay for a
+    %virtual observer will be drawn randomly and stored in the trialDelays
+    %struct. This delay will be used for the tone duration.
+    startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* (cueLoudness*0.85) + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, trialDelays.virtualObsInitDelay);  %Use maximum pre-stimulus delay
 end
 startTrialCueSound = [zeros(1,size(startTrialCueWaveform,2)); startTrialCueWaveform];
 

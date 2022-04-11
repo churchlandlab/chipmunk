@@ -99,14 +99,13 @@ switch figMethod
 %         
         %---------
         %Observer virtual demonstrator panel
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,'Units', 'normal', 'Position',[0,0.5-0.1,0.87,0.5],'style', 'text', 'String','simulatedCorrectRate','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,'Units', 'normal', 'Position',[0,0-0.1,0.87,0.5],'style', 'text', 'String','simulatedEarlyWithdrawalRate','HorizontalAlignment','right');
-      
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,'Units', 'normal', 'Position',[0,0.5-0.1,0.87,0.5],'style', 'text', 'String','virtualDemonCorrectRate','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,'Units', 'normal', 'Position',[0,0-0.1,0.87,0.5],'style', 'text', 'String','virtualDemonEarlyWithdrawalRate','HorizontalAlignment','right');      
         
-        BpodSystem.GUIHandles.ParamEdit.simulatedCorrectRate = uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,...
-            'Units', 'normal', 'Position',[0.88,0.5,0.12,0.5],'style', 'edit', 'String',BpodSystem.ProtocolSettings.simulatedCorrectRate);
-        BpodSystem.GUIHandles.ParamEdit.simulatedEarlyWithdrawalRate = uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,...
-            'Units', 'normal', 'Position',[0.88,0,0.12,0.5],'style', 'edit', 'String',BpodSystem.ProtocolSettings.simulatedEarlyWithdrawalRate);
+        BpodSystem.GUIHandles.ParamEdit.virtualDemonCorrectRate = uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,...
+            'Units', 'normal', 'Position',[0.88,0.5,0.12,0.5],'style', 'edit', 'String',BpodSystem.ProtocolSettings.virtualDemonCorrectRate);
+        BpodSystem.GUIHandles.ParamEdit.virtualDemonEarlyWithdrawalRate = uicontrol('Parent', BpodSystem.GUIHandles.ObsVirtualDemonPanel,...
+            'Units', 'normal', 'Position',[0.88,0,0.12,0.5],'style', 'edit', 'String',BpodSystem.ProtocolSettings.virtualDemonEarlyWithdrawalRate);
         %-----------
         %Observer reward panel
         uicontrol('Parent', BpodSystem.GUIHandles.ObsRewardParamPanel,'Units', 'normal', 'Position',[0,-0.2,0.74,1],'style', 'text', 'String','obsRewardVolume','HorizontalAlignment','right');

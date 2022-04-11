@@ -167,8 +167,10 @@ switch figMethod
         %Set the different Task control panels
         BpodSystem.GUIHandles.DemonExperimentPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.05, 0.32, 0.3, 0.12],'Title','Experiment','FontWeight','bold');
-         BpodSystem.GUIHandles.DemonInitiationPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
-            'Position', [0.35, 0.32, 0.3, 0.12],'Title','Demonstrator initiation','FontWeight','bold');
+%          BpodSystem.GUIHandles.DemonInitiationPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
+%             'Position', [0.35, 0.32, 0.3, 0.12],'Title','Demonstrator initiation','FontWeight','bold');
+         BpodSystem.GUIHandles.virtualObsPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
+            'Position', [0.35, 0.32, 0.3, 0.12],'Title','Virtual observer','FontWeight','bold');
         BpodSystem.GUIHandles.DemonFixationPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.35, 0.2, 0.3, 0.12],'Title','Fixation','FontWeight','bold');
         BpodSystem.GUIHandles.DemonPreStimPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
@@ -186,13 +188,26 @@ switch figMethod
         BpodSystem.GUIHandles.DemonChangeExpButton = uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,...
             'Units', 'normal', 'Position', [0.1,0.1,0.8,0.4],'Style','pushbutton','String','Change experiment',...
             'Callback',{@changeExpButton});
-        %-----
-        %Initiation panel
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonInitiationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','initiationWindow','HorizontalAlignment','right');
-
-        BpodSystem.GUIHandles.ParamEdit.initiationWindow = uicontrol('Parent', BpodSystem.GUIHandles.DemonInitiationPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.initiationWindow);
+%         %-----
+%         %Initiation panel
+%         uicontrol('Parent', BpodSystem.GUIHandles.DemonInitiationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','initiationWindow','HorizontalAlignment','right');
+% 
+%         BpodSystem.GUIHandles.ParamEdit.initiationWindow = uicontrol('Parent', BpodSystem.GUIHandles.DemonInitiationPanel,...
+%             'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.initiationWindow);
+%         
         
+        %-----
+        %Virtual observer panel
+        uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','virtualObsInitMin','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','virtualObsInitMax','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,0/3,2/3,1/3],'style', 'text', 'String','virtualObsInitLambda','HorizontalAlignment','right');
+        
+        BpodSystem.GUIHandles.ParamEdit.virtualObsInitMin = uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,...
+            'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.virtualObsInitMin);
+        BpodSystem.GUIHandles.ParamEdit.virtualObsInitMax = uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,...
+            'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.virtualObsInitMax);
+        BpodSystem.GUIHandles.ParamEdit.virtualObsInitLambda = uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,...
+            'Units', 'normal', 'Position',[2/3+0.025,0/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.virtualObsInitLambda);
         %------
         %Fixation panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonFixationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','minWaitTime','HorizontalAlignment','right');

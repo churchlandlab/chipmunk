@@ -1,5 +1,5 @@
-function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorFixationTrainingSMA(correctSideOnCurrent);
-% [sma, taskDelays, reviseChoiceFlag, pacedFlag] = DemonstratorFixationTrainingSMA(correctSideOnCurrent);
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorFixationTrainingSMA(correctSideOnCurrent);
+% [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorFixationTrainingSMA(correctSideOnCurrent);
 %
 % SMA assemly function for the DemonstratorFixationTraining. In this
 % experiment the demonstrator learns to fixate for a given time and to
@@ -61,15 +61,20 @@ interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTria
 % observer can't yet fixate in the observer deck and instructs the observer
 % that it can only poke when the demonstrator is already fixating.
 
-%The delay between demonstrator poking and stimulus playing. This delay
-%serves 2 purposes: 1) The random delay until the stimulus presentation
-%start is supposed to mimick the time it would take an observer to fixate
-%at the observer deck; 2) It may help reducing anticipatory signals to the
+virtualObsInitDelay = generate_random_delay(BpodSystem.ProtocolSettings.virtualObsInitLambda, BpodSystem.ProtocolSettings.virtualObsInitMin, BpodSystem.ProtocolSettings.virtualObsInitMax);
+%The delay between demonstrator poking and virtual observer initiating.
+%This is separtely assigned because the tone needs to be terminated before
+%the trial can move on to the pre stimulus delay period. A pre/stimulus
+%period is still necessary because the continuous tone for the simulated
+%observer initation would allow the demonstrator to get a precise timing of
+%the stimlus onset.
+
+preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
+%This delay may help reducing anticipatory signals to the
 %stimulus (although in the poisson version the presentation of the first 
 %stimulus is not predictable by definition)
-preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
-
 %Check for the wait time
+
 if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
     postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the mean is 0.1 : mean = 1/lambda
     waitTime = 1 + postStimDelay; %Add the delay to the 1 s of stimulus
@@ -79,12 +84,13 @@ else
 end
 
 % Creat the struct to hold the task delays
-taskDelays = struct();
-taskDelays.trialStartDelay = trialStartDelay;
-taskDelays.preStimDelay = preStimDelay;
-taskDelays.waitTime = waitTime;
-taskDelays.postStimDelay = postStimDelay;
-taskDelays.interTrialInterval = interTrialInterval;
+trialDelays = struct();
+trialDelays.trialStartDelay = trialStartDelay;
+trialDelays.preStimDelay = preStimDelay;
+trialDelays.waitTime = waitTime;
+trialDelays.postStimDelay = postStimDelay;
+trialDelays.interTrialInterval = interTrialInterval;
+trialDelays.virtualObsInitDelay = virtualObsInitDelay;
 
 %--------------------------------------------------------------------------
 %% Assemble the state matrix
@@ -115,13 +121,19 @@ sma = AddState(sma, 'Name', 'DemonWaitForCenterFixation', ...
 %into the center port.
 
 sma = AddState(sma, 'Name', 'DemonInitFixation',...
-    'Timer',preStimDelay, ...
-    'StateChangeConditions', {'Tup','PlayStimulus','Port2Out','DemonEarlyWithdrawal'},...
+    'Timer',virtualObsInitDelay, ...
+    'StateChangeConditions', {'Tup','PreStimPeriod','Port2Out','DemonEarlyWithdrawal'},...
     'OutputActions', {'SoftCode', 2, 'PWM1', 255, 'PWM3', 255, 'PWM4', 255});
 %This state is the demonstrator waiting for the virtual observer to
 %initiate fixation at the observer deck before moving on to stimulus
 %presentation.
 
+sma = AddState(sma, 'Name', 'PreStimPeriod',...
+    'Timer',preStimDelay, ...
+    'StateChangeConditions', {'Tup','PlayStimulus','Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', {'PWM4', 255});
+%This state is the preStimulus delay where both animals are waiting for
+%action!
 
 sma = AddState(sma, 'Name', 'PlayStimulus',...
     'Timer', 0, ...

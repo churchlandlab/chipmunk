@@ -1,10 +1,10 @@
-function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverTaskSMA(correctSideOnCurrent);
-% [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverTaskSMA(correctSideOnCurrent);
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = ObserverTaskSMA(correctSideOnCurrent);
+% [sma, trialDelays, reviseChoiceFlag, pacedFlag] = ObserverTaskSMA(correctSideOnCurrent);
 %
 % SMA assembler function for the complete observer task. In this revised
 % implementation the demonstrator starts the task after a random delay
-% (that servers the observer to go and harvest reward and be ready again in
-% time) by poking in the center port. This will trigger a sound that
+% (that serves the observer to go and harvest reward and be ready again in
+% time) by poking in the center port. This will trigger a constant pure tone that
 % indicates that the observer can now fixate on the observer deck. Once the
 % observer pokes the stimulus is triggered and the demonstrator performs
 % the task as trained. After the outcome is revealed (reward, wrong choice 
@@ -25,7 +25,7 @@ function [sma, taskDelays, reviseChoiceFlag, pacedFlag] = ObserverTaskSMA(correc
 %                      by an observer or virtually (pacedFlag = true) or
 %                      whether it can self initiate (pacedFlag = false).
 %
-% LO, 4/1/2021, 1/12/2022
+% LO, 4/1/2021, 1/12/2022, 4/10/2022
 %-------------------------------------------------------------------------
 global BpodSystem
 
@@ -103,13 +103,13 @@ outcomeSeparation = 0.1;
 %signal that could be learned.
 
 % Creat the struct to hold the task delays
-taskDelays = struct();
-taskDelays.trialStartDelay = trialStartDelay;
-taskDelays.preStimDelay = preStimDelay;
-taskDelays.waitTime = waitTime;
-taskDelays.postStimDelay = postStimDelay;
-taskDelays.interTrialInterval = interTrialInterval;
-taskDelays.outcomeSeparation = outcomeSeparation;
+trialDelays = struct();
+trialDelays.trialStartDelay = trialStartDelay;
+trialDelays.preStimDelay = preStimDelay;
+trialDelays.waitTime = waitTime;
+trialDelays.postStimDelay = postStimDelay;
+trialDelays.interTrialInterval = interTrialInterval;
+trialDelays.outcomeSeparation = outcomeSeparation;
 
 %--------------------------------------------------------------------------
 %% Assemble the state matrix
@@ -142,7 +142,7 @@ sma = AddState(sma, 'Name', 'DemonWaitForCenterFixation', ...
 
 sma = AddState(sma, 'Name', 'DemonInitFixation',...
     'Timer',BpodSystem.ProtocolSettings.obsInitiationWindow, ...
-    'StateChangeConditions', {'Tup','ObsNoInit_DemonContinue','ObserverDeck1_1','ObsInitFixation','Port2Out','ObsNoInit_DemonEarlyWithdrawal'},...
+    'StateChangeConditions', {'Tup','ObsDidNotInitiate_DemonContinue','ObserverDeck1_1','ObsInitFixation','Port2Out','ObsDidNotInitiate_DemonEarlyWithdrawal'},...
     'OutputActions', {'SoftCode', 2, 'PWM1', 255, 'PWM3', 255, 'PWM4', 255});
 %This state is the demonstrator waiting for the observer to initiate. First,
 %play a sound to indicate possibility to fixate to the observer (SoftCode2). The
@@ -172,20 +172,20 @@ sma = AddState(sma, 'Name', 'PreStimPeriod',...
 %Introduces some separation between the continuous observer fixation cue
 %and the actual stimuls.
 
-sma = AddState(sma, 'Name', 'ObsNoInit_DemonContinue',...
+sma = AddState(sma, 'Name', 'ObsDidNotInitiate_DemonContinue',...
     'Timer',0, ...
     'StateChangeConditions', {'Tup','PreStimPeriod','Port2Out','DemonEarlyWithdrawal'},...
-    'OutputActions', {'SoftCode', 255,'ObserverDeck1',33});
+    'OutputActions', {'SoftCode', 255, 'PWM4', 255,'ObserverDeck1',33});
 %Register that the observer did not initiate in the correct time window to
 %evaluate observer fixation success later. Bit 33 to teensy signals
 %non-initiation and will be treated like unsucessful fixation without
-%punishment. Switch off the side LEDs to indicate that stimulus
-%presentation starts.
+%punishment. Switch off the observer initiaton tone via SoftCode 255 and 
+%now only keep the observer side poke LED on.
 
-sma = AddState(sma, 'Name', 'ObsNoInit_DemonEarlyWithdrawal',...
+sma = AddState(sma, 'Name', 'ObsDidNotInitiate_DemonEarlyWithdrawal',...
     'Timer',0, ...
     'StateChangeConditions', {'Tup','DemonEarlyWithdrawal'},...
-    'OutputActions', {'SoftCode', 255,'ObserverDeck1',33});
+    'OutputActions', {'SoftCode', 255,'ObserverDeck1',33,'PWM1', 255,'PWM2', 255,'PWM3', 255,'PWM4', 255});
 %Register that the observer did not initiate in the correct time window to
 %evaluate observer fixation success later. Bit 33 to teensy signals
 %non-initiation and will be treated like unsucessful fixation without
@@ -198,7 +198,7 @@ sma = AddState(sma, 'Name', 'PlayStimulus',...
     'Timer', 0, ...
     'StateChangeConditions', {'Tup','DemonCenterFixationPeriod', 'Port2Out', 'DemonEarlyWithdrawal'},...
     'OutputActions', {'SoftCode',1,'PWM4',255});
-%Trigger the stimulus delivery to the demonstrator )SoftCode 1 and move on.
+%Trigger the stimulus delivery to the demonstrator SoftCode 1 and move on.
 %The stimulus will keep playing until finished or until the SoftCode 255 is
 %sent.
 %If the demonstrator gets out of the port in that very moment register an
