@@ -685,7 +685,7 @@ end
     
     if isfield(BpodSystem.ProtocolSettings, 'obsID') %Increase the wait time for the observer
         if S.minObsTimeStep > 0
-            if S.minObsTime >= S.simulatedMedianDemonTrialDur
+            if S.minObsTime >= 2 %Hard coded here, never have to wait longer than 2 s
                 S.minObsTimeStep = 0;
             else
                 if BpodSystem.Data.ObsOutcomeRecord(TrialsDone) == 1
