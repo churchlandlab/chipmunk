@@ -268,6 +268,7 @@ end
 %% Start saving labcams if connected
 if exist('udpObj','var')
     fwrite(udpObj,'softtrigger=0')
+    pause(1)
     fgetl(udpObj);
     fwrite(udpObj,'manualsave=1')
     fgetl(udpObj);
@@ -603,6 +604,7 @@ if BpodSystem.Status.BeingUsed == 0
             fwrite(udpObj,sprintf('log=end'));fgetl(udpObj);
             fwrite(udpObj,sprintf('softtrigger=0'));fgetl(udpObj);
             fwrite(udpObj,sprintf('manualsave=0'));fgetl(udpObj);
+            pause(1)
             fwrite(udpObj,sprintf('quit=1'));
             fclose(udpObj);
             clear udpObj
