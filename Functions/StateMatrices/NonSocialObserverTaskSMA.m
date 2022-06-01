@@ -46,8 +46,8 @@ if exist('correctSideOnCurrent') && ~isempty(correctSideOnCurrent) %input check
     end
 
 else %The dummy case assuming left
-    %rewardedSide = 0;
-    %RewardValve = 2^0;
+    rewardedSide = 0;
+    RewardValve = 2^0;
     rewardValveTime = 0;
     incorrectPortLED = 'PWM3';
 end
@@ -211,7 +211,7 @@ sma = AddState(sma, 'Name', 'ObsDidNotInitiate',...
 sma = AddState(sma, 'Name', 'PlayStimulus',...
     'Timer', 0, ...
     'StateChangeConditions', {'Tup','DemonCenterFixationPeriod'},...
-    'OutputActions', {'PWM4',255, 'SoftCode', 1});
+    'OutputActions', {'SoftCode', 1,'PWM4',255});
 %Play the auditory stimulus.
 
 if ~isnan(earlyWithdrawalTime) %If this trial has been designated a demonstrator early withdrawal
