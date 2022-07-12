@@ -4,6 +4,7 @@ import serial.tools.list_ports
 from time import strftime, gmtime, time
 import socket #To establish udp connection to the behavior computer
 import json
+from labdatatools import rclone_upload_data
 
 #%%-----Make sure to provide a directory containing a Data folder and a
 #       Protocols folder where chipmunk lives or change here
@@ -138,4 +139,7 @@ except KeyboardInterrupt:
     teensyCOM.close()
     del server_socket
     print("Synchronization ended")
-
+#%%-----Use labdatatools to upload the data to the google drive
+    print("Starting to upload the miniscope data...")
+    rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
+    print("...upload complete.")
