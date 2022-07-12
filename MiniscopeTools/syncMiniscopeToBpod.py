@@ -65,10 +65,10 @@ miniscope_config = json.load(f)
 f.close()
 
 #Assign the correct directory, matching the animal and the session
-data_directory = os.path.join(root_directory, "Data", animal_id, session_date_time, "miniscope") #Assign and create the directory
+data_directory = os.path.join(miniscope_config['dataDirectory'], animal_id, session_date_time, "miniscope") #Assign and create the directory
 os.makedirs(data_directory)
 
-config_directory = os.path.join(root_directory, "Data", animal_id, session_date_time)
+config_directory = os.path.join(miniscope_config['dataDirectory'], animal_id, session_date_time)
 #Since the miniscope software will create subdirectories of the one passed as input
 #we will pass the directory one level above as input to the DAQ software
 miniscope_config['dataDirectory'] = config_directory
@@ -142,4 +142,3 @@ except KeyboardInterrupt:
 #%%-----Use labdatatools to upload the data to the google drive
     print("Starting to upload the miniscope data...")
     rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
-    print("...upload complete.")
