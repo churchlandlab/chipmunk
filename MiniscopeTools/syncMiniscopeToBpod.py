@@ -4,6 +4,7 @@ import serial.tools.list_ports
 from time import strftime, gmtime, time
 import socket #To establish udp connection to the behavior computer
 import json
+from labdatatools import rclone_upload_data
 
 #%%-----Make sure to provide a directory containing a Data folder and a
 #       Protocols folder where chipmunk lives or change here
@@ -64,10 +65,10 @@ miniscope_config = json.load(f)
 f.close()
 
 #Assign the correct directory, matching the animal and the session
-data_directory = os.path.join(root_directory, "Data", animal_id, session_date_time, "miniscope") #Assign and create the directory
+data_directory = os.path.join(miniscope_config['dataDirectory'], animal_id, session_date_time, "miniscope") #Assign and create the directory
 os.makedirs(data_directory)
 
-config_directory = os.path.join(root_directory, "Data", animal_id, session_date_time)
+config_directory = os.path.join(miniscope_config['dataDirectory'], animal_id, session_date_time)
 #Since the miniscope software will create subdirectories of the one passed as input
 #we will pass the directory one level above as input to the DAQ software
 miniscope_config['dataDirectory'] = config_directory
@@ -138,4 +139,6 @@ except KeyboardInterrupt:
     teensyCOM.close()
     del server_socket
     print("Synchronization ended")
-
+#%%-----Use labdatatools to upload the data to the google drive
+    print("Starting to upload the miniscope data...")
+    rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')

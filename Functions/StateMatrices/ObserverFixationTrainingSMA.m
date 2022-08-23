@@ -107,7 +107,7 @@ minObsTime = BpodSystem.ProtocolSettings.minObsTime + generate_random_delay(12, 
 
 % Assign the wait- and reporting time of a virtual demonstrator. This is to
 % find the appropriate timing of the go-cue.
-if minObsTime  > 1.1 %If the minimal wait time is bigger than the stimulus presentation plus delay time
+if minObsTime  > 1.4 %If the minimal wait time is bigger than the stimulus presentation plus delay time
    postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the mean is 0.1 : mean = 1/lambda
    waitTime = 1 + postStimDelay; %To mimick the regular wait time with the go-cue
    %This version is different than the previous one in the sense that the
