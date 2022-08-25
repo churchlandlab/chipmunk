@@ -27,7 +27,7 @@ BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 
 SamplingFreq = 192000; %The frequency of the (Fenix) sound card
 
-if isfield(BpodSystem.ProtocolSettings,'obsID') %If there is an observer it ill be the main subject and the videos will be saved to its folder
+if isfield(BpodSystem.ProtocolSettings,'obsID') %If there is an observer it will be the main subject and the videos will be saved to its folder
 [subjectFolder,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{2});
 else
 [subjectFolder,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{1});
@@ -583,7 +583,7 @@ for currentTrial = 1:maxTrialNum
             end
         end
         
-        BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data) %Store the notes with the session data
+        BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data); %Store the notes with the session data
         %--------------------------------------------------------------------------
         %% Write the trial end to the labcams camlog
         
