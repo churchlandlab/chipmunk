@@ -1,4 +1,4 @@
-# chipmunk-solo
+# chipmunk
 
 Freely moving auditory and visual discrimination task for mice (adapted from Raposo et al. 2012)
 
