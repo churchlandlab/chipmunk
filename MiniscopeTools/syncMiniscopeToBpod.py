@@ -140,5 +140,6 @@ except KeyboardInterrupt:
     del server_socket
     print("Synchronization ended")
 #%%-----Use labdatatools to upload the data to the google drive
-    print("Starting to upload the miniscope data...")
-    rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
+    if animal_id != 'FakeSubject':
+       print("Starting to upload the miniscope data...")
+       rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
