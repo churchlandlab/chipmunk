@@ -810,5 +810,4 @@ for currentTrial = 1:maxTrialNum
         rethrow(ME) %Display the error message
     end
 end
-
-
+end
