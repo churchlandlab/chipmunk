@@ -20,7 +20,7 @@ S = initChipmunk;
 %% Decide on the sound handling
 
 %Find sound card for stimuli
-PsychToolboxSoundServer('init'); % Try and let this crash before all the other inputs are passed
+PsychToolboxSoundServerEDIT('init'); % Try and let this crash before all the other inputs are passed
 
 %Set soft code handler to trigger sounds
 BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
@@ -52,7 +52,7 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
             disp(' -> labcams connected.');
         else
             disp(' -> starting labcams');
-            system('export QT_QPA_PLATFORM_PLUGIN_PATH=/usr/lib/x86_64-linux-gnu/qt5/plugins/platforms/; gnome-terminal -- labcams -w')
+            system('export QT_PLUGIN_PATH=/usr/lib/x86_64-linux-gnu/qt5/plugins/platforms/; gnome-terminal -- labcams -w')
                     for i =  1:5
                         fwrite(udplabcams,'ping')
                         tmp = fgetl(udplabcams);
