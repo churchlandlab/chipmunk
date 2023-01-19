@@ -52,7 +52,7 @@ This needs to be done for every rig? Stored somewhere? Where?
 
 #### Water reward size
 
-Within the Bpod control panel, click on the wrench icon and select the water spout icon. This will take you to the water calibration panel. From there, select the valves you will calibrate and record at least three measurements (we use 30, 60, and 90ms with 300 repetitions). 
+Within the Bpod control panel, click on the wrench icon and select the water spout icon. This will take you to the water calibration panel. From there, select the valves you will calibrate and record at least three measurements (we use 30, 60, and 90ms with 300 repetitions). After calibrating, test curve (we use 4 microliters). Official Bpod documentation [here]([url](https://sites.google.com/site/bpoddocumentation/user-guide/general-concepts/liquid-calibration?pli=1)).
 
 
 
