@@ -269,7 +269,7 @@ if pacedFlag
 end
 %--------------------------------------------------------------------------
 %% Start saving labcams if connected
-if exist('udpObj','var')
+if exist('udplabcams','var')
     fwrite(udplabcams,'softtrigger=0')
     pause(1)
     fgetl(udplabcams);
