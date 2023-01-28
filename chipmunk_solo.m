@@ -287,6 +287,7 @@ pause(0.5) %Introduce a small break before starting the trials. This gives
 %------------------------MAIN LOOP-----------------------------------------
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
+tstart = tic;
 for currentTrial = 1:maxTrialNum
     try %This is to make sure that the data will be saved even if some error occurs during its execution
         disp("---------------New Loop Starts!---------------");
@@ -553,7 +554,8 @@ for currentTrial = 1:maxTrialNum
         %% Add to the camera log and run the state machine
         if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
             if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-                fwrite(udplabcams,sprintf('log=trial_start: %d',currentTrial))
+                
+                fwrite(udplabcams,sprintf('log=trial_start[%4.0f]: %d',toc(tstart)/60,currentTrial))
             end
         end
 
