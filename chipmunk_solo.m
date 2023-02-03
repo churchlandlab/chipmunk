@@ -20,7 +20,7 @@ S = initChipmunk;
 %% Decide on the sound handling
 
 %Find sound card for stimuli
-PsychToolboxSoundServerEDIT('init'); % Try and let this crash before all the other inputs are passed
+PsychToolboxSoundServer('init'); % Try and let this crash before all the other inputs are passed
 
 %Set soft code handler to trigger sounds
 BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
