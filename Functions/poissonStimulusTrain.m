@@ -31,7 +31,9 @@ if stimulusRate > length(bin_array)
 end
 
 bin_array(1 : stimulusRate) = 1; %Get the specified number of stimuli
-bin_array = bin_array(randperm(length(bin_array))); %There is the magic!
+shuffleIdx = randperm(length(bin_array)-1); %Get a set of randomly permuted indices, with one less entry than the bins
+%This is to make sure the first bin alwas plays the stimulus
+bin_array(2:end) = bin_array(shuffleIdx + 1); %There is the magic!
 
 eventBin = find(bin_array == 1); %Find the bins that contain a stimulus event
 interStimulusIntervalList = zeros(1, (length(eventBin)+1)); %There is one more interval than stimuli
