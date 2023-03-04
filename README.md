@@ -7,14 +7,14 @@ Freely moving auditory and visual discrimination task for mice (adapted from Rap
 
 This repo contains code, setup description, assembly instructions and parts design to build a freely moving behavior setup.
 
-The task is a visual and/or auditory accumulation of evidence task. The stimuli is stochastic ticks and/or flashes.
+The task is a visual and/or auditory accumulation of evidence task. The stimuli are stochastic ticks and/or flashes.
 
 
 ### Description of the setup
 
-[partslist here](partslist.xlsx)
+You can find a spreadsheet with a parts list [here](hardware_setup/parts_list.xlsx)
 	
-![There should be a picture here.](images/setupdescription.png)
+[This is how a finshed rig looks like.](images/rig.jpg)
 	
 Here goes a description in words.
 	
