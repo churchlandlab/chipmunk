@@ -2,23 +2,25 @@
 
 Freely moving auditory and visual discrimination task for mice (adapted from Raposo et al. 2012)
 
-
 ### Introduction
 
-This repo contains code, setup description, assembly instructions and parts design to build a freely moving behavior setup.
+This repo contains the code, setup description, assembly instructions, and parts design to build a freely moving behavior setup. The task is a visual and/or auditory accumulation of evidence task. The stimuli are stochastic ticks and/or flashes. 
 
-The task is a visual and/or auditory accumulation of evidence task. The stimuli are stochastic ticks and/or flashes.
+### Setup instructions
 
+You can find a spreadsheet with a parts list [here](hardware_setup/parts_list.xlsx). The designs for custom parts are in **/custom_parts**. 
 
-### Description of the setup
+After getting all the nessary parts, follow these steps:
 
-You can find a spreadsheet with a parts list [here](hardware_setup/parts_list.xlsx)
+1. Grab a breadboard big enough to place the behavioral enclosure, cameras, and any other additional equipment you might need. This will depend on the experiments specific needs.
+2. Start assembling the behavioral enclosure and make sure there is enough distance between the breadboard and the bottom of the enclosure. This is to make sure that there is enough distance between a camera at the bottom and the bottom of the enclosure to visualize the subject in the experiment.
+3. The back piece of the behavioral enclosure has openings for placing nose pokes and an LED board (to deliver experimental visual stimuli). Start by assembling the LED board. To do so, grab two of the LED panels and and place them
 	
 [This is how a finshed rig looks like.](images/rig.jpg)
 	
-Here goes a description in words.
+To build a rig for
 	
-3d parts for building the setup are in the **custom_parts/3d** folder.
+3d parts for building the setup are in the **custom_parts/enclosure** folder.
 	
 The walls are laser cut from *pololu* and the drawings are in the **custom_parts/enclosure**
 	
