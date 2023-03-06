@@ -37,7 +37,7 @@ You can find a spreadsheet with a parts list [here](hardware_setup/parts_list.xl
 
 Use cameras that have GPIO connections like the FLIR Chamaeleon 3. On the Chamaeleon 3 you can use the purple wire (GPIO 2) for syncing the cameras. This will be necessary to receive TTL pulses from *Bpod* (more on this later) signaling the start and end of a trial on the camera's log file (see [labcams](https://bitbucket.org/jpcouto/labcams) for using the cameras in your experiments). 
 	
-## Software instalation
+## Software installation
 
 ### Bpod Gen 2
 Install Bpod from the repository [here](https://github.com/sanworks/Bpod_Gen2). This is what will be used to control everything related to the experiment.
