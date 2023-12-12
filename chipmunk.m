@@ -613,6 +613,21 @@ if BpodSystem.Status.BeingUsed == 0
     SessionData = BpodSystem.Data;
     if ~strcmpi(BpodSystem.ProtocolSettings.demonID,'Virtual') %This is when an observer is exposed to the empty cage
         save(BpodSystem.Path.CurrentDataFile{1},'SessionData') %The file path for the demonstrator is always generated and is in position 1
+        
+        %Find notes associated with trials if that function is used
+        trializedNoteIdx = [];
+        for k=1:length(BpodSystem.Data.Notes)
+            if ~isempty(BpodSystem.Data.Notes{k})
+                trializedNoteIdx(end+1) = k;
+            end
+        end
+        if ~isempty(trializedNoteIdx)
+            notesFile = fopen(fullfile(fileparts(BpodSystem.Path.CurrentDataFile{1}), 'notes.txt'), 'w');
+            for k=1:length(trializedNoteIdx)
+                fprintf(notesFile, [sprintf('Trial %d: ', round(trializedNoteIdx(k))) BpodSystem.Data.Notes{trializedNoteIdx(k)} '\n']);
+            end
+            fclose(notesFile);
+        end
     end
     
     if isfield(BpodSystem.ProtocolSettings,'obsID')
@@ -751,6 +766,21 @@ end
     SessionData = BpodSystem.Data;
     if ~strcmpi(BpodSystem.ProtocolSettings.demonID,'Virtual') %This is when an observer is exposed to the empty cage
         save(BpodSystem.Path.CurrentDataFile{1},'SessionData') %The file path for the demonstrator is always generated and is in position 1
+        
+        %Find notes associated with trials if that function is used
+        trializedNoteIdx = [];
+        for k=1:length(BpodSystem.Data.Notes)
+            if ~isempty(BpodSystem.Data.Notes{k})
+                trializedNoteIdx(end+1) = k;
+            end
+        end
+        if ~isempty(trializedNoteIdx)
+            notesFile = fopen(fullfile(fileparts(BpodSystem.Path.CurrentDataFile{1}), 'notes.txt'), 'w');
+            for k=1:length(trializedNoteIdx)
+                fprintf(notesFile, [sprintf('Trial %d: ', round(trializedNoteIdx(k))) BpodSystem.Data.Notes{trializedNoteIdx(k)} '\n']);
+            end
+            fclose(notesFile);
+        end
     end
     
     if isfield(BpodSystem.ProtocolSettings,'obsID')
