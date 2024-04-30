@@ -82,11 +82,11 @@ preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLam
 
 %Check for the wait time
 if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
-    postStimDelay = generate_random_delay(1/0.1, 0.01, 1); %set lambda such that the mean is 0.1 : mean = 1/lambda
-    waitTime = 1 + postStimDelay; %Add the delay to the 1 s of stimulus
+    postWaitDelay = generate_random_delay(1/0.1, 0.01, 0.5); %set lambda such that the mean is 0.1 : mean = 1/lambda
+    waitTime = 0.5 + postWaitDelay; %Add the delay to the 1 s of stimulus
 else
     waitTime = BpodSystem.ProtocolSettings.minWaitTime; %This is to be consisten with previous versions.
-    postStimDelay = 0;
+    postWaitDelay = 0;
 end
 
 %Create the struct to hold the task delays
@@ -94,7 +94,7 @@ trialDelays = struct();
 trialDelays.trialStartDelay = trialStartDelay;
 trialDelays.preStimDelay = preStimDelay;
 trialDelays.waitTime = waitTime;
-trialDelays.postStimDelay = postStimDelay;
+trialDelays.postWaitDelay = postWaitDelay;
 trialDelays.interTrialInterval = interTrialInterval;
 trialDelays.virtualObsInitDelay = virtualObsInitDelay;
 

@@ -696,9 +696,9 @@ for currentTrial = 1:maxTrialNum
         % If previous trial was not an early withdrawal, increase wait duration
         if strcmpi(S.minWaitTime,'Exp') %There are no more wait time steps once the exponential delay mode has been reached.
             S.minWaitTimeStep = 0;
-        elseif S.minWaitTime >=1.1
+        elseif S.minWaitTime >=0.5
             S.minWaitTimeStep = 0;
-            S.minWaitTime = 1.1;
+            S.minWaitTime = 0.5;
         else %Increase the wait times only when the mouse has been waiting successfully
             if BpodSystem.Data.OutcomeRecord(TrialsDone) > -1 % If the last trial was initiated and the animal waited long enough
                 S.minWaitTime = S.minWaitTime + S.minWaitTimeStep;
