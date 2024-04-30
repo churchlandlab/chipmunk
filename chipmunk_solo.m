@@ -70,7 +70,7 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
                 fgetl(udplabcams);
                 fwrite(udplabcams,'manualsave=0')
                 fgetl(udplabcams);
-                fwrite(udplabcams,'softtrigger=1')
+                fwrite(udplabcams,'softtrigger=1') %change this to 0 for ephys recordings
                 fgetl(udplabcams);
             end
         end
