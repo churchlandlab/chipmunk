@@ -1,4 +1,4 @@
-# chipmunk_solo
+# half_second_chipmunk_solo
 
 Freely moving auditory and visual discrimination task for mice (adapted from Raposo et al. 2012). *chipmunk_solo* is an adaptation of *chipmunk*, which can be found at https://github.com/churchlandlab/chipmunk.
 
