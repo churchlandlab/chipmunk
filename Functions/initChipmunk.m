@@ -31,9 +31,9 @@ settingsPathPieces = split(BpodSystem.Path.Settings, filesep);
 experimentName = settingsPathPieces{end}(1:end-4); %get the name to identify the settings. Probaly this is the most stable feature...
 selectedSubjName = settingsPathPieces{end-3}; %Retrieve the name of the mouse, this is possible because the settings file is copied over to the animal's folder
 
-if isempty(strfind(experimentName,'Demonstrator')) && isempty(strfind(experimentName,'Observer')) %Make sure to get the infor about the main subject
-    error('Please specify the main subject inside the settings file name as "Demonstrator" or "Observer"')
-end
+% if isempty(strfind(experimentName,'Demonstrator')) && isempty(strfind(experimentName,'Observer')) %Make sure to get the infor about the main subject
+%     error('Please specify the main subject inside the settings file name as "Demonstrator" or "Observer"')
+% end
 
 %Launch an additional GUI to incorporate more info
 initPanel = figure('Units','Normal','Position',[0.4, 0.2, 0.3, 0.5],'Name',experimentName,...
@@ -74,6 +74,9 @@ if ~isempty(strfind(experimentName,'Observer')) %The observer is the main subjec
     ha.obsID = uicontrol('Parent', Obs,'Units', 'normal', 'Position',[0.55,2/3,0.4,1/3],'style', 'edit', 'String', selectedSubjName);
     ha.obsWeight = uicontrol('Parent', Obs,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit');
 elseif ~isempty(strfind(experimentName,'Demonstrator'))  %Here the demonstrator is the main subject no observer present
+    ha.demonID = uicontrol('Parent', Demon,'Units', 'normal', 'Position',[0.55,2/3,0.4,1/3],'style', 'edit','String', selectedSubjName); %pre-fill with meaningless value for folder
+    ha.demonWeight = uicontrol('Parent', Demon,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit');
+elseif ~isempty(experimentName)
     ha.demonID = uicontrol('Parent', Demon,'Units', 'normal', 'Position',[0.55,2/3,0.4,1/3],'style', 'edit','String', selectedSubjName); %pre-fill with meaningless value for folder
     ha.demonWeight = uicontrol('Parent', Demon,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit');
 end
