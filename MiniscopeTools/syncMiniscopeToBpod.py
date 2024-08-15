@@ -5,6 +5,7 @@ from time import strftime, gmtime, time
 import socket #To establish udp connection to the behavior computer
 import json
 from labdatatools import rclone_upload_data
+import sys
 
 #%%-----Make sure to provide a directory containing a Data folder and a
 #       Protocols folder where chipmunk lives or change here
@@ -14,8 +15,9 @@ miniscope_software_directory = "C:/Users/Anne/Documents"
 #%%-----Find available teensy and establish connection---------
 
 ports = serial.tools.list_ports.comports(include_links=False)
-for port in ports :
-    portsList = [port.device]
+portsList = []
+for port in ports:
+    portsList.append(port.device)
   
 if (len(portsList) == 1):
     teensyCOM = serial.Serial(portsList[0], 9600) #Establish connection at matching rate!
