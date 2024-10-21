@@ -60,6 +60,6 @@ Training has 3 stages:
 2. Learning how the rate of the stimuli predicts the side where reward will be delivered.
 3. Learning to discriminate across a range of differing rates to obtain rewards.
 
-For additional information on how to choose and adjust task parameters during training, check the following [link](https://grojasbowe.notion.site/Parameters-for-training-ebe81437f5f14483b646d6c6ad3185f8). An important note is that these parameters were chosen on the basis that the stimuli presented throughout learning are always multi-sensory (visual and auditory). I have yet to try single-modality training. For that, refer to https://github.com/churchlandlab/chipmunk.
+For additional information on how to choose and adjust task parameters during training, check the following [link](https://grojasbowe.notion.site/Parameters-for-training-ebe81437f5f14483b646d6c6ad3185f8).
 
-By Lukas Oesch and Gabriel Rojas Bowe, circa 2023.
+By Lukas Oesch and Gabriel Rojas Bowe, circa 2024.
