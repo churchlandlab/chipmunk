@@ -1,4 +1,4 @@
-function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = VisualTaskSMA(correctSideOnCurrent);
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = VisualTaskSMA(correctSideOnCurrent)
 % [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
 %
 % SMA assemly function for the DemonstratorTask. In this condition a
@@ -94,7 +94,7 @@ trialDelays = struct();
 trialDelays.trialStartDelay = trialStartDelay;
 trialDelays.preStimDelay = preStimDelay;
 trialDelays.waitTime = waitTime;
-trialDelays.postWaitDelay = postWaitDelay;
+trialDelays.postStimDelay = postWaitDelay;
 trialDelays.interTrialInterval = interTrialInterval;
 trialDelays.virtualObsInitDelay = virtualObsInitDelay;
 
