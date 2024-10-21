@@ -55,11 +55,12 @@ Within the Bpod control panel, click on the wrench icon, and select the water sp
 
 ## Training strategy
 
-Training has 3 stages:
-1. Learning the basics of the task (center poke initiates a trial, rewards are on the left/right ports, etc.)
-2. Learning how the rate of the stimuli predicts the side where reward will be delivered.
-3. Learning to discriminate across a range of differing rates to obtain rewards.
-
+Training has 4 stages:
+1. Learning to initiate trials.
+2. Learning to discriminate easy stimulus strengths
+3. Learning to wait until the maximum wait time (0.5 s + a random delay taken from an exponential distribution).
+4. Learning to discriminate across the full range of stimulus strengths.
+   
 For additional information on how to choose and adjust task parameters during training, check the following [link](https://grojasbowe.notion.site/Parameters-for-training-ebe81437f5f14483b646d6c6ad3185f8).
 
 By Lukas Oesch and Gabriel Rojas Bowe, circa 2024.
