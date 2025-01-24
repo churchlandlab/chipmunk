@@ -47,26 +47,8 @@
      - [Psychtoolbox website](http://psychtoolbox.org/download)
 
 2. **Bpod Setup**:
-   - Clone the **Bpod Gen2** repository:
-     ```bash
-     git clone https://github.com/sanworks/Bpod_Gen2.git ~/Documents/Bpod_Gen2
-     cd ~/Documents/Bpod_Gen2
-     ```
-   - Create two subfolders in the `Bpod Local` directory:
-     ```bash
-     mkdir ~/Documents/Bpod_Gen2/Bpod_Local/Protocols
-     mkdir ~/Documents/Bpod_Gen2/Bpod_Local/Data
-     ```
-   - Clone the **Chipmunk** repository into the `Protocols` folder:
-     ```bash
-     git clone https://github.com/your-org/Chipmunk.git ~/Documents/Bpod_Gen2/Bpod_Local/Protocols
-     ```
-   - Place the WhiteNoise calibration file in the `Calibrations` folder:
-     ```bash
-     mkdir ~/Documents/Bpod_Gen2/Bpod_Local/Calibrations
-     cp path_to_calibration_file ~/Documents/Bpod_Gen2/Bpod_Local/Calibrations
-     ```
-   - Run **Chipmunk** to test.
+   - Install Bpod from the repository [here](https://github.com/sanworks/Bpod_Gen2). This is what will be used to control everything related to the experiment.
+   - Clone this repository to `Bpod Local/Protocols` on the computer you will be using for running experiments. If you make changes, create a branch and remember to commit changes regularly.
 
 3. **Camera Software**:
    - Download and install **SpinView (SpinnakerSDK)**:
