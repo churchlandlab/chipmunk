@@ -63,27 +63,36 @@
 
 ## Labcams Setup
 1. **Install Labcams**:
-   - Open a terminal in the **anne** user's home directory.
-   - Run:
-     ```bash
-     pip install labcams
-     ```
-
-2. **Run Labcams**:
-   - Run Labcams once to generate the folder structure and a default template file:
-     ```bash
-     labcams
-     ```
-
-3. **Install FFMPEG**:
-   - Install FFMPEG via Conda:
-     ```bash
-     conda install ffmpeg -c conda-forge
-     ```
+   Instructions are found [here](https://github.com/jcouto/labcams?tab=readme-ov-file#instalation-on-ubuntu-2004).
 
 4. **Configure Labcams**:
    - Update the configuration with the following parameters:
-     - `pxformat`: Mono8
-     - `hardware_trigger`: out_line3
-     - `recorder_path_format`: `{filename}_{datename}_{nfiles}`
-     - `binning`: 2
+        ```
+         {
+       "cams": [
+           {
+         "Save": true,
+         "serial": CHANGE_ME_TO_CAMERA_SERIAL_NUMBER,
+         "driver": "PointGrey",
+         "frame_rate": 80.0,
+         "gain": 12,
+   	    "exposure":12000,
+   	    "gamma":1.8,
+   	    "binning":2,
+   	    "cam_id": 0,
+         "pxformat": "Mono8",
+         "name": "BottomView",
+   	    "recorder":{
+   		      "format":"ffmpeg",
+             "compression": "27:5M",
+   		      "hwaccel":"nvidia"},
+   	    "hardware_trigger":"out_line3"
+           }
+       ],
+       "recorder_frames_per_file": 0,
+       "recorder_path": "/home/anne/data",
+       "recorder_path_format":"{filename}_{dataname}_{nfiles}",
+       "recorder_sleep_time": 0.05,
+       "server":"udp",
+       "server_port": 9999
+}```
