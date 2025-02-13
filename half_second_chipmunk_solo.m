@@ -67,6 +67,7 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
             if exist('udplabcams', 'var')
                 videoDataPath = subjectFolder;
                 fwrite(udplabcams,['expname=' videoDataPath filesep bhvFile])
+                fwrite(udplabcams,'load_reference=/home/anne/reference_image')
                 fgetl(udplabcams);
                 fwrite(udplabcams,'manualsave=0')
                 fgetl(udplabcams);
