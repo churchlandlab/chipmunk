@@ -1,4 +1,4 @@
-function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = MultipleModalitiesSMA(correctSideOnCurrent)
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = MultipleModalitiesTaskSMA(correctSideOnCurrent)
 % [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
 %
 % SMA assemly function for the DemonstratorTask. In this condition a
