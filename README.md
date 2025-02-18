@@ -39,11 +39,7 @@ Use cameras that have GPIO connections like the FLIR Chamaeleon 3. On the Chamae
 	
 ## Software installation
 
-### Bpod Gen 2
-Install Bpod from the repository [here](https://github.com/sanworks/Bpod_Gen2). This is what will be used to control everything related to the experiment.
-
-### chipmunk task files
-Clone this repository to `Bpod Local/Protocols` on the computer you will be using for running experiments. If you make changes, create a branch and remember to commit changes regularly.
+Refer to instructions [here](/ubuntu_software_setup.md).
 
 ### Calibration 
 
