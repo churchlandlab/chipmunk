@@ -171,6 +171,6 @@ class Chipmunk(dj.Imported):
             DatasetVideo.Frame.insert([dict(key,**f) for f in frames],
                                       skip_duplicates = True,
                                       ignore_extra_fields = True)
-            # should also run droplets_insert_decision_task but has to be changed to allow.
-            # from .utils import droplets_insert_decision_task
-            # droplets_insert_decision_task(key)
+            # should also run chipmunk_insert_decision_task but has to be changed to allow.
+            from .utils import chipmunk_insert_decision_task
+            chipmunk_insert_decision_task(key)

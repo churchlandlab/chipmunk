@@ -444,11 +444,11 @@ def extract_chipmunk_camera_data(folder, trial_dict):
     if len(a): 
         conditiontrials += [np.random.choice(a,1)]
         timepoints.append(trials.t_response.values[conditiontrials[-1]])
-    a = np.where(np.isfinite(trials.t_response.values) & (trials.response.values == -1))[0]
+    a = np.where(np.isfinite([t if not t is None else np.nan for t in trials.t_response.values]) & (trials.response.values == -1))[0]
     if len(a):
         conditiontrials += [np.random.choice(a,1)]
         timepoints.append(trials.t_response.values[conditiontrials[-1]])
-    a = np.where(np.isfinite(trials.t_earlywithdraw.values) & (trials.early_withdrawal.values == 1))[0]
+    a = np.where(np.isfinite([t if not t is None else np.nan for t in trials.t_earlywithdraw.values]) & (trials.early_withdrawal.values == 1))[0]
     if len(a): 
         conditiontrials += [np.random.choice(a,1)]
         timepoints.append(trials.t_response.values[conditiontrials[-1]])
@@ -486,3 +486,94 @@ def extract_chipmunk_camera_data(folder, trial_dict):
                         print(f'Check {videoname} in {folder}, there might be a sync issue?')
         del vid
     return camera, frames, events
+
+
+def chipmunk_insert_decision_task(d, mintrials = 50):
+    '''
+    Inserts a chipmunk trialset into the DecisionTask tables
+
+    Joao Couto - 2025
+    '''
+    import warnings
+    from .pluginschema import Chipmunk
+    from labdata.schema import Watering, Session, DecisionTask, Dataset
+    d = (Dataset & d).fetch1()
+
+    trials = pd.DataFrame((Chipmunk*Chipmunk.Trial*Chipmunk.TrialParameters & d).fetch(order_by='trial_num'))
+    if len(trials)<50: 
+        return
+    trials['reward_volume'] = 0
+    trials.loc[(trials['rewarded'] == 1)&(trials['response'] == 1),'reward_volume'] = trials['setting_right_reward_volume'].iloc[0]
+    trials.loc[(trials['rewarded'] == 1)&(trials['response'] == -1),'reward_volume'] = trials['setting_left_reward_volume'].iloc[0]
+
+    watering = dict(subject_name = d['subject_name'],
+                watering_datetime = (Dataset*Session & d).fetch('session_datetime')[0],
+                water_volume = np.sum(trials.reward_volume.values)/1000.)
+    dtask = dict(d,n_total_trials = len(trials),
+             n_total_assisted = 0, # there are no assisted trials for chipmunk?
+             n_total_performed = np.sum((trials.early_withdrawal.values == 0) &
+                                        (trials.initiated.values == 1)),
+             n_total_with_choice = np.sum((trials.early_withdrawal.values == 0) &
+                                          (trials.response.values != 0)),
+             n_total_initiated = np.sum((trials.initiated.values == 1)),
+             n_total_rewarded = np.sum((trials.early_withdrawal.values == 0) &
+                                       (trials.response.values != 0) &
+                                       (trials.rewarded.values == 1)),
+             n_total_punished = np.sum((trials.early_withdrawal.values == 0) &
+                                       (trials.response.values != 0) &
+                                       (trials.punished.values == 1)),
+             watering_datetime = watering['watering_datetime'])
+    # separate by optogenetics trials and by modality:
+    trialsets = []
+    for mod in np.unique(trials.rewarded_modality.values):
+        tset = trials[(trials.rewarded_modality == mod)]
+        if mod == 'visual':
+            stim_int = tset.stim_rate_vision.values - tset.category_boundary.values
+        elif mod == 'audio':
+            stim_int = tset.stim_rate_audio.values - tset.category_boundary.values
+        else:
+            raise(f'[chipmunk]: Not sure how to handle {mod}.')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            reaction_times = tset.t_response.values - tset.t_gocue.values
+        reaction_times[(tset.response.values == 0)] = np.nan
+        performance = np.nansum((tset.with_choice.values == 1) 
+                                & (tset.rewarded == 1))/np.nansum((tset.with_choice.values == 1))
+        performance_easy = np.nansum((tset.with_choice.values == 1) & 
+                                  (np.abs(stim_int) == np.nanmax(stim_int)) &
+                                  (tset.rewarded.values == 1))/np.nansum(
+                                      (tset.with_choice.values == 1) &
+                                      (np.abs(stim_int) == np.nanmax(stim_int)) &
+                                      (tset.response.values != 0))
+        if not np.isfinite(performance_easy):
+            performance_easy = 0
+        if not np.isfinite(performance):
+            performance = 0 # there were no unassisted
+        if len(tset)>10: # only add if there are more than 
+            trialsets.append(dict(d,
+                                  trialset_description = mod,
+                                  n_trials = len(tset),
+                                  n_performed = np.nansum((tset.initiated.values == 1)),
+                                  n_with_choice = np.nansum((tset.with_choice.values == 1)),
+                                  n_correct = np.nansum(~(tset.with_choice.values == 0) &
+                                                     (tset.rewarded.values == 0)),
+                                  performance = performance,
+                                  performance_easy = performance_easy,
+                                  trial_num = tset.trial_num.values,
+                                  assisted = tset.with_choice.values*0, # there are no assisted
+                                  response_values = [r if i==1 else np.nan for i,r in zip(tset.with_choice.values,tset.response.values)],
+                                  correct_values = tset.rewarded.values,
+                                  initiation_times = tset.t_initiate.values-tset.t_start.values,
+                                  intensity_values = stim_int,
+                                  reaction_times = reaction_times))    
+    # Inserts
+    Watering.insert1(watering,
+                     skip_duplicates = True)
+    DecisionTask.insert1(dtask,
+                         skip_duplicates = True,
+                         allow_direct_insert=True,
+                         ignore_extra_fields=True)
+    DecisionTask.TrialSet.insert(trialsets,
+                                 skip_duplicates = True,
+                                 allow_direct_insert=True,
+                                 ignore_extra_fields=True)
