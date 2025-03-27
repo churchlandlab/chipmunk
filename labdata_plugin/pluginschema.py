@@ -1,12 +1,12 @@
 from labdata.schema import *
 
 username = prefs['database']['database.user']
-chipmunkschema = f'{username}_chipmunk'  # allows user defined schemas
-if 'atlas_registration_schema' in prefs.keys(): # to be able to override to another name
+chipmunkschema = f'user_{username}_chipmunk'  # allows user defined schemas
+if 'chipmunk_schema' in prefs.keys(): # to be able to override to another name
     chipmunkschema = prefs['chipmunk_schema']
 if 'root' in chipmunkschema:
     raise(ValueError('[chipmunk] "chipmunk_schema" must be specified in the preference file to run as root.'))
-    
+
 chipmunkschema = dj.schema(chipmunkschema)
 
 @chipmunkschema
