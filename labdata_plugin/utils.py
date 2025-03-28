@@ -273,7 +273,10 @@ def process_chipmunk_file(filepath):
                           t_response = _get_state_time(trial,['Reward','WrongChoice']),
                           t_end = _get_state_time(trial,'FinishTrial'))
 
-        stim_duration = 1. + trial['ExtraStimulusDuration']
+        if 'ExtraStimulusDuration' in trialdata.keys():
+            stim_duration = 1. + trial['ExtraStimulusDuration']
+        else:
+            stim_duration = 1.
         if not trialtimes['t_earlywithdraw'] is None:
             # trim the stim duration to the withdrawal time
             if not trialtimes['t_stim'] is None:
