@@ -205,7 +205,7 @@ def _get_state_time(trial, states = [],index = 0):
         return None
     if type(states) is str:
         states = [states]
-    time =  None # in case the state does not exist..
+    time =  np.nan # in case the state does not exist..
     for state  in states:
         statekeys = [k for k in trial.keys() if state in k]
         if len(statekeys):
