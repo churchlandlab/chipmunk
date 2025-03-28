@@ -26,8 +26,11 @@ def load_chipmunk_trialdata(file_name):
     try:
         sesdata = loadmat(file_name, squeeze_me=True,
                               struct_as_record=True)['SessionData']
-        notes = sesdata['Notes']
-        notes = '\n'.join([f'trial:{itrial};{note}' for itrial,note in enumerate(notes.tolist()) if len(note)])
+        if 'Notes' in sesdata.dtype.names:
+            notes = sesdata['Notes']
+            notes = '\n'.join([f'trial:{itrial};{note}' for itrial,note in enumerate(notes.tolist()) if len(note)])
+        else:
+            notes = ''
         tset = sesdata['TrialSettings'].tolist()
         setup_name = tset['rigNo'][0]
         experimenter = tset['researcher'][0]
@@ -125,7 +128,11 @@ def load_chipmunk_trialdata(file_name):
                 outcome_timing.append(np.array([np.nan, np.nan]))
         trialdata.insert(trialdata.shape[1], 'outcome_presentation', outcome_timing)
         # Retrieve the flag for revised choices
-        trialdata.insert(trialdata.shape[1], 'revise_choice_flag', np.ones(trialdata.shape[0], dtype = bool) * sesdata['ReviseChoiceFlag'].tolist())
+        if 'ReviseChoiceFlag' in sesdata.dtype.names:
+            trialdata.insert(trialdata.shape[1], 'revise_choice_flag', np.ones(trialdata.shape[0], dtype = bool) * sesdata['ReviseChoiceFlag'].tolist())
+        else:
+            print('There was no ReviseChoiceFlag.')
+            trialdata.insert(trialdata.shape[1], 'revise_choice_flag', np.ones(trialdata.shape[0], dtype = bool) * 0)
         #Get the Bpod timestamps for the start of each new trial
         trialdata.insert(trialdata.shape[1], 'trial_start_time' , sesdata['TrialStartTimestamp'].tolist())
         #----Get the timestamp of when the mouse gets out of the response poke
@@ -230,9 +237,14 @@ def process_chipmunk_file(filepath):
         setting_modalities = 'visual'
     else:
         setting_modalities = 'visual+audio'
+
+    setting_strict_choice = 0
+    setting_free_choice = 0
+    if 'ReviseChoiceFlag' in session_data.dtype.names:
+        setting_strict_choice = session_data['ReviseChoiceFlag'].tolist() == 0
+    if 'PacedFlag' in session_data.dtype.names:
+        setting_free_choice = session_data['PacedFlag'].tolist() == 0
         
-    setting_strict_choice = session_data['ReviseChoiceFlag'].tolist() == 0
-    setting_free_choice = session_data['PacedFlag'].tolist() == 0
     
     setting_left_reward_volume = session_data['TrialSettings'].tolist()['leftRewardVolume'][0]
     setting_right_reward_volume = session_data['TrialSettings'].tolist()['rightRewardVolume'][0]
