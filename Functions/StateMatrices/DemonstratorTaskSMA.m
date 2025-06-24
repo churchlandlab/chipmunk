@@ -1,5 +1,5 @@
-function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
-% [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent, isOmmission, isViolation);
+% [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent,  isOmmission, isViolation);
 %
 % SMA assemly function for the DemonstratorTask. In this condition a
 % demonstrator can self-initiate trials by poking into the center port after
@@ -9,6 +9,11 @@ function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(c
 % INPUTS (optional): -correctSideOnCurrent: The side designated to be
 %                                           rewarded during the current trial
 %                                           if chosen.
+%                     -isOmmision: Boolean indicating if the outcome will
+%                      be ommitted in the current trial.
+%                     -isViolation: Boolean indicating whether a
+%                      conflicting outcome will be presented during the
+%                      current trial.
 %
 % Outputs: - sma: The state machine to be sent to Bpod to run the trial.
 %          - taskDelays: A struct containing the pre-stimulus delay and the
@@ -23,11 +28,15 @@ function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(c
 %-------------------------------------------------------------------------
 global BpodSystem
 
+
 %% Valve time and LED assignment
 %If the correct side is provided as an input argument assign the valves to
 %their functions (e.g. reward, wrong choice).
 if exist('correctSideOnCurrent') && ~isempty(correctSideOnCurrent) %input check
     rewardedSide = correctSideOnCurrent;
+    if isViolation %Flip rewarded and punished sides for violation trials
+        rewardedSide = ~correctSideOnCurrent;
+    end
     if rewardedSide == 0 %the case for left side correct
         RewardValve = 2^0; %left-hand port represents port#0, therefore valve value is 2^0
         rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.leftRewardVolume, 1); %second value is Bpod index for the valve
@@ -174,12 +183,19 @@ sma = AddState(sma, 'Name', 'DemonWaitForWithdrawalFromCenter',...
     'OutputActions', {'PWM4',255});
 %Reaction time until the demonstrator gets out of the center port. 
 
+if isOmission %---> Directly terminate the trial if it is an ommission
+    sma = AddState(sma, 'Name', 'DemonWaitForResponse',...
+    'Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
+    'StateChangeConditions', {'Port1In','FinishTrial','Port3In','FinishTrial','Tup','DemonDidNotChoose'},...
+    'OutputActions', {'PWM4',255});
+else
 sma = AddState(sma, 'Name', 'DemonWaitForResponse',...
     'Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
     'StateChangeConditions', {'Port1In',leftPortAction,'Port3In',rightPortAction,'Tup','DemonDidNotChoose'},...
     'OutputActions', {'PWM4',255});
 %This is the period to report the choice by poking into one of the side
-%pokes. 
+%pokes.
+end
 
 sma = AddState(sma,'Name', 'DemonReward',...
     'Timer',rewardValveTime, ...

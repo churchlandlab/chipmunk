@@ -17,7 +17,11 @@ function varargout = OutcomePlotDemonstrator(AxesHandle, plotMethod, varargin)
 %                                 0: incorrect choice (red dot)
 %                                 1: correct choice (green dot)
 %                                 2: did not choose (green circle)
-%                                -2: no trial initiated (gray circle)
+%                                 3: outcome ommission (blue circle)
+%                                 4: correct choice but punish feedback,
+%                                    rule violation (green triangle)
+%                                 5: incorrect choice but rewarded, rule
+%                                    violation (red triangle)
 %
 % -OUTPUTS: varargout: Only available for refresh mode. The plotting
 %                      limits in terms of trials.
@@ -35,6 +39,7 @@ plottingColors = [0.5, 0.5, 0.5]; %Filled gray for trials yet to come, gray circ
 plottingColors(2,:) = [0.3, 0.72 0.96]; %Bright blue for the current trial
 plottingColors(3,:) = [0.35 0.8 0.1]; %Green for correct choices and open green circles for no selection
 plottingColors(4,:) = [0.79 0.2 0.1]; %Red for incorrect choices, open red circles for early withdrawals
+plottingColors(5,:) = [16/256 31/256 172/256]; %Blue for ommitted rewards
 
 switch plotMethod
     %%
@@ -59,6 +64,9 @@ switch plotMethod
         %BpodSystem.GUIHandles.UnrewardedCorrectLine = line([0,0],[0,0], 'LineStyle','none','Marker','o','MarkerEdge','g','MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.NoResponseCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(3,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.NoTrialStartedCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(1,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
+        BpodSystem.GUIHandles.OutcomeOmmissionCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(5,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
+        BpodSystem.GUIHandles.CorrectViolationTrianlge = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','^','MarkerEdge',plottingColors(3,:),'MarkerFace',plottingColors(3,:), 'MarkerSize',6);
+        BpodSystem.GUIHandles.InorrectViolationTriangle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','^','MarkerEdge',plottingColors(4,:),'MarkerFace',plottingColors(4,:), 'MarkerSize',6);
         set(AxesHandle,'TickDir', 'out','YLim', [-1, 2], 'YTick', [0 1],'YTickLabel', {'Left','Right'});
         xlabel(AxesHandle, 'Trial number');
         hold(AxesHandle,'on')
@@ -86,35 +94,53 @@ switch plotMethod
         %Plot current trial
         set(BpodSystem.GUIHandles.CurrentTrialCircle, 'xdata', [currentTrial,currentTrial], 'ydata', [TrialSidesList(currentTrial),TrialSidesList(currentTrial)]);
         
-        %Plot past trials
+
+        %------Plot the past trials-------
+        outcomeCodes = -2:5;
+        fieldNames = {'NoTrialStartedCircle','EarlyWithdrawalCircle', 'PunishedErrorCircle', 'RewardedCorrectCircle',...
+            'NoResponseCircle', 'OutcomeOmmissionCircle', 'CorrectViolationTriangle', 'IncorrectViolationTriangle'};
         if currentTrial > 1 %Only needed when the current trial is at least the second one
             indxToPlot = mn:currentTrial-1;
-
-            %Plot Error, unpunished
-            EarlyWithdrawalTrialsIndx = (OutcomeRecord(indxToPlot) == -1);
-            Xdata = indxToPlot(EarlyWithdrawalTrialsIndx); Ydata = TrialSidesList(Xdata);
-            set(BpodSystem.GUIHandles.EarlyWithdrawalCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
-            %Plot Error, punished
-            InCorrectTrialsIndx = (OutcomeRecord(indxToPlot) == 0);
-            Xdata = indxToPlot(InCorrectTrialsIndx); Ydata = TrialSidesList(Xdata);
-            set(BpodSystem.GUIHandles.PunishedErrorCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
-            %Plot Correct, rewarded
-            CorrectTrialsIndx = (OutcomeRecord(indxToPlot) == 1);
-            Xdata = indxToPlot(CorrectTrialsIndx); Ydata = TrialSidesList(Xdata);
-            set(BpodSystem.GUIHandles.RewardedCorrectCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
-            %Plot Correct, unrewarded
-%             UnrewardedTrialsIndx = (OutcomeRecord(indxToPlot) == 2);
-%             Xdata = indxToPlot(UnrewardedTrialsIndx); Ydata = SideList(Xdata);
-%             set(BpodSystem.GUIHandles.UnrewardedCorrectLine, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
-            %Plot DidNotChoose
-            DidNotChooseTrialsIndx = (OutcomeRecord(indxToPlot) == 2);
-            Xdata = indxToPlot(DidNotChooseTrialsIndx); Ydata = TrialSidesList(Xdata);
-            set(BpodSystem.GUIHandles.NoResponseCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
-            %Plot no trial initiation
-            noInitiationIndx = (OutcomeRecord(indxToPlot) == -2);
-            Xdata = indxToPlot(noInitiationIndx); Ydata = TrialSidesList(Xdata);
-            set(BpodSystem.GUIHandles.NoTrialStartedCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+            for k=1:size(outcomeCodes,2)
+                TrialsIndx = (OutcomeRecord(indxToPlot) == outcomeCodes(k));
+                Xdata = indxToPlot(TrialsIndx); Ydata = TrialSidesList(Xdata);
+                set(getfield(BpodSystem.GUIHandles, fieldNames{k}), 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+            end
         end
+% 
+%         %Plot past trials
+%         if currentTrial > 1 %Only needed when the current trial is at least the second one
+%             indxToPlot = mn:currentTrial-1;
+% 
+%             %Plot Error, unpunished
+%             EarlyWithdrawalTrialsIndx = (OutcomeRecord(indxToPlot) == -1);
+%             Xdata = indxToPlot(EarlyWithdrawalTrialsIndx); Ydata = TrialSidesList(Xdata);
+%             set(BpodSystem.GUIHandles.EarlyWithdrawalCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+%             %Plot Error, punished
+%             InCorrectTrialsIndx = (OutcomeRecord(indxToPlot) == 0);
+%             Xdata = indxToPlot(InCorrectTrialsIndx); Ydata = TrialSidesList(Xdata);
+%             set(BpodSystem.GUIHandles.PunishedErrorCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+%             %Plot Correct, rewarded
+%             CorrectTrialsIndx = (OutcomeRecord(indxToPlot) == 1);
+%             Xdata = indxToPlot(CorrectTrialsIndx); Ydata = TrialSidesList(Xdata);
+%             set(BpodSystem.GUIHandles.RewardedCorrectCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+%             %Plot Correct, unrewarded
+% %             UnrewardedTrialsIndx = (OutcomeRecord(indxToPlot) == 2);
+% %             Xdata = indxToPlot(UnrewardedTrialsIndx); Ydata = SideList(Xdata);
+% %             set(BpodSystem.GUIHandles.UnrewardedCorrectLine, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+%             %Plot DidNotChoose
+%             DidNotChooseTrialsIndx = (OutcomeRecord(indxToPlot) == 2);
+%             Xdata = indxToPlot(DidNotChooseTrialsIndx); Ydata = TrialSidesList(Xdata);
+%             set(BpodSystem.GUIHandles.NoResponseCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+%             %Plot no trial initiation
+%             noInitiationIndx = (OutcomeRecord(indxToPlot) == -2);
+%             Xdata = indxToPlot(noInitiationIndx); Ydata = TrialSidesList(Xdata);
+%             set(BpodSystem.GUIHandles.NoTrialStartedCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+%             %Plot outcome omissions
+%             noOutcomeIndx = (OutcomeRecord(indxToPlot) == 3);
+%             Xdata = indxToPlot(noInitiationIndx); Ydata = TrialSidesList(Xdata);
+%             set(BpodSystem.GUIHandles.NoTrialStartedCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+%         end
         varargout = {[mn, mx]}; %Return the new plot limits if in the refresh mode.
 end
 

@@ -157,6 +157,22 @@ maxTrialNum = 5000; %Constrain the number of trials but at rather high value
 TrialSidesList = double(rand(1,maxTrialNum) > S.propLeft); %Right side trials will be assigned 1 and left trials 0
 % IMPORTANT: get as double so that it does not mess up other functions
 
+%Assign ommission or violation trials and set violation to 0 if there will
+%be no feedback anyway
+if isfiled(S.propOutcomeOmmissions)
+    ommissions = rand(maxTrialNum) > S.propOutcomeOmmissions;
+else
+    ommissions = NaN(maxTrialNum,1);
+end
+if isfiled(S.propRuleViolations)
+    violations = rand(maxTrialNum) > S.propRuleViolations;
+else
+    violations = NaN(maxTrialNum,1);
+end
+if ~isnan(ommissions) & ~isnan(violations)
+    violations(ommissions) = 0;
+end
+
 %Prealocate variables for the anti bias functions
 trialHistoryBiases = 0.5 * ones(2, 2, 2);
 %This array captures the estimated propensity of an animal to choose one
@@ -204,6 +220,8 @@ BpodSystem.Data.ValidTrials = 0;
 BpodSystem.Data.LeftSideRewardAmount = 0; %The cumulatively harvested amount of water on the left side, a scalar
 BpodSystem.Data.RightSideRewardAmount = 0;
 BpodSystem.Data.CorrectResponse = 0;
+BpodSystem.Data.OutcomeOmmission = NaN;
+BpodSystem.Data.RuleViolation = NaN;
 if isfield(S, 'obsID')
     BpodSystem.Data.ObsOutcomeRecord = NaN;
     BpodSystem.Data.ObsCompletedTrials = 0;
@@ -518,7 +536,7 @@ for currentTrial = 1:maxTrialNum
         %--------------------------------------------------------------------------
         %% Assemble and the state matrix for the trial
         
-        [sma, trialDelays, reviseChoiceFlag, pacedFlag]  = eval([BpodSystem.ProtocolSettings.smaAssembler '(' sprintf('%d',TrialSidesList(currentTrial)) ');']);
+        [sma, trialDelays, reviseChoiceFlag, pacedFlag]  = eval([BpodSystem.ProtocolSettings.smaAssembler '(' sprintf('%d',TrialSidesList(currentTrial)) ',' sprintf('%d',ommissions(currentTrial)) ',' sprintf('%d',violations(currentTrial)) ');']);
         % Get the state matrix, the random delays generated inside the assembler
         % function and a logical value that indicates whether the animals can revise
         % wrong choices and whether trials are self-initiated.

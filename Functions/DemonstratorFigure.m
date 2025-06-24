@@ -181,6 +181,8 @@ switch figMethod
             'Position', [0.65, 0.04, 0.3, 0.16],'Title','Post stimulus','FontWeight','bold');
         BpodSystem.GUIHandles.DemonPunishPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.05, 0.04, 0.6, 0.16],'Title','Punishment','FontWeight','bold');
+        BpodSystem.GUIHandles.OmmissionViolationPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
+            'Position', [0.65, 0.32, 0.3, 0.12],'Title','Ommission - Violation','FontWeight','bold');
         %---
         %Experiment panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,'Units', 'normal', 'Position',[0,2/3-0.05,1,1/3],'style', 'text', 'String',BpodSystem.ProtocolSettings.experimentName);
@@ -197,6 +199,19 @@ switch figMethod
 %         
         
         %-----
+        %Reward ommission and task rule violation panel
+        uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','propOutcomeOmmission','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','propRuleViolation','HorizontalAlignment','right');
+        
+        if isfield(BpodSystem.ProtocolSettings, propOutcomeOmmission)
+        BpodSystem.GUIHandles.ParamEdit.propRewardOmission = uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,...
+            'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.propOutcomeOmission);
+        end
+        if isfield(BpodSystem.ProtocolSettings, propRuleViolation)
+        BpodSystem.GUIHandles.ParamEdit.propRuleViolation = uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,...
+            'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.propRuleViolation);
+        end
+
         %Virtual observer panel
         uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','virtualObsInitMin','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','virtualObsInitMax','HorizontalAlignment','right');

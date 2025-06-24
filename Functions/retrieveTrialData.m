@@ -1,5 +1,6 @@
 function retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,reviseChoiceFlag, ModalityRecord,...
-    stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList);
+    stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList,...
+    ommissions, violations);
 % retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,reviseChoiceFlag, ModalityRecord,...
 %    stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList);
 %
@@ -30,6 +31,8 @@ function retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,revis
 %                             to this input...
 % -visualIsiList
 % -auditoryIsiList
+% -ommissions
+% -violations
 %
 % LO, 5/26/2021, 7/13/2021
 %--------------------------------------------------------------------------
@@ -160,6 +163,10 @@ BpodSystem.Data.CorrectResponse(TrialsDone) = 0;
 end
 BpodSystem.Data.ValidTrials(TrialsDone) = ~isnan(ResponseSideRecord);
 
+%Add outcome ommissions and rule violations
+BpodSystem.Data.OutcomeOmmission(TrialsDone) = ommissions(TrialsDone);
+BpodSystem.Data.RuleViolation(TrialsDone) = violations(TrialsDone);
+
 %Also generate a composite outcome vector containing categorical values
 if BpodSystem.Data.CorrectResponse(TrialsDone) == 1
     BpodSystem.Data.OutcomeRecord(TrialsDone) = 1;
@@ -175,6 +182,13 @@ end
 if BpodSystem.Data.DidNotInitiate(TrialsDone) == 1
     BpodSystem.Data.OutcomeRecord(TrialsDone) = -2;
 end
+if BpodSystem.Data.OutcomeOmmission(TrialsDone) == 1
+    BpodSystem.Data.OutcomeRecord(TrialsDone) = 3;
+end
+if BpodSystem.Data.RuleViolation(TrialsDone) == 1
+    BpodSystem.Data.OutcomeRecord(TrialsDone) = 4;
+end
+
 
 %Update the earned reward volume
     if BpodSystem.Data.Rewarded(TrialsDone) == 1 %Only if rewarded, but not necessarily only if correct because of the possibility to revise choice
