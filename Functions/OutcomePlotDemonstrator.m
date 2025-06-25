@@ -65,8 +65,8 @@ switch plotMethod
         BpodSystem.GUIHandles.NoResponseCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(3,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.NoTrialStartedCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(1,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.OutcomeOmmissionCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(5,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
-        BpodSystem.GUIHandles.CorrectViolationTrianlge = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','^','MarkerEdge',plottingColors(3,:),'MarkerFace',plottingColors(3,:), 'MarkerSize',6);
-        BpodSystem.GUIHandles.InorrectViolationTriangle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','^','MarkerEdge',plottingColors(4,:),'MarkerFace',plottingColors(4,:), 'MarkerSize',6);
+        BpodSystem.GUIHandles.CorrectViolationTriangle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','^','MarkerEdge',plottingColors(3,:),'MarkerFace',plottingColors(3,:), 'MarkerSize',6);
+        BpodSystem.GUIHandles.IncorrectViolationTriangle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','^','MarkerEdge',plottingColors(4,:),'MarkerFace',plottingColors(4,:), 'MarkerSize',6);
         set(AxesHandle,'TickDir', 'out','YLim', [-1, 2], 'YTick', [0 1],'YTickLabel', {'Left','Right'});
         xlabel(AxesHandle, 'Trial number');
         hold(AxesHandle,'on')
@@ -105,6 +105,7 @@ switch plotMethod
                 TrialsIndx = (OutcomeRecord(indxToPlot) == outcomeCodes(k));
                 Xdata = indxToPlot(TrialsIndx); Ydata = TrialSidesList(Xdata);
                 set(getfield(BpodSystem.GUIHandles, fieldNames{k}), 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
+                drawnow
             end
         end
 % 

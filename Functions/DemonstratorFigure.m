@@ -200,16 +200,16 @@ switch figMethod
         
         %-----
         %Reward ommission and task rule violation panel
-        uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','propOutcomeOmmission','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','propRuleViolation','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','propOutcomeOmmissions','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','propRuleViolations','HorizontalAlignment','right');
         
-        if isfield(BpodSystem.ProtocolSettings, propOutcomeOmmission)
-        BpodSystem.GUIHandles.ParamEdit.propRewardOmission = uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.propOutcomeOmission);
+        if isfield(BpodSystem.ProtocolSettings, 'propOutcomeOmmissions')
+        BpodSystem.GUIHandles.ParamEdit.propOutcomeOmmissions = uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,...
+            'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.propOutcomeOmmissions);
         end
-        if isfield(BpodSystem.ProtocolSettings, propRuleViolation)
-        BpodSystem.GUIHandles.ParamEdit.propRuleViolation = uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.propRuleViolation);
+        if isfield(BpodSystem.ProtocolSettings, 'propRuleViolations')
+        BpodSystem.GUIHandles.ParamEdit.propRuleViolations = uicontrol('Parent', BpodSystem.GUIHandles.OmmissionViolationPanel,...
+            'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.propRuleViolations);
         end
 
         %Virtual observer panel

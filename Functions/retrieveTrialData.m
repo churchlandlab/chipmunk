@@ -120,7 +120,7 @@ if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation
 end
 
 ResponseSideRecord = NaN; %Pre-set the response to NaN and change if the trial was valid
-if reviseChoiceFlag %Check for the actual response side if the animal can revise its decision
+%if reviseChoiceFlag %Check for the actual response side if the animal can revise its decision
     if ~(BpodSystem.Data.EarlyWithdrawal(TrialsDone) || BpodSystem.Data.DidNotChoose(TrialsDone) || BpodSystem.Data.DidNotInitiate(TrialsDone))
         %Three scenarios where the demonstrator doesn't choose: No
         %initiation, early withdrawal, no choice after waiting.
@@ -143,17 +143,17 @@ if reviseChoiceFlag %Check for the actual response side if the animal can revise
         ResponseSideRecord = NaN; %If the trial was invalid
     end
     
-else %The case where wrong choices are punished
-    if ~(BpodSystem.Data.EarlyWithdrawal(TrialsDone) || BpodSystem.Data.DidNotChoose(TrialsDone) || BpodSystem.Data.DidNotInitiate(TrialsDone))
-        if (TrialSidesList(TrialsDone)==0 && BpodSystem.Data.Rewarded(TrialsDone)) || (TrialSidesList(TrialsDone)==1 && ~BpodSystem.Data.Rewarded(TrialsDone))
-            ResponseSideRecord = 0;
-        elseif (TrialSidesList(TrialsDone)==0 && ~BpodSystem.Data.Rewarded(TrialsDone)) || (TrialSidesList(TrialsDone)==1 && BpodSystem.Data.Rewarded(TrialsDone))
-            ResponseSideRecord = 1;
-        end
-    else
-        ResponseSideRecord = NaN;
-    end
-end
+% else %The case where wrong choices are punished
+%     if ~(BpodSystem.Data.EarlyWithdrawal(TrialsDone) || BpodSystem.Data.DidNotChoose(TrialsDone) || BpodSystem.Data.DidNotInitiate(TrialsDone))
+%         if (TrialSidesList(TrialsDone)==0 && BpodSystem.Data.Rewarded(TrialsDone)) || (TrialSidesList(TrialsDone)==1 && ~BpodSystem.Data.Rewarded(TrialsDone))
+%             ResponseSideRecord = 0;
+%         elseif (TrialSidesList(TrialsDone)==0 && ~BpodSystem.Data.Rewarded(TrialsDone)) || (TrialSidesList(TrialsDone)==1 && BpodSystem.Data.Rewarded(TrialsDone))
+%             ResponseSideRecord = 1;
+%         end
+%     else
+%         ResponseSideRecord = NaN;
+%     end
+% end
 
 BpodSystem.Data.ResponseSide(TrialsDone) = ResponseSideRecord;
 if ~isnan(ResponseSideRecord)
@@ -185,10 +185,12 @@ end
 if BpodSystem.Data.OutcomeOmmission(TrialsDone) == 1
     BpodSystem.Data.OutcomeRecord(TrialsDone) = 3;
 end
-if BpodSystem.Data.RuleViolation(TrialsDone) == 1
+if (BpodSystem.Data.RuleViolation(TrialsDone) == 1) && (BpodSystem.Data.CorrectResponse(TrialsDone)==1)
     BpodSystem.Data.OutcomeRecord(TrialsDone) = 4;
 end
-
+if (BpodSystem.Data.RuleViolation(TrialsDone) == 1) && (BpodSystem.Data.CorrectResponse(TrialsDone)==0)
+    BpodSystem.Data.OutcomeRecord(TrialsDone) = 5;
+end
 
 %Update the earned reward volume
     if BpodSystem.Data.Rewarded(TrialsDone) == 1 %Only if rewarded, but not necessarily only if correct because of the possibility to revise choice

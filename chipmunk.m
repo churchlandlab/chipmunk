@@ -159,13 +159,13 @@ TrialSidesList = double(rand(1,maxTrialNum) > S.propLeft); %Right side trials wi
 
 %Assign ommission or violation trials and set violation to 0 if there will
 %be no feedback anyway
-if isfiled(S.propOutcomeOmmissions)
-    ommissions = rand(maxTrialNum) > S.propOutcomeOmmissions;
+if isfield(S, 'propOutcomeOmmissions')
+    ommissions = rand(maxTrialNum,1) < S.propOutcomeOmmissions;
 else
     ommissions = NaN(maxTrialNum,1);
 end
-if isfiled(S.propRuleViolations)
-    violations = rand(maxTrialNum) > S.propRuleViolations;
+if isfield(S, 'propRuleViolations')
+    violations = rand(maxTrialNum,1) < S.propRuleViolations;
 else
     violations = NaN(maxTrialNum,1);
 end
@@ -194,7 +194,8 @@ lastValidOutcome = NaN;
 %anti-bias arrays and identify biases across invalid trials.
 
 prevPropLeft = S.propLeft; %store this value to update the sides list if necessary
-
+prevPropOmmissions = S.propOutcomeOmmissions;
+prevPropViolations = S.propRuleViolations;
 %--------------------------------------------------------------------------
 %% Dummy state matrix
 % Initialize the state matrix associated with this experiment for the
@@ -349,7 +350,14 @@ for currentTrial = 1:maxTrialNum
             outcomePlotLimits = OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'refresh',...
                 currentTrial,TrialSidesList,BpodSystem.Data.OutcomeRecord); %Update the display if changed
         end
-        
+        if isfield(S, 'propOutcomeOmmissions') & (prevPropOmmissions ~= S.propOutcomeOmmissions)
+           ommissions = rand(maxTrialNum,1) < S.propOutcomeOmmissions;
+           prevPropOmmissions = S.propOutcomeOmmissions;
+        end
+        if isfield(S, 'propRuleViolations') & (prevPropViolations ~= S.propRuleViolations)
+           violations = rand(maxTrialNum,1) < S.propRuleViolations;
+           prevPropViolations = S.propRuleViolations
+        end
             %Check the biases the animal has for choice and outcome history, and modality and
             %change the proportion of left trials according to these biases and the
             %antiBiasStrength factor.
@@ -592,7 +600,7 @@ for currentTrial = 1:maxTrialNum
             %Incorporate trial and outcome information into the Data field inside
             %BpodSystem.
             retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,reviseChoiceFlag, ModalityRecord,...
-                stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList);           
+                stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList,ommissions,violations);           
         else
             if BpodSystem.Status.BeingUsed == 1 %Do not show this warning if the session is ending
             warning('on')
@@ -735,17 +743,16 @@ end
     end
     
     %Update the anti-bias arrays
-    if BpodSystem.Data.ValidTrials(TrialsDone) %Only update biases if the trial has been valid, meaning a choice was made.
+    if BpodSystem.Data.ValidTrials(TrialsDone) &&  ~(ommissions(TrialsDone) == 1 || violations(TrialsDone) == 1)%Only update biases if the trial has been valid, meaning a choice was made.
         if sum(BpodSystem.Data.ValidTrials) > 1 %Make sure that there is a history to the choice
-            [modalityBiases, trialHistoryBiases] = updateAntiBiasArrays(...
-                modalityBiases, trialHistoryBiases, ModalityRecord(TrialsDone), BpodSystem.Data.ResponseSide(TrialsDone),...
-                BpodSystem.Data.OutcomeRecord(TrialsDone),lastValidCorrectSide, lastValidResponseSide,...
-                lastValidOutcome, BpodSystem.ProtocolSettings.antiBiasTau);
-            %Here, we update our estimate of the animal's biases based on
-            %the outcomes of the trial just completed and the last valid
-            %trial recorded. This estimate will be used to dynamically
-            %modify the probability of designating a response side.
-     
+                [modalityBiases, trialHistoryBiases] = updateAntiBiasArrays(...
+                    modalityBiases, trialHistoryBiases, ModalityRecord(TrialsDone), BpodSystem.Data.ResponseSide(TrialsDone),...
+                    BpodSystem.Data.OutcomeRecord(TrialsDone),lastValidCorrectSide, lastValidResponseSide,...
+                    lastValidOutcome, BpodSystem.ProtocolSettings.antiBiasTau);
+                %Here, we update our estimate of the animal's biases based on
+                %the outcomes of the trial just completed and the last valid
+                %trial recorded. This estimate will be used to dynamically
+                %modify the probability of designating a response side.
         %Now update info to store the last valid trials
         end
         lastValidCorrectSide = BpodSystem.Data.CorrectSide(TrialsDone);

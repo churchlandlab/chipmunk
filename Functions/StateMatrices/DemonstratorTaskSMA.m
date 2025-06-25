@@ -28,12 +28,24 @@ function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(c
 %-------------------------------------------------------------------------
 global BpodSystem
 
+%Input checks
+if ~exist('isOmmission')
+    isOmmission = 0;
+end
 
 %% Valve time and LED assignment
 %If the correct side is provided as an input argument assign the valves to
 %their functions (e.g. reward, wrong choice).
 if exist('correctSideOnCurrent') && ~isempty(correctSideOnCurrent) %input check
     rewardedSide = correctSideOnCurrent;
+    %Continued input checks
+    if isnan(isOmmission)
+        isOmmission = 0;
+    end
+    if isnan(isViolation)
+        isViolation = 0;
+    end
+    
     if isViolation %Flip rewarded and punished sides for violation trials
         rewardedSide = ~correctSideOnCurrent;
     end
@@ -183,7 +195,7 @@ sma = AddState(sma, 'Name', 'DemonWaitForWithdrawalFromCenter',...
     'OutputActions', {'PWM4',255});
 %Reaction time until the demonstrator gets out of the center port. 
 
-if isOmission %---> Directly terminate the trial if it is an ommission
+if isOmmission %---> Directly terminate the trial if it is an ommission
     sma = AddState(sma, 'Name', 'DemonWaitForResponse',...
     'Timer',BpodSystem.ProtocolSettings.timeToChoose, ...
     'StateChangeConditions', {'Port1In','FinishTrial','Port3In','FinishTrial','Tup','DemonDidNotChoose'},...
