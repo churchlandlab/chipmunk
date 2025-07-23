@@ -37,7 +37,7 @@ function generateTaskControlSounds(cueLoudness, earlyPunishLoudness, earlyPunish
 global BpodSystem
 samplingFreq = 192000; %Match the sampling frequency the sound card was initialized with, hard-coded!
 
-startTrialCueFreq = 2000; %Set the frequency of the tiral initiation sound
+startTrialCueFreq = 2000; %Set the frequency of the tiral initiation sound ---> This is now the reward feedback sound, LO, 07/22/2025
 goCueFreq = 7000; % Set the frequency of the goCue at the end of the demonstrator fixation
 punishSoundFreq = 15000; %Set the frequency for wrong choice punishments
 
@@ -53,7 +53,8 @@ else
     %When the main subject is not the observer the initiation delay for a
     %virtual observer will be drawn randomly and stored in the trialDelays
     %struct. This delay will be used for the tone duration.
-    startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* (cueLoudness*0.85) + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, trialDelays.virtualObsInitDelay);  %Use maximum pre-stimulus delay
+    %startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* (cueLoudness*0.85) + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, trialDelays.virtualObsInitDelay);  %Use maximum pre-stimulus delay
+    startTrialCueWaveform = 0.15 * 10^(1/10*(soundCalibrationModelParams(1)* (cueLoudness) + soundCalibrationModelParams(2))) * GenerateSineWave(samplingFreq, startTrialCueFreq, 0.2);  %Use maximum pre-stimulus delay
 end
 startTrialCueSound = [zeros(1,size(startTrialCueWaveform,2)); startTrialCueWaveform];
 

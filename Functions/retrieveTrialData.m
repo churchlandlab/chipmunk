@@ -49,7 +49,7 @@ BpodSystem.Data.TrialSettings(TrialsDone) = BpodSystem.ProtocolSettings;
 %Go first thorugh the demonstrator data
 %The side and outcome info
 BpodSystem.Data.CorrectSide(TrialsDone) = TrialSidesList(TrialsDone);
-BpodSystem.Data.Rewarded(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonReward(1));
+BpodSystem.Data.Rewarded(TrialsDone) = (isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States, 'DemonReward')) && (~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonReward(1)));
 BpodSystem.Data.EarlyWithdrawal(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1));
 
 BpodSystem.Data.DidNotChoose(TrialsDone) = 0; %Assume default false
