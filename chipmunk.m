@@ -159,18 +159,18 @@ TrialSidesList = double(rand(1,maxTrialNum) > S.propLeft); %Right side trials wi
 
 %Assign ommission or violation trials and set violation to 0 if there will
 %be no feedback anyway
-if isfield(S, 'propOutcomeOmmissions')
-    ommissions = rand(maxTrialNum,1) < S.propOutcomeOmmissions;
+if isfield(S, 'propOutcomeOmissions')
+    omissions = rand(maxTrialNum,1) < S.propOutcomeOmissions;
 else
-    ommissions = NaN(maxTrialNum,1);
+    omissions = NaN(maxTrialNum,1);
 end
 if isfield(S, 'propRuleViolations')
     violations = rand(maxTrialNum,1) < S.propRuleViolations;
 else
     violations = NaN(maxTrialNum,1);
 end
-if ~isnan(ommissions) & ~isnan(violations)
-    violations(ommissions) = 0;
+if ~isnan(omissions) & ~isnan(violations)
+    violations(omissions) = 0;
 end
 
 %Prealocate variables for the anti bias functions
@@ -194,7 +194,7 @@ lastValidOutcome = NaN;
 %anti-bias arrays and identify biases across invalid trials.
 
 prevPropLeft = S.propLeft; %store this value to update the sides list if necessary
-prevPropOmmissions = S.propOutcomeOmmissions;
+prevPropomissions = S.propOutcomeOmissions;
 prevPropViolations = S.propRuleViolations;
 %--------------------------------------------------------------------------
 %% Dummy state matrix
@@ -221,7 +221,7 @@ BpodSystem.Data.ValidTrials = 0;
 BpodSystem.Data.LeftSideRewardAmount = 0; %The cumulatively harvested amount of water on the left side, a scalar
 BpodSystem.Data.RightSideRewardAmount = 0;
 BpodSystem.Data.CorrectResponse = 0;
-BpodSystem.Data.OutcomeOmmission = NaN;
+BpodSystem.Data.OutcomeOmission = NaN;
 BpodSystem.Data.RuleViolation = NaN;
 if isfield(S, 'obsID')
     BpodSystem.Data.ObsOutcomeRecord = NaN;
@@ -350,9 +350,9 @@ for currentTrial = 1:maxTrialNum
             outcomePlotLimits = OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'refresh',...
                 currentTrial,TrialSidesList,BpodSystem.Data.OutcomeRecord); %Update the display if changed
         end
-        if isfield(S, 'propOutcomeOmmissions') & (prevPropOmmissions ~= S.propOutcomeOmmissions)
-           ommissions = rand(maxTrialNum,1) < S.propOutcomeOmmissions;
-           prevPropOmmissions = S.propOutcomeOmmissions;
+        if isfield(S, 'propOutcomeomissions') & (prevPropomissions ~= S.propOutcomeomissions)
+           omissions = rand(maxTrialNum,1) < S.propOutcomeomissions;
+           prevPropomissions = S.propOutcomeomissions;
         end
         if isfield(S, 'propRuleViolations') & (prevPropViolations ~= S.propRuleViolations)
            violations = rand(maxTrialNum,1) < S.propRuleViolations;
@@ -544,7 +544,7 @@ for currentTrial = 1:maxTrialNum
         %--------------------------------------------------------------------------
         %% Assemble and the state matrix for the trial
         
-        [sma, trialDelays, reviseChoiceFlag, pacedFlag]  = eval([BpodSystem.ProtocolSettings.smaAssembler '(' sprintf('%d',TrialSidesList(currentTrial)) ',' sprintf('%d',ommissions(currentTrial)) ',' sprintf('%d',violations(currentTrial)) ');']);
+        [sma, trialDelays, reviseChoiceFlag, pacedFlag]  = eval([BpodSystem.ProtocolSettings.smaAssembler '(' sprintf('%d',TrialSidesList(currentTrial)) ',' sprintf('%d',omissions(currentTrial)) ',' sprintf('%d',violations(currentTrial)) ');']);
         % Get the state matrix, the random delays generated inside the assembler
         % function and a logical value that indicates whether the animals can revise
         % wrong choices and whether trials are self-initiated.
@@ -600,7 +600,7 @@ for currentTrial = 1:maxTrialNum
             %Incorporate trial and outcome information into the Data field inside
             %BpodSystem.
             retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,reviseChoiceFlag, ModalityRecord,...
-                stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList,ommissions,violations);           
+                stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList,omissions,violations);           
         else
             if BpodSystem.Status.BeingUsed == 1 %Do not show this warning if the session is ending
             warning('on')
@@ -743,7 +743,7 @@ end
     end
     
     %Update the anti-bias arrays
-    if BpodSystem.Data.ValidTrials(TrialsDone) &&  ~(ommissions(TrialsDone) == 1 || violations(TrialsDone) == 1)%Only update biases if the trial has been valid, meaning a choice was made.
+    if BpodSystem.Data.ValidTrials(TrialsDone) &&  ~(omissions(TrialsDone) == 1 || violations(TrialsDone) == 1)%Only update biases if the trial has been valid, meaning a choice was made.
         if sum(BpodSystem.Data.ValidTrials) > 1 %Make sure that there is a history to the choice
                 [modalityBiases, trialHistoryBiases] = updateAntiBiasArrays(...
                     modalityBiases, trialHistoryBiases, ModalityRecord(TrialsDone), BpodSystem.Data.ResponseSide(TrialsDone),...

@@ -64,7 +64,7 @@ switch plotMethod
         %BpodSystem.GUIHandles.UnrewardedCorrectLine = line([0,0],[0,0], 'LineStyle','none','Marker','o','MarkerEdge','g','MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.NoResponseCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(3,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.NoTrialStartedCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(1,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
-        BpodSystem.GUIHandles.OutcomeOmmissionCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(5,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
+        BpodSystem.GUIHandles.OutcomeOmissionCircle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(5,:),'MarkerFace',[1 1 1], 'MarkerSize',6);
         BpodSystem.GUIHandles.CorrectViolationTriangle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','^','MarkerEdge',plottingColors(3,:),'MarkerFace',plottingColors(3,:), 'MarkerSize',6);
         BpodSystem.GUIHandles.IncorrectViolationTriangle = line([NaN,NaN],[NaN,NaN], 'LineStyle','none','Marker','^','MarkerEdge',plottingColors(4,:),'MarkerFace',plottingColors(4,:), 'MarkerSize',6);
         set(AxesHandle,'TickDir', 'out','YLim', [-1, 2], 'YTick', [0 1],'YTickLabel', {'Left','Right'});
@@ -98,7 +98,7 @@ switch plotMethod
         %------Plot the past trials-------
         outcomeCodes = -2:5;
         fieldNames = {'NoTrialStartedCircle','EarlyWithdrawalCircle', 'PunishedErrorCircle', 'RewardedCorrectCircle',...
-            'NoResponseCircle', 'OutcomeOmmissionCircle', 'CorrectViolationTriangle', 'IncorrectViolationTriangle'};
+            'NoResponseCircle', 'OutcomeOmissionCircle', 'CorrectViolationTriangle', 'IncorrectViolationTriangle'};
         if currentTrial > 1 %Only needed when the current trial is at least the second one
             indxToPlot = mn:currentTrial-1;
             for k=1:size(outcomeCodes,2)
