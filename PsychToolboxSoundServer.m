@@ -98,7 +98,7 @@ switch Function
             else
                 for x = 1:nDevices
                     DeviceName = AudioDevices(x).DeviceName;
-                    if sum(strcmp(DeviceName, {'HDA C-Media: Generic Analog (hw:2,0)', 'XONA', 'ASUS'})) > 0 % Assumes ASUS Xonar series or other Asio Soundcard
+                    if sum(strcmp(DeviceName, {'HDA C-Media: Generic Analog (hw:1,0)', 'HDA C-Media: Generic Analog (hw:2,0)', 'XONA', 'ASUS'})) > 0 % Assumes ASUS Xonar series or other Asio Soundcard
                         if AudioDevices(x).NrOutputChannels > 3
                             nCandidates = nCandidates + 1;
                             CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
