@@ -4,12 +4,12 @@
 
 
 %**************************************************************************
-function chipmunk
+function half_second_chipmunk_solo
 
 global BpodSystem
 
 %Add the path to the external functions for chipmunk
-addpath(genpath(fullfile(BpodSystem.Path.ProtocolFolder,'chipmunk','Functions')));
+addpath(genpath(fullfile(BpodSystem.Path.ProtocolFolder,'half_second_chipmunk_solo','Functions')));
 warning('off','all') %Switch off unnecessary warnings
 
 %% Initialize the protocol
@@ -113,12 +113,12 @@ if ~isempty(BpodSystem.ProtocolSettings.miniscopeID) %Enforce that the user prov
         end
         messageReturned = string(native2unicode(acknowledgement')); %Flip this first to get a regular string back
         if strcmp(messageReturned, messageSent) %Check whether the server understood correctly, throw error and return otherwise.
-            display('Successfully sent session information to miniscope computer!')
+            disp('Successfully sent session information to miniscope computer!')
         else
             if strcmp(messageReturned,"") %See whether the acknowledgment is empty
-                error(sprintf('The connection attempt to the miniscope computer has timed-out\nMake sure to execute syncMiniscopeToBpod.py and check connection.'))
+                error('The connection attempt to the miniscope computer has timed-out\nMake sure to execute syncMiniscopeToBpod.py and check connection.')
             else
-                error(sprintf('Information was not accurately transmitted to the miniscope computer. The server echoed the following message:\n%s', messageReturned))
+                error('Information was not accurately transmitted to the miniscope computer. The server echoed the following message:\n%s', messageReturned)
             end
         end
         fclose(miniscopeConnection); %Just to keep it clean.
@@ -547,8 +547,8 @@ for currentTrial = 1:maxTrialNum
 
         % After all is prepared check the time to prepare
         if currentTrial > 1 %Only display updating time from the second trial on
-            display(sprintf('Time to retrieve data, update plots and prepare trial number %d: %d seconds',round(currentTrial),toc(preparationTime)));
-            display(sprintf('----------------------------------------------------------------------------\n'));
+            fprintf('Time to retrieve data, update plots and prepare trial number %d: %d seconds\n',round(currentTrial),toc(preparationTime));
+            fprintf('----------------------------------------------------------------------------\n\n');
         end
 
         %--------------------------------------------------------------------------
@@ -679,14 +679,14 @@ for currentTrial = 1:maxTrialNum
                 if exist('copyStatus') % In case the session features no observer and the demonstrator is FakeSubject
                     if sum(copyStatus) == 0 %Check for errors
                         warning('on')
-                        warning(sprintf('%s\n',copyErrorMsg{:}))
+                        warning('%s\n',copyErrorMsg{:})
                         warning('off','all')
                     end
                 end
             end
 
             clear BpodSystem.GUIHandles.ParamEdit
-            display('*********************************************************************')
+            disp('*********************************************************************')
             return;
         end
 
@@ -831,15 +831,15 @@ for currentTrial = 1:maxTrialNum
             if exist('copyStatus')
                 if sum(copyStatus) == 0 %Check for errors
                     warning('on')
-                    warning(sprintf('%s\n',copyErrorMsg{:}))
+                    warning('%s\n',copyErrorMsg{:})
                     warning('off','all')
                 end
             end
         end
         BpodSystem.Status.BeingUsed = 0; %Switch the Bpod off
         clear BpodSystem.GUIHandles.ParamEdit
-        display('*********************************************************************')
-        display('chipmunk ended due to an error, see below') %Inform the user
+        disp('*********************************************************************')
+        disp('chipmunk ended due to an error, see below') %Inform the user
         rethrow(ME) %Display the error message
     end
 end
