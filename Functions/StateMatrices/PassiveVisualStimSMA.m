@@ -1,4 +1,4 @@
-function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = PassiveVisualStim(correctSideOnCurrent)
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = PassiveVisualStimSMA(~)
 % [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
 %
 % SMA assemly function for the DemonstratorTask. In this condition a
