@@ -199,8 +199,8 @@ switch figMethod
 %         
         
         %-----
-        %Reward ommission and task rule violation panel
-        uicontrol('Parent', BpodSystem.GUIHandles.OmissionViolationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','propOutcomeOmmissions','HorizontalAlignment','right');
+        %Reward omission and task rule violation panel
+        uicontrol('Parent', BpodSystem.GUIHandles.OmissionViolationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','propOutcomeOmissions','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.OmissionViolationPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','propRuleViolations','HorizontalAlignment','right');
         
         if isfield(BpodSystem.ProtocolSettings, 'propOutcomeOmissions')

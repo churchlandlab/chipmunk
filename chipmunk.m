@@ -350,9 +350,9 @@ for currentTrial = 1:maxTrialNum
             outcomePlotLimits = OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'refresh',...
                 currentTrial,TrialSidesList,BpodSystem.Data.OutcomeRecord); %Update the display if changed
         end
-        if isfield(S, 'propOutcomeomissions') & (prevPropomissions ~= S.propOutcomeomissions)
-           omissions = rand(maxTrialNum,1) < S.propOutcomeomissions;
-           prevPropomissions = S.propOutcomeomissions;
+        if isfield(S, 'propOutcomeOmissions') & (prevPropomissions ~= S.propOutcomeOmissions)
+           omissions = rand(maxTrialNum,1) < S.propOutcomeOmissions;
+           prevPropomissions = S.propOutcomeOmissions;
         end
         if isfield(S, 'propRuleViolations') & (prevPropViolations ~= S.propRuleViolations)
            violations = rand(maxTrialNum,1) < S.propRuleViolations;
