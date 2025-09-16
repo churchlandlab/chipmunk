@@ -18,7 +18,7 @@ ports = serial.tools.list_ports.comports(include_links=False)
 portsList = []
 for port in ports:
     portsList.append(port.device)
-  
+
 if (len(portsList) == 1):
     teensyCOM = serial.Serial(portsList[0], 9600) #Establish connection at matching rate!
     print("Connected to teensy on " + portsList[0])
@@ -28,7 +28,7 @@ elif (len(portsList) > 1):
     print("Connected to teensy on " + teensyPortID)
 else:
     print("No COM port available. Please check teensy connection.")
-    
+
 
 #%%----Establish connection with the behavior computer and fetch info about
 #      the animal, session name and miniscope.
@@ -36,22 +36,22 @@ port_number = 9998 #Degine this here for now
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
  #Start a UDP socket. The SOCK_DGRAM specifies the UDP connection protocol
-    
+
 server_socket.bind(('', port_number))
     #Make this socket listen to port 6003. Since this is the server that will
     #be contacted by a client one doesn't need to specify the IP address here.
-    
+
 print(f"Start listening to port {port_number} for chipmunk information...")
 message = []
 client_address = []
 while len(client_address) == 0: #This loop listens until the client sends a message over
       #clientsocket, cl_address = server_socket.accept()
       message, client_address = server_socket.recvfrom(1024)  #Assign a maximum of 1024 bytes that can be read at once
-    
+
 print("Received animal, session and minisope information. Sending acknowledgement back.")
 
 #server_socket.sendto(str.encode("Fake news!"), client_address) #Test for non-matching message
-server_socket.sendto(message, client_address) #Acknowledge the message 
+server_socket.sendto(message, client_address) #Acknowledge the message
 
 session_info = str.split(message.decode(), sep=',')
 animal_id = session_info[0]
@@ -78,7 +78,7 @@ miniscope_config['devices']['miniscopes']['miniscope']['deviceName'] = miniscope
 
 #Create a json file in the session's miniscope folder
 miniscope_config_out = data_directory + "/" + animal_id + "_miniscopeConfig.json"
-with open(miniscope_config_out,'w') as f : 
+with open(miniscope_config_out,'w') as f :
     json.dump(miniscope_config, f)
 
 
@@ -95,7 +95,7 @@ logFileName = (animal_id + "_" + session_date_time + "_miniscope.mscopelog")
 #Check if directory exists and create otherwise
 # if not os.path.exists(logFileDirectory):
 #     os.makedirs(logFileDirectory)
-    
+
 logFilePath = os.path.join(data_directory, logFileName)
 output_file = open(logFilePath, "w+")
 
@@ -113,7 +113,7 @@ teensyCOM.write(str.encode('1')) #Send a byte (49) to reset the counting of fram
 
 acquisition_start= time(); #Keep track of the start of the acquisition
 last_report = 0; #Update time of the last reporting
-current_time = 0; #Store time 
+current_time = 0; #Store time
 
 try:
     while True:
@@ -122,7 +122,7 @@ try:
         output_file.write(entry);
         #print(entry)
         teensyCOM.reset_output_buffer()
-        
+
         current_time = time()
         if (current_time - last_report) > 120: #Update every 2 min
             print(f"Synchronization ran for {round(current_time - acquisition_start)} s.")
@@ -143,4 +143,5 @@ except KeyboardInterrupt:
     print("Synchronization ended")
 #%%-----Use labdatatools to upload the data to the google drive
     print("Starting to upload the miniscope data...")
-    rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
+    #rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
+    subporcess.run("labdata2", "put", dataDirectory, "-r", "miniscope"])
