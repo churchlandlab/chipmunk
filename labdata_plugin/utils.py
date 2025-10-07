@@ -73,11 +73,11 @@ def load_chipmunk_trialdata(file_name):
         tmp_modality_numeric = sesdata['Modality'].tolist()
         temp_modality = []
         for t in tmp_modality_numeric:
-            if t == 1:
+            if t in [1,'visual']:
                 temp_modality.append('visual')
-            elif t == 2:
+            elif t in  [2,'audio','auditory']:
                 temp_modality.append('auditory')
-            elif t == 3:
+            elif t in [3, 'audio+visual']:
                 temp_modality.append('audio+visual')
             else:
                 temp_modality.append(np.nan)
@@ -198,6 +198,9 @@ def load_chipmunk_trialdata(file_name):
     except Exception as err:
         warnings.warn(f"[chipmunk]: An error occured and {file_name} could not be loaded")
         print(err)
+        trialdata = None
+        sesdata = None
+        metadata = None
     return trialdata,sesdata,metadata
 
 def _get_state_time(trial, states = [],index = 0):
@@ -308,7 +311,7 @@ def process_chipmunk_file(filepath):
             modality = 'audio'
         elif trial.stimulus_modality == 'visual':
             modality = 'visual'
-        elif trial.stimulus_modality == 'multisensory':
+        elif trial.stimulus_modality in ['multisensory','audio+visual']:
             modality = 'visual+audio'
         else:
             raise(ValueError(f'[chipmunk]: Unknown modality {trial.stimulus_modality}'))
@@ -547,8 +550,10 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
             stim_int = tset.stim_rate_vision.values - tset.category_boundary.values
         elif mod == 'audio':
             stim_int = tset.stim_rate_audio.values - tset.category_boundary.values
+        elif mod == 'visual+audio': # take vision because these should be congruent.
+            stim_int = tset.stim_rate_vision.values - tset.category_boundary.values
         else:
-            raise(f'[chipmunk]: Not sure how to handle {mod}.')
+            raise(ValueError(f'[chipmunk]: Not sure how to handle {mod}.'))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             reaction_times = tset.t_response.values - tset.t_gocue.values

@@ -1,13 +1,13 @@
 from labdata.schema import *
 
 username = prefs['database']['database.user']
-chipmunkschema = f'user_{username}_chipmunk'  # allows user defined schemas
+chipmunkschema = get_user_schema()  # allows user defined schemas
 if 'chipmunk_schema' in prefs.keys(): # to be able to override to another name
     chipmunkschema = prefs['chipmunk_schema']
-if 'root' in chipmunkschema:
-    raise(ValueError('[chipmunk] "chipmunk_schema" must be specified in the preference file to run as root.'))
-
-chipmunkschema = dj.schema(chipmunkschema)
+if type(chipmunkschema) is str: 
+    if 'root' in chipmunkschema:    
+        raise(ValueError('[chipmunk] "chipmunk_schema" must be specified in the preference file to run as root.'))
+    chipmunkschema = dj.schema(chipmunkschema)
 
 @chipmunkschema
 class Chipmunk(dj.Imported):
@@ -87,7 +87,7 @@ class Chipmunk(dj.Imported):
             computer_name = None
             if not metadata['setup_name'] is None:
                 # add if not there
-                computer_name = metadata['setup_name']
+                computer_name = str(metadata['setup_name'])
                 if not computer_name in Setup().fetch('setup_name'):
                     locations = SetupLocation().fetch(as_dict = True)
                     if len(locations):
@@ -96,6 +96,15 @@ class Chipmunk(dj.Imported):
                         computer_name = None
                         
             if not metadata['experimenter'] is None:
+                if metadata['experimenter'] == 'HM': # fix hanna marsi label
+                    metadata['experimenter'] = 'Marsi'
+                elif metadata['experimenter'] == 'LY': # fix Letizia label
+                    metadata['experimenter'] = 'Letizia'
+                elif metadata['experimenter'] == 'XL': # fix Xinyan label
+                    metadata['experimenter'] = 'Xinyan'
+                elif metadata['experimenter'] == 'Marvion': # fix Marvin label
+                    metadata['experimenter'] = 'Marvin'
+                
                 # retrieve the name
                 namesdict = LabMember().fetch(as_dict=True)
                 namesdict = [dict(u,name = ' '.join([u['first_name'],u['last_name']])) for u in namesdict]
@@ -125,7 +134,7 @@ class Chipmunk(dj.Imported):
                     Dataset.update1(dset)
             # update the setup_name
             if not computer_name is None:
-                dset['setup_name'] = computer_name
+                dset['setup_name'] = str(computer_name)
                 Dataset.update1(dset)
                 
             if not len(trialdicts):
