@@ -104,7 +104,8 @@ class Chipmunk(dj.Imported):
                     metadata['experimenter'] = 'Xinyan'
                 elif metadata['experimenter'] == 'Marvion': # fix Marvin label
                     metadata['experimenter'] = 'Marvin'
-                
+                elif metadata['experimenter'] == 'GRB': # fix Gabriel label
+                    metadata['experimenter'] = 'Gabriel'
                 # retrieve the name
                 namesdict = LabMember().fetch(as_dict=True)
                 namesdict = [dict(u,name = ' '.join([u['first_name'],u['last_name']])) for u in namesdict]
