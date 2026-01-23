@@ -32,8 +32,14 @@ def load_chipmunk_trialdata(file_name):
         else:
             notes = ''
         tset = sesdata['TrialSettings'].tolist()
-        setup_name = tset['rigNo'][0]
-        experimenter = tset['researcher'][0]
+        if 'rigNo' in  sesdata.dtype.fields:
+            setup_name = tset['rigNo'][0]
+        else:
+            setup_name = None
+        if 'researcher' in  sesdata.dtype.fields:
+            experimenter = tset['researcher'][0]
+        else:
+            experimenter = None
         metadata = dict(notes = notes,
                         setup_name = setup_name,
                         experimenter = experimenter)
@@ -71,29 +77,55 @@ def load_chipmunk_trialdata(file_name):
         trialdata.insert(trialdata.shape[1], 'correct_side', sesdata['CorrectSide'].tolist())
         #Get stim modality
         tmp_modality_numeric = sesdata['Modality'].tolist()
+        if isinstance(tmp_modality_numeric[0], str): #In some early recordings a string value was assigned to the modality
+            for k in range(tmp_modality_numeric.shape[0]):
+                if tmp_modality_numeric[k] in ['visual', 'Visual']:
+                    tmp_modality_numeric[k] = 1
+                if tmp_modality_numeric[k] in ['audio', 'auditory', 'Auditory']:
+                    tmp_modality_numeric[k] = 2
+                if tmp_modality_numeric[k] in ['audio+visual', 'multi-sensory', 'Multi-sensory']:
+                    tmp_modality_numeric[k] = 3
         temp_modality = []
         for t in tmp_modality_numeric:
-            if t in [1,'visual']:
+            if t in [1,'visual', 'Visual']:
                 temp_modality.append('visual')
-            elif t in  [2,'audio','auditory']:
+            elif t in  [2,'audio','auditory', 'Auditory']:
                 temp_modality.append('auditory')
             elif t in [3, 'audio+visual']:
-                temp_modality.append('audio+visual')
+                temp_modality.append('audio+visual', 'multi-sensory', 'Multi-sensory')
             else:
                 temp_modality.append(np.nan)
                 print('[chipmunk]: Could not determine modality and set value to nan')
         trialdata.insert(trialdata.shape[1], 'stimulus_modality', temp_modality)
         trialdata.insert(trialdata.shape[1], 'category_boundary', sesdata['CategoryBoundary'])
-        trialdata.insert(trialdata.shape[1], 'stimulus_rate_visual', sesdata['StimulusRate'].tolist()[:,0])
-        trialdata.insert(trialdata.shape[1], 'stimulus_rate_auditory', sesdata['StimulusRate'].tolist()[:,1])
+        if 'StimulusRate' in sesdata.dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'stimulus_rate_visual', sesdata['StimulusRate'].tolist()[:,0])
+            trialdata.insert(trialdata.shape[1], 'stimulus_rate_auditory', sesdata['StimulusRate'].tolist()[:,1])
+        else: #Stimulus rate was not yet implemented in early versions of the task
+            tmp = sesdata['nVisualEvents'].tolist().astype(float)
+            tmp[np.array([x == 'Visual' for x in sesdata['Modality'].tolist()]) == False] = np.nan
+            trialdata.insert(trialdata.shape[1], 'stimulus_rate_visual', tmp)
+            
+            tmp = sesdata['nAuditoryEvents'].tolist().astype(float)
+            tmp[np.array([x == 'Auditory' for x in sesdata['Modality'].tolist()]) == False] = np.nan
+            trialdata.insert(trialdata.shape[1], 'stimulus_rate_auditory', tmp)
         
         #Reconstruct the time stamps for the individual stimuli
         event_times = []
-        event_duration = sesdata['StimulusDuration'].tolist()[0]
+        if 'StimulusDuration' in sesdata.dtype.fields:
+            event_duration = sesdata['StimulusDuration'].tolist()[0]
+        else:
+            event_duration = 0.015 #This value was never change in the code and was used in the earliest chipmunk implementations
         for t in range(trialdata.shape[0]):
             if tmp_modality_numeric[t] < 3: #Unisensory
-                temp_isi = sesdata['InterStimulusIntervalList'].tolist().tolist()[t][tmp_modality_numeric[t]-1]
-                #Index into the corresponding trial and find the isi for the corresponding modality
+                if 'InterStimulusIntervalList' in sesdata.dtype.fields:
+                    temp_isi = sesdata['InterStimulusIntervalList'].tolist().tolist()[t][tmp_modality_numeric[t]-1]
+                    #Index into the corresponding trial and find the isi for the corresponding modality
+                else: 
+                    if tmp_modality_numeric[t] == 1:
+                        temp_isi = sesdata['visualIsis'].tolist().tolist()[t]
+                    elif tmp_modality_numeric[t] == 2:
+                        temp_isi = sesdata['auditoryIsis'].tolist().tolist()[t]
             else:
                 temp_isi = sesdata['InterStimulusIntervalList'].tolist().tolist()[t][0]
                 #For now assume synchronous and only look at visual stims
@@ -104,7 +136,14 @@ def load_chipmunk_trialdata(file_name):
             event_times.append(temp_trial_event_times + trialdata['PlayStimulus'][t][0]) #Add the timestamp for play stimulus to the event time
         trialdata.insert(trialdata.shape[1], 'stimulus_event_timestamps', event_times)
         #Insert the outcome record for faster access to the different trial outcomes
-        trialdata.insert(0, 'outcome_record', sesdata['OutcomeRecord'].tolist())
+        if 'OutcomeRecord' in sesdata.dtype.fields:
+            trialdata.insert(0, 'outcome_record', sesdata['OutcomeRecord'].tolist())
+        else: # Re-define outcome record
+            outcome_record = np.zeros([trialdata.shape[0]]) * np.nan
+            outcome_record[sesdata['ResponseSide'].tolist() == sesdata['CorrectSide'].tolist()] = 1
+            outcome_record[sesdata['ResponseSide'].tolist() != sesdata['CorrectSide'].tolist()] = 0
+            outcome_record[sesdata['EarlyWithdrawal'].tolist()] = -1
+            outcome_record[sesdata['DidNotChoose'].tolist()] = 2
         try:
             tmp = sesdata['TrialDelays'].tolist()
             for key in tmp[0].dtype.fields.keys(): #Find all the keys and extract the data associated with them
@@ -112,18 +151,27 @@ def load_chipmunk_trialdata(file_name):
                 trialdata.insert(trialdata.shape[1], key , tmp_delay)
         except:
             print('[chipmunk]: For this version of chipmunk the task delays struct was not implemented yet.\nDid not generate the respective columns in the data frame.')
+            
         tmp = sesdata['ActualWaitTime'].tolist()
         trialdata.insert(trialdata.shape[1], 'actual_wait_time' , tmp)
         #TEMPORARY: import the demonstrator and observer id
         tmp = sesdata['TrialSettings'].tolist()
-        trialdata.insert(trialdata.shape[1], 'demonstrator_ID' , tmp['demonID'].tolist())
+        if 'demonID' in tmp.dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'demonstrator_ID' , tmp['demonID'].tolist())
+        else: #The subject ID was not explicitly tracked within the data structure initially
+            trialdata.insert(trialdata.shape[1], 'demonstrator_ID' , os.path.split(file_name)[1].split('_')[0]) #Use the identifier contained in the file name
+        
         #Add a generic state tracking the timing of outcome presentation, this is also a 1d array of two elements
+        if 'DemonReward' in trialdata.keys():
+            outcome_names = ['DemonReward', 'DemonWrongChoice']
+        else:
+            outcome_name = ['Reward', 'WrongChoice']
         outcome_timing = []
         for k in range(trialdata.shape[0]):
-            if np.isnan(trialdata['DemonReward'][k][0]) == 0:
-                outcome_timing.append(np.array([trialdata['DemonReward'][k][0], trialdata['DemonReward'][k][0]]))
-            elif np.isnan(trialdata['DemonWrongChoice'][k][0]) == 0:
-                outcome_timing.append(np.array([trialdata['DemonWrongChoice'][k][0],trialdata['DemonWrongChoice'][k][0]]))
+            if np.isnan(trialdata[outcome_name[0]][k][0]) == 0:
+                outcome_timing.append(np.array([trialdata[outcome_name[0]][k][0], trialdata[outcome_name[0]][k][0]]))
+            elif np.isnan(trialdata[outcome_name[1]][k][0]) == 0:
+                outcome_timing.append(np.array([trialdata[outcome_name[1]][k][0],trialdata[outcome_name[1]][k][0]]))
             else:
                 outcome_timing.append(np.array([np.nan, np.nan]))
         trialdata.insert(trialdata.shape[1], 'outcome_presentation', outcome_timing)
@@ -181,9 +229,9 @@ def load_chipmunk_trialdata(file_name):
         trialdata.insert(trialdata.shape[1], 'response_port_out', response_port_out)
         outcome_end = []
         for k in range(trialdata.shape[0]):
-            if np.isnan(trialdata['DemonReward'][k][0]) == 0:
+            if np.isnan(trialdata[outcome_name[0]][k][0]) == 0:
                 outcome_end.append(np.array([trialdata['response_port_out'][k][0], trialdata['response_port_out'][k][0]]))
-            elif np.isnan(trialdata['DemonWrongChoice'][k][0]) == 0:
+            elif np.isnan(trialdata[outcome_name[1]][k][0]) == 0:
                 outcome_end.append(np.array([trialdata['FinishTrial'][k][0],trialdata['FinishTrial'][k][0]]))
             else:
                 outcome_end.append(np.array([np.nan, np.nan]))
