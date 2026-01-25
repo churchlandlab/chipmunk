@@ -276,13 +276,30 @@ def _get_port(trial,port):
     port[:,0] += trial.trial_start_time
     return port
 
+def _read_setting(session_data, setting_name):
+    ''' 
+    This is to resolve inconsistencies in the filenames.
+    Please don't change the case spelling of variables.
+    '''
+    settings = session_data['SettingsFile'].tolist()    
+    if setting_name in settings.dtype.names:
+        return settings[setting_name].tolist()
+    else: # try capitalizing the first letter..
+        set_name = setting_name[0].upper() + setting_name[1:] 
+        if set_name in settings.dtype.names:
+            return settings[set_name].tolist()
+        else:
+            print('Could not find setting name')
+            return None
+
+
 def process_chipmunk_file(filepath):
     trialdata,session_data,metadata = load_chipmunk_trialdata(filepath)
 
     # process settings from the entire session
     setting_high_rate_side = 'right' if (session_data['SettingsFile'].tolist())['highRateSide'] == 'R' else 'left'
-    setting_prob_audio = session_data['SettingsFile'].tolist()['propOnlyAuditory'].tolist()
-    setting_prob_vision = session_data['SettingsFile'].tolist()['propOnlyVisual'].tolist()
+    setting_prob_audio = _read_setting(session_data, 'propOnlyAuditory')
+    setting_prob_vision = _read_setting(session_data,'propOnlyVisual')
     if setting_prob_audio == 1:
         setting_modalities = 'audio'
     elif setting_prob_vision == 1:
@@ -314,7 +331,7 @@ def process_chipmunk_file(filepath):
     trial_settings_dict = []
     for itrial, trial in trialdata.iterrows():
         trialtimes = dict(trial_num = itrial,
-                          t_start = _get_state_time(trial,'WaitForCenterFixation'), 
+                          t_start = _get_state_time(trial,['WaitForCenterFixation','GoToCenter']), 
                           t_sync = _get_state_time(trial,'Sync'),         
                           t_initiate = _get_state_time(trial,'InitFixation'),
                           t_earlywithdraw = _get_state_time(trial,'EarlyWithdrawal'), 
@@ -322,7 +339,7 @@ def process_chipmunk_file(filepath):
                           t_gocue = _get_state_time(trial,'WaitForWithdrawalFromCenter'),
                           t_react = _get_state_time(trial,'WaitForResponse'),
                           t_response = _get_state_time(trial,['Reward','WrongChoice']),
-                          t_end = _get_state_time(trial,'FinishTrial'))
+                          t_end = _get_state_time(trial,['FinishTrial','PrepareNextTrial']))
 
         if 'ExtraStimulusDuration' in trialdata.keys():
             stim_duration = 1. + trial['ExtraStimulusDuration']
