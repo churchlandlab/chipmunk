@@ -184,3 +184,7 @@ class Chipmunk(dj.Imported):
             # should also run chipmunk_insert_decision_task but has to be changed to allow.
             from .utils import chipmunk_insert_decision_task
             chipmunk_insert_decision_task(key)
+            
+            if 'LABDATA_DELETE_FILES_AFTER_POPULATE' in os.environ.keys():
+                [os.unlink(f) for f in filenames]
+                print('Deleted files after populating because "LABDATA_DELETE_FILES_AFTER_POPULATE" is defined.')
