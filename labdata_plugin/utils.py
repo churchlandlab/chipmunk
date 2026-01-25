@@ -69,9 +69,9 @@ def load_chipmunk_trialdata(file_name):
         trialstates = pd.DataFrame(trialstates)
         trialevents = pd.DataFrame(trialevents)
         trialdata = pd.merge(trialevents,trialstates,left_index=True, right_index=True)
-        # Insert a column for DemonWrongChoice in trialda if necessary
-        if 'DemonWrongChoice' not in trialdata.columns:
-            trialdata.insert(trialdata.shape[1], 'DemonWrongChoice', [np.array([np.nan, np.nan])] * trialdata.shape[0])
+        ## Insert a column for DemonWrongChoice in trialdata if necessary
+        #if 'DemonWrongChoice' not in trialdata.columns:
+        #    trialdata.insert(trialdata.shape[1], 'DemonWrongChoice', [np.array([np.nan, np.nan])] * trialdata.shape[0])
         #Add response and stimulus train related information: correct side, rate, event occurence time stamps
         trialdata.insert(trialdata.shape[1], 'response_side', sesdata['ResponseSide'].tolist())
         trialdata.insert(trialdata.shape[1], 'correct_side', sesdata['CorrectSide'].tolist())
@@ -149,9 +149,9 @@ def load_chipmunk_trialdata(file_name):
             for key in tmp[0].dtype.fields.keys(): #Find all the keys and extract the data associated with them
                 tmp_delay = tmp[key].tolist()
                 trialdata.insert(trialdata.shape[1], key , tmp_delay)
-        except:
+        except Exception as err:
             print('[chipmunk]: For this version of chipmunk the task delays struct was not implemented yet.\nDid not generate the respective columns in the data frame.')
-            
+
         tmp = sesdata['ActualWaitTime'].tolist()
         trialdata.insert(trialdata.shape[1], 'actual_wait_time' , tmp)
         #TEMPORARY: import the demonstrator and observer id
@@ -179,7 +179,7 @@ def load_chipmunk_trialdata(file_name):
         if 'ReviseChoiceFlag' in sesdata.dtype.names:
             trialdata.insert(trialdata.shape[1], 'revise_choice_flag', np.ones(trialdata.shape[0], dtype = bool) * sesdata['ReviseChoiceFlag'].tolist())
         else:
-            print('There was no ReviseChoiceFlag.')
+            print('[chipmunk]: There was no ReviseChoiceFlag.')
             trialdata.insert(trialdata.shape[1], 'revise_choice_flag', np.ones(trialdata.shape[0], dtype = bool) * 0)
         #Get the Bpod timestamps for the start of each new trial
         trialdata.insert(trialdata.shape[1], 'trial_start_time' , sesdata['TrialStartTimestamp'].tolist())
@@ -229,10 +229,14 @@ def load_chipmunk_trialdata(file_name):
         trialdata.insert(trialdata.shape[1], 'response_port_out', response_port_out)
         outcome_end = []
         for k in range(trialdata.shape[0]):
+
             if np.isnan(trialdata[outcome_name[0]][k][0]) == 0:
                 outcome_end.append(np.array([trialdata['response_port_out'][k][0], trialdata['response_port_out'][k][0]]))
             elif np.isnan(trialdata[outcome_name[1]][k][0]) == 0:
-                outcome_end.append(np.array([trialdata['FinishTrial'][k][0],trialdata['FinishTrial'][k][0]]))
+                if 'FinishTrial' in sesdata.dtype.fields: # this outcome_end is legacy?
+                    outcome_end.append(np.array([trialdata['FinishTrial'][k][0],trialdata['FinishTrial'][k][0]]))
+                else:
+                    outcome_end.append(np.array([np.nan, np.nan]))
             else:
                 outcome_end.append(np.array([np.nan, np.nan]))
         trialdata.insert(trialdata.shape[1], 'outcome_end', outcome_end)
