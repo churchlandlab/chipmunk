@@ -544,7 +544,16 @@ def extract_chipmunk_camera_data(folder, trial_dict):
 
     for icam,(vidfile,log) in enumerate(zip(camfiles,camlogfiles)):
         comm, camlog = read_camlog(log)
-        vid = VideoReader(str(vidfile))
+        try:
+            vid = VideoReader(str(vidfile))
+        except Exception as err:
+            # re-encode the video?
+              if 'broken metadata': # re-encode the video
+                  print(f'[chipmunk]: Video had broken metadata, re-encoding {vidfile}.')
+                  output = Path(vidfile).with_suffix(".metadata.avi")
+                  cmd = f'ffmpeg -i {vidfile} -r 30 -enc_time_base -1 -bf 0 -c:v libx264 -preset slow -pix_fmt yuv420p -vsync 2 -c:a copy {output}'
+                  os.system(cmd) # re-encode the video using ffmpeg. Note that this may drop frames if some are missing in the original data
+                  vid = VideoReader(str(output))
         try:
             frametimes, camera_events = _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trial_dict)
         except Exception as err:
