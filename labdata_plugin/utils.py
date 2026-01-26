@@ -462,7 +462,8 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts):
         # do this only if there is a sync connected.
         onsets = np.where(np.hstack([0,np.diff(g.astype(np.int8))])>0)[0]
         offsets = np.where(np.hstack([0,np.diff(g.astype(np.int8))])<0)[0]-1
-        if (len(onsets) > len(trialmarkers)-2) & (len(onsets) < len(trialmarkers)+2): # allow to be one sync off, this is because of how the task is stopped
+        if (len(onsets) > len(trialmarkers)-2) & (len(onsets) < len(trialmarkers)+2):
+            # allow to be one sync off, this is because of how the task is stopped
             # get the frametimes (prefered method)
             # right now doing this only if rig_t and frame_num[events] have the same size of be off by 1
             if (len(trialmarkers) == len(onsets)) or (len(trialmarkers)+1 == len(onsets)):
@@ -546,14 +547,15 @@ def extract_chipmunk_camera_data(folder, trial_dict):
         try:
             vid = VideoReader(str(vidfile))
         except Exception as err:
+            continue # skip ahead
             # re-encode the video?
-              if 'broken metadata': # re-encode the video
-                  print(f'[chipmunk]: Video had broken metadata, re-encoding {vidfile}.')
-                  output = Path(vidfile).with_suffix(".metadata.avi")
-                  cmd = f'ffmpeg -i {vidfile} -r 30 -enc_time_base -1 -bf 0 -c:v libx264 -preset slow -pix_fmt yuv420p -vsync 2 -c:a copy {output}'
-                  print(cmd)
-                  os.system(cmd) # re-encode the video using ffmpeg. Note that this may drop frames if some are missing in the original data
-                  vid = VideoReader(str(output))
+            if 'broken metadata': # re-encode the video
+                print(f'[chipmunk]: Video had broken metadata, re-encoding {vidfile}.')
+                output = Path(vidfile).with_suffix(".metadata.avi")
+                cmd = f'ffmpeg -i {vidfile} -r 30 -enc_time_base -1 -bf 0 -c:v libx264 -preset slow -pix_fmt yuv420p -vsync 2 -c:a copy {output}'
+                print(cmd)
+                os.system(cmd) # re-encode the video using ffmpeg. Note that this may drop frames if some are missing in the original data
+                vid = VideoReader(str(output))
         try:
             frametimes, camera_events = _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trial_dict)
         except Exception as err:
