@@ -599,9 +599,9 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
     trials = pd.DataFrame((Chipmunk*Chipmunk.Trial*Chipmunk.TrialParameters & d).fetch(order_by='trial_num'))
     if len(trials)<50: 
         return
-    trials['reward_volume'] = 0
-    trials.loc[(trials['rewarded'] == 1)&(trials['response'] == 1),'reward_volume'] = trials['setting_right_reward_volume'].iloc[0]
-    trials.loc[(trials['rewarded'] == 1)&(trials['response'] == -1),'reward_volume'] = trials['setting_left_reward_volume'].iloc[0]
+    trials['reward_volume'] = 0.0
+    trials.loc[(trials['rewarded'] == 1)&(trials['response'] == 1),'reward_volume'] = np.float32(trials['setting_right_reward_volume'].iloc[0])
+    trials.loc[(trials['rewarded'] == 1)&(trials['response'] == -1),'reward_volume'] = np.float32(trials['setting_left_reward_volume'].iloc[0])
 
     watering = dict(subject_name = d['subject_name'],
                 watering_datetime = (Dataset*Session & d).fetch('session_datetime')[0],
