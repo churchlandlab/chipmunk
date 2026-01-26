@@ -91,8 +91,8 @@ def load_chipmunk_trialdata(file_name):
                 temp_modality.append('visual')
             elif t in  [2,'audio','auditory', 'Auditory']:
                 temp_modality.append('auditory')
-            elif t in [3, 'audio+visual']:
-                temp_modality.append('audio+visual', 'multi-sensory', 'Multi-sensory')
+            elif t in [3, 'audio+visual', 'multi-sensory', 'Multi-sensory']:
+                temp_modality.append('audio+visual')
             else:
                 temp_modality.append(np.nan)
                 print('[chipmunk]: Could not determine modality and set value to nan')
@@ -551,6 +551,7 @@ def extract_chipmunk_camera_data(folder, trial_dict):
                   print(f'[chipmunk]: Video had broken metadata, re-encoding {vidfile}.')
                   output = Path(vidfile).with_suffix(".metadata.avi")
                   cmd = f'ffmpeg -i {vidfile} -r 30 -enc_time_base -1 -bf 0 -c:v libx264 -preset slow -pix_fmt yuv420p -vsync 2 -c:a copy {output}'
+                  print(cmd)
                   os.system(cmd) # re-encode the video using ffmpeg. Note that this may drop frames if some are missing in the original data
                   vid = VideoReader(str(output))
         try:
