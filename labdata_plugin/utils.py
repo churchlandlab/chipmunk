@@ -163,7 +163,7 @@ def load_chipmunk_trialdata(file_name):
         
         #Add a generic state tracking the timing of outcome presentation, this is also a 1d array of two elements
         if 'DemonReward' in trialdata.keys():
-            outcome_names = ['DemonReward', 'DemonWrongChoice']
+            outcome_name = ['DemonReward', 'DemonWrongChoice']
         else:
             outcome_name = ['Reward', 'WrongChoice']
         outcome_timing = []
