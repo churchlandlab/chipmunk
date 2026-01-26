@@ -335,16 +335,15 @@ def process_chipmunk_file(filepath):
     trial_settings_dict = []
     for itrial, trial in trialdata.iterrows():
         trialtimes = dict(trial_num = itrial,
-                          t_start = _get_state_time(trial,['WaitForCenterFixation','GoToCenter']), 
+                          t_start = _get_state_time(trial,['WaitForCenterFixation','GoToCenter','DemonTrialStart']), 
                           t_sync = _get_state_time(trial,'Sync'),         
-                          t_initiate = _get_state_time(trial,'InitFixation'),
-                          t_earlywithdraw = _get_state_time(trial,'EarlyWithdrawal'), 
+                          t_initiate = _get_state_time(trial,['InitFixation','DemonInitFixation']),
+                          t_earlywithdraw = _get_state_time(trial,['EarlyWithdrawal','DemonEarlyWithdrawal']), 
                           t_stim = _get_state_time(trial,'PlayStimulus'),
-                          t_gocue = _get_state_time(trial,'WaitForWithdrawalFromCenter'),
-                          t_react = _get_state_time(trial,'WaitForResponse'),
-                          t_response = _get_state_time(trial,['Reward','WrongChoice']),
+                          t_gocue = _get_state_time(trial,['WaitForWithdrawalFromCenter','DemonWaitForWithdrawalFromCenter']),
+                          t_react = _get_state_time(trial,['WaitForResponse','DemonWaitForResponse']),
+                          t_response = _get_state_time(trial,['Reward','WrongChoice','DemonReward','DemonWrongChoice']),
                           t_end = _get_state_time(trial,['FinishTrial','PrepareNextTrial']))
-
         if 'ExtraStimulusDuration' in trialdata.keys():
             stim_duration = 1. + trial['ExtraStimulusDuration']
         else:
