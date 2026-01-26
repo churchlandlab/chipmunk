@@ -94,7 +94,7 @@ class Chipmunk(dj.Imported):
                         Setup.insert1(dict(locations[0],setup_name = computer_name,setup_description = 'Added automatically.'))
                     else:
                         computer_name = None
-                        
+            user_name = None
             if not metadata['experimenter'] is None:
                 if metadata['experimenter'] == 'HM': # fix hanna marsi label
                     metadata['experimenter'] = 'Marsi'
@@ -122,8 +122,10 @@ class Chipmunk(dj.Imported):
             notes = metadata['notes'] if not metadata['notes'] == '' else None
             if not notes is None:
                 ses = (Session() & (Dataset & key)).fetch1()
-                
                 if dset['note_datetime'] is None:
+                    if user_name is None:
+                        LabMember().insert1(dict(user_name = 'unknown',date_joined = '2001-1-1'),skip_duplicates = True)
+                        user_name = 'unknown'
                     note = dict(note_datetime = ses['session_datetime'],
                                 notetaker = user_name,
                                 notes = notes)
