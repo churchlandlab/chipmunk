@@ -162,7 +162,9 @@ def load_chipmunk_trialdata(file_name):
             trialdata.insert(trialdata.shape[1], 'demonstrator_ID' , os.path.split(file_name)[1].split('_')[0]) #Use the identifier contained in the file name
         
         #Add a generic state tracking the timing of outcome presentation, this is also a 1d array of two elements
-        if 'DemonReward' in trialdata.keys():
+        if 'DemonCorrectChoice' in trialdata.keys(): # This is the chipmunk version with omissions
+            outcome_name = ['DemonCorrectChoice', 'DemonWrongChoice']
+        elif 'DemonReward' in trialdata.keys():
             outcome_name = ['DemonReward']
             if 'DemonWrongChoice' in trialdata.keys():
                 outcome_name.append('DemonWrongChoice')
