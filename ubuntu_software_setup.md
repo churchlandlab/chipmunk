@@ -31,23 +31,14 @@
      sudo apt-get install git
      ```
    - **Arduino**:
-     - **Warning**: Ensure the Arduino version is compatible with Teensyduino. This is critical for proper functionality.
-     - Download and install the latest version of the Arduino IDE from the [official Arduino website](https://www.arduino.cc/en/software).
+     - Install `v1.18.19` from the [official Arduino website](https://www.arduino.cc/en/software).
    - **Teensyduino**:
-     - Install Teensyduino, ensuring its version matches the Arduino IDE version.
-     - Follow installation instructions for Linux from the [Teensyduino website](https://www.pjrc.com/teensy/td_download.html).
-   - **Anaconda**:
-     - Download and install Anaconda:
-       ```bash
-       wget https://repo.anaconda.com/archive/Anaconda3-latest-Linux-x86_64.sh
-       bash Anaconda3-latest-Linux-x86_64.sh
-       ```
-     - Add Conda Python to the PATH during installation.
+     - Install `v1.59` and follow installation instructions for Linux from the [Teensyduino website](https://www.pjrc.com/teensy/td_download.html).
    - **Psychtoolbox**:
      - [Psychtoolbox website](http://psychtoolbox.org/download)
 
 2. **Bpod Setup**:
-   - Install Bpod from the repository [here](https://github.com/sanworks/Bpod_Gen2). This is what will be used to control everything related to the experiment.
+   - Install Bpod `v1.72` from the repository [here](https://github.com/sanworks/Bpod_Gen2). This is what will be used to control everything related to the experiment. 
    - Clone this repository to `Bpod Local/Protocols` on the computer you will be using for running experiments. If you make changes, create a branch and remember to commit changes regularly.
 
 3. **Camera Software**:
@@ -81,7 +72,7 @@
    	    "binning":2,
    	    "cam_id": 0,
          "pxformat": "Mono8",
-         "name": "BottomView",
+         "name": "CAM_NAME",
    	    "recorder":{
    		      "format":"ffmpeg",
              "compression": "27:5M",
@@ -95,4 +86,5 @@
        "recorder_sleep_time": 0.05,
        "server":"udp",
        "server_port": 9999
-}```
+      }
+        ```
