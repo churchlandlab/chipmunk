@@ -650,7 +650,7 @@ for currentTrial = 1:maxTrialNum
                 if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
                     %Do not copy fake subject or virtual (no demonstrator present)
                     [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-                    system(['export LD_LIBRARY_PATH=""; labdata2 put ', fPath, ' --ask']);
+                    system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata2 put ', fPath, ' --ask']);
                     % if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
                     %     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
                     % end
@@ -666,7 +666,7 @@ for currentTrial = 1:maxTrialNum
                 if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
                     if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
                         [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                        system(['export LD_LIBRARY_PATH=""; labdata2 put ', fPath, ' --ask']);
+                        system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata2 put ', fPath, ' --ask']);
                         % if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
                         %     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
                         % end
@@ -807,7 +807,7 @@ for currentTrial = 1:maxTrialNum
                 %Do not copy fake subject or virtual (no demonstrator present)
                 %For this version use labdata2 to put the file on hodgkin
                 [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-                system(['export LD_LIBRARY_PATH=""; labdata2 put ', fPath, ' --ask']);
+                system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata2 put ', fPath, ' --ask']);
                 % if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
                 %     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
                 % end
@@ -823,7 +823,7 @@ for currentTrial = 1:maxTrialNum
             if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
                 if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
                     [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                    system(['export LD_LIBRARY_PATH=""; labdata2 put ', fPath, ' --ask']);
+                    system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata2 put ', fPath, ' --ask']);
                     % if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
                     %     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
                     % end
