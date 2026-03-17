@@ -113,9 +113,11 @@ def load_chipmunk_trialdata(file_name):
         #Reconstruct the time stamps for the individual stimuli
         event_times = []
         if 'StimulusDuration' in sesdata.dtype.fields:
-            event_duration = sesdata['StimulusDuration'].tolist()[0]
+            event_duration = sesdata['StimulusDuration'].tolist()
         else:
-            event_duration = 0.015 #This value was never change in the code and was used in the earliest chipmunk implementations
+            event_duration = [0.015]*trialdata.shape[0] #This value is hard-coded in chipmunk but can change in chipmunk_solo as of March 2026
+        trialdata.insert(trialdata.shape[1], 'stimulus_event_duration', event_duration)
+        
         for t in range(trialdata.shape[0]):
             if tmp_modality_numeric[t] < 3: #Unisensory
                 if 'InterStimulusIntervalList' in sesdata.dtype.fields:
@@ -132,9 +134,12 @@ def load_chipmunk_trialdata(file_name):
                 warnings.warn('[chipmunk]: Found multisensory trials, assumed synchronous condition')
             temp_trial_event_times = [temp_isi[0]]
             for k in range(1,temp_isi.shape[0]-1): #Start at 1 because the first Isi is already the timestamp after the play stimulus
-                temp_trial_event_times.append(temp_trial_event_times[k-1] + event_duration + temp_isi[k])
+                temp_trial_event_times.append(temp_trial_event_times[k-1] + event_duration[t] + temp_isi[k])
             event_times.append(temp_trial_event_times + trialdata['PlayStimulus'][t][0]) #Add the timestamp for play stimulus to the event time
         trialdata.insert(trialdata.shape[1], 'stimulus_event_timestamps', event_times)
+        trialdata.insert(trialdata.shape[1], 'stimulus_brightness', sesdata['TrialSettings'].tolist()['stimBrightness'])
+        trialdata.insert(trialdata.shape[1], 'stimulus_loudness', sesdata['TrialSettings'].tolist()['stimLoudness'])
+        
         #Insert the outcome record for faster access to the different trial outcomes
         if 'OutcomeRecord' in sesdata.dtype.fields:
             trialdata.insert(0, 'outcome_record', sesdata['OutcomeRecord'].tolist())
@@ -372,6 +377,9 @@ def process_chipmunk_file(filepath):
         
         trials_dict.append(dict(trialtimes,
                                 stim_duration = stim_duration,
+                                stimulus_event_duration = trial['stimulus_event_duration'],
+                                stimulus_brightness = trial['stimulus_brightness'],
+                                stimulus_loudness = trial['stimulus_loudness'],
                                 left_poke = _get_port(trial,'Port1'),
                                 center_poke = _get_port(trial,'Port2'),
                                 right_poke = _get_port(trial,'Port3'),

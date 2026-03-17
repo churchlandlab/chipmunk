@@ -56,6 +56,9 @@ class Chipmunk(dj.Imported):
         t_response = NULL            : float      # DemonWrongChoice or DemonReward
         t_end                        : float      # FinishTrial [seconds]
         stim_duration                : float      # default 1second + extrastim duration
+        stimulus_event_duration      : float      # Duration of individual flashes or clicks
+        stimulus_brightness          : float      # Flash brightness
+        stimulus_loudness            : float      # Click loudness
         
         left_poke = NULL             : longblob   # left poke timestamps and states
         center_poke = NULL           : longblob   # center poke timestamps and states
