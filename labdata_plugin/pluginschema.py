@@ -30,14 +30,18 @@ class Chipmunk(dj.Imported):
     class TrialParameters(dj.Part):
         definition = """
         -> master
-        trial_num                    : int
+        trial_num                           : int
         ---
-        rewarded_modality            : enum('visual','audio','visual+audio')
-        stim_rate_audio = NULL       : float      # audio stimulus rate [Hz]
-        stim_rate_vision = NULL      : float      # visual stimulus rate [Hz]
-        category_boundary            : float 
-        rewarded_position            : enum('left','right')
-        stim_events = NULL           : longblob   # time of the events
+        rewarded_modality                   : enum('visual','audio','visual+audio')
+        stim_rate_audio = NULL              : float      # audio stimulus rate [Hz]
+        stim_rate_vision = NULL             : float      # visual stimulus rate [Hz]
+        category_boundary                   : float 
+        rewarded_position                   : enum('left','right')
+        stim_events = NULL                  : longblob   # time of the events
+        stim_event_duration = NULL          : float      # Duration of individual flashes or clicks
+        stim_brightness = NULL              : float      # Flash brightness
+        stim_loudness = NULL                : float      # Click loudness
+
         """
 
     class Trial(dj.Part):
@@ -56,9 +60,6 @@ class Chipmunk(dj.Imported):
         t_response = NULL            : float      # DemonWrongChoice or DemonReward
         t_end                        : float      # FinishTrial [seconds]
         stim_duration                : float      # default 1second + extrastim duration
-        stimulus_event_duration      : float      # Duration of individual flashes or clicks
-        stimulus_brightness          : float      # Flash brightness
-        stimulus_loudness            : float      # Click loudness
         
         left_poke = NULL             : longblob   # left poke timestamps and states
         center_poke = NULL           : longblob   # center poke timestamps and states
@@ -70,7 +71,7 @@ class Chipmunk(dj.Imported):
         with_choice                  : tinyint    # if [Demon]WrongChoice or [Demon]Reward
         response = 0                 : tinyint    # -1:left, 0:no response, 1:right
         """
-    
+
     def make(self,key):
         localpath = prefs['local_paths'][0]
         if key['dataset_name'] == 'chipmunk':
