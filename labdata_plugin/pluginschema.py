@@ -39,8 +39,20 @@ class Chipmunk(dj.Imported):
         rewarded_position                   : enum('left','right')
         stim_events = NULL                  : longblob   # time of the events
         stim_event_duration = NULL          : float      # Duration of individual flashes or clicks
+        min_isi = NULL                      : float      # The shortest allowed interval between flashes or clicks
+        is_poisson = NULL                   : tinyint    # 1 if intervals between flashes / clicks are random, 0 if there are only two intervals
         stim_brightness = NULL              : float      # Flash brightness
         stim_loudness = NULL                : float      # Click loudness
+        extra_stim_duration = NULL          : float      # Added time the stimulus train is playing after one full presentation
+        proportion_left = NULL              : float      # Proportion of left-side trials
+        anti_bias_strength = NULL           : float      # Proportion of trials where the anti-bias updates the trial sides
+        anti_bias_tau = NULL                : float      # Integration window of choice biases for anti-bias algorithm
+        pre_stim_delay_min = NULL           : float      # Minimal pre-stim delay duration
+        pre_stim_delay_max = NULL           : float      # Maximal pre-stim delay duration
+        pre_stim_delay_lambda = NULL        : float      # Shape parameter for the distribution from which to sample the pre-stim delays
+        pre_stim_delay = NULL               : float      # Sampled pre-stim delay
+        incorrect_choice_timeout = NULL     : float      # Timeout and tone duration after incorrect choice
+        early_withdrawal_timeout = NULL     : float      # Timeout and noise duration after early withdrawal
 
         """
 
@@ -58,6 +70,7 @@ class Chipmunk(dj.Imported):
         t_gocue = NULL               : float      # enter DemonWaitForWithdrawalFromCenter
         t_react = NULL               : float      # enter DemonWaitForResponse
         t_response = NULL            : float      # DemonWrongChoice or DemonReward
+        t_response_port_out = NULL   : float      # Removing the nose from the response port
         t_end                        : float      # FinishTrial [seconds]
         stim_duration                : float      # default 1second + extrastim duration
         
@@ -100,8 +113,8 @@ class Chipmunk(dj.Imported):
                         computer_name = None
             user_name = None
             if not metadata['experimenter'] is None:
-                if metadata['experimenter'] == 'HM': # fix hanna marsi label
-                    metadata['experimenter'] = 'Marsi'
+                if metadata['experimenter'] == 'HM': # fix hanna masri label
+                    metadata['experimenter'] = 'Masri'
                 elif metadata['experimenter'] == 'LY': # fix Letizia label
                     metadata['experimenter'] = 'Letizia'
                 elif metadata['experimenter'] == 'XL': # fix Xinyan label
@@ -143,7 +156,15 @@ class Chipmunk(dj.Imported):
             if not computer_name is None:
                 dset['setup_name'] = str(computer_name)
                 Dataset.update1(dset)
-                
+            
+            #Insert the weight
+            weight = metadata['weight']
+            if np.isfinite(weight):
+                Weighing.insert1(dict((Session & key).proj(
+                    weighing_datetime = 'session_datetime').fetch(
+                        'subject_name',
+                        'weighing_datetime',as_dict=True)[0],weight = weight))
+            
             if not len(trialdicts):
                 print(f'[chipmunk]: There are no trials for {key}')
                 return
