@@ -6,6 +6,7 @@ import socket #To establish udp connection to the behavior computer
 import json
 from labdatatools import rclone_upload_data
 import sys
+import subprocess
 
 #%%-----Make sure to provide a directory containing a Data folder and a
 #       Protocols folder where chipmunk lives or change here
@@ -144,4 +145,4 @@ except KeyboardInterrupt:
 #%%-----Use labdatatools to upload the data to the google drive
     print("Starting to upload the miniscope data...")
     #rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
-    subporcess.run("labdata2", "put", dataDirectory, "-r", "miniscope"])
+    subprocess.run(["labdata2", "put", data_directory, "-r", "miniscope"])
