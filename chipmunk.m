@@ -670,7 +670,8 @@ if BpodSystem.Status.BeingUsed == 0
         if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
             %Do not copy fake subject or virtual (no demonstrator present)
             [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-            system(['labdata2 put ', fPath, ' --ask']);
+            %system(['labdata2 put ', fPath, ' --ask']);
+            system(['set LABDATA_DATABASE_USER=oesch&& set LABDATA_DATABASE_PASS=@C@!sC00L&& labdata2 put ', fPath, ' -p oesch_chipmunk --ask']);
 %             if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
 %                 mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
 %             end
@@ -686,7 +687,8 @@ if BpodSystem.Status.BeingUsed == 0
         if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
             if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
                 [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                system(['labdata2 put ', fPath, ' --ask']);
+                system(['set LABDATA_DATABASE_USER=oesch&& set LABDATA_DATABASE_PASS=@C@!sC00L&& labdata2 put ', fPath, ' -p oesch_chipmunk --ask']);
+                %system(['labdata2 put ', fPath, ' --ask']);
 %                 if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
 %                      mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
 %                 end
