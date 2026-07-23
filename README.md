@@ -26,6 +26,13 @@ The visual and auditory stimuli printed circuit boards are [here](https://github
 	
 ### Software instalation
 
+#### labdata dashboard
+
+The labdata plugin works without the optional dashboard. To add a **Chipmunk**
+page to the labdata dashboard, install
+[chipmunk-dashboard](https://github.com/rojasgabriel/chipmunk-dashboard) in the
+same Python environment used to run `labdata dashboard`.
+
 #### Bpod gen 2
 
 Install Bpod from the repository [here](https://github.com/sanworks/Bpod_Gen2). This was tested with commit `329bd9e`.
@@ -85,5 +92,3 @@ Arena size is 20x20cm. An additional chamber can attached to hold an observer.
 6. try different training strategies. Find the best strategy. What the best way to get multimodal enhancement? What is the best loudness and visual saliency? 
 
 Most of these can be done in parallel, some can't. Version 1 can be rough for most of these (we can use code and audio from MudSkipper2 for now.) 
-
-
