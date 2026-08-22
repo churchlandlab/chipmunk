@@ -7,7 +7,6 @@ from .utils import (
     process_chipmunk_file,
 )
 
-
 if find_spec("chipmunk_dashboard") is not None:
     dashboard_name = "**Chipmunk**"
 
