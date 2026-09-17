@@ -111,7 +111,7 @@ class Chipmunk(dj.Imported):
                     metadata['experimenter'] = 'Gabriel'
                 # retrieve the name
                 namesdict = LabMember().fetch(as_dict=True)
-                namesdict = [dict(u,name = ' '.join([u['first_name'],u['last_name']])) for u in namesdict]
+                namesdict = [dict(u,name = ' '.join([u['first_name'],u['last_name']])) for u in namesdict if not u['first_name'] is None]
                 experimenter = [u for u in namesdict if metadata['experimenter'] in u['name']]
                 if not len(experimenter):
                     raise(ValueError(f'[chipmunk] LabMember {metadata["experimenter"]} not in database?'))
@@ -120,16 +120,14 @@ class Chipmunk(dj.Imported):
                 ses = (Session() & (Dataset & key)).fetch1()
                 ses['experimenter'] = user_name
                 Session.update1(ses)
-                
             dset = (Dataset & key).fetch1()
-            notes = metadata['notes'] if not metadata['notes'] == '' else None  # noqa: SIM201
+            notes = metadata['notes'] if not metadata['notes'] == '' else None  
             if not notes is None:
                 ses = (Session() & (Dataset & key)).fetch1()
                 if dset['note_datetime'] is None:
                     if user_name is None:
-                        LabMember().insert1(dict(user_name = 'unknown',date_joined = '2001-1-1'),skip_duplicates = True)  # noqa: C408
-                        user_name = 'unknown'
-                    note = dict(note_datetime = ses['session_datetime'],  # noqa: C408
+                        user_name = 'unknown' # this will fail if no unknown user is present
+                    note = dict(note_datetime = ses['session_datetime'],  
                                 notetaker = user_name,
                                 notes = notes)
                     if note['notetaker'] is None:

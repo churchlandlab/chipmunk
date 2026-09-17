@@ -32,18 +32,17 @@ def load_chipmunk_trialdata(file_name):
         else:
             notes = ''
         tset = sesdata['TrialSettings'].tolist()
-        if 'rigNo' in  sesdata.dtype.fields:
+        if 'rigNo' in  tset.dtype.fields:
             setup_name = tset['rigNo'][0]
         else:
             setup_name = None
-        if 'researcher' in  sesdata.dtype.fields:
+        if 'researcher' in  tset.dtype.fields:
             experimenter = tset['researcher'][0]
         else:
             experimenter = None
         metadata = dict(notes = notes,
                         setup_name = setup_name,
                         experimenter = experimenter)
-        
         tmp = sesdata['RawEvents'].tolist()
         tmp = tmp['Trial'].tolist()
         uevents = np.unique(np.hstack([t['Events'].tolist().dtype.names for t in tmp])) #Make sure not to duplicate state definitions
