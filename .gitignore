@@ -2,3 +2,7 @@
 __pycache__/
 *.py[cod]
 .vscode/
+
+# Streamlit agent skills (environment-specific symlinks)
+.agents/skills/developing-with-streamlit
+.claude/skills/developing-with-streamlit
