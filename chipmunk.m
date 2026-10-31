@@ -644,7 +644,7 @@ if BpodSystem.Status.BeingUsed == 0
         if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
             %Do not copy fake subject or virtual (no demonstrator present)
             [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-            system(['labdata2 put ', fPath, ' --ask']);
+            system(['labdata put ', fPath, ' --ask']);
 %             if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
 %                 mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
 %             end
@@ -660,7 +660,7 @@ if BpodSystem.Status.BeingUsed == 0
         if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
             if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
                 [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                system(['labdata2 put ', fPath, ' --ask']);
+                system(['labdata put ', fPath, ' --ask']);
 %                 if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
 %                      mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
 %                 end
@@ -799,9 +799,9 @@ end
     %if ~isempty(BpodSystem.ProtocolSettings.serverPath) %Only copy to a server when one is specified
         if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
             %Do not copy fake subject or virtual (no demonstrator present)
-            %For this version use labdata2 to put the file on hodgkin
+            %For this version use labdata to put the file on hodgkin
             [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-            system(['labdata2 put ', fPath, ' --ask']);
+            system(['labdata put ', fPath, ' --ask']);
 %             if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
 %                 mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
 %             end
@@ -817,7 +817,7 @@ end
         if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
             if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
                 [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                system(['labdata2 put ', fPath, ' --ask']);
+                system(['labdata put ', fPath, ' --ask']);
                 %                 if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
 %                      mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
 %                 end
