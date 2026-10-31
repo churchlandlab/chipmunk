@@ -12,12 +12,8 @@ will be interrupted.
 LO, 8/5/2021
 */
 
-#include "TimeLib.h" //To get millis()
-
 #define MINISCOPE 2
 #define BPOD 23
-#define FINDINTACT 11
-#define TESTMINI 10
 
 // Set up the required variables
 volatile unsigned long frameNumber = 0; //Counts the number of frames acquired from the miniscope
@@ -29,24 +25,12 @@ volatile bool initialized = 0; //Jumps to true once the frames have been reset a
 int serialMessage = -1; //Message from the python function to enable counting or stoppining it.
 
 
-////////////////////
-//Checking
-bool frameSimulation = 0; //simulated miniscope frame square wave
-///////////////////
-
-///-----Setup function for interrupts-------------///
 void setup() {
   Serial.begin(9600);
 
-  //Configure pins
-  pinMode(MINISCOPE, INPUT); //Set the miniscope sync signal to input
-  pinMode(BPOD, INPUT); //Set the Bpod trial start/stop signal to input
+  pinMode(MINISCOPE, INPUT);
+  pinMode(BPOD, INPUT);
 
- /////////////////////
- //For testing
-  pinMode(TESTMINI, OUTPUT); //Generate regular TTL pulses
-  ////////////////////
- 
   //Set the interrupts
   attachInterrupt(digitalPinToInterrupt(MINISCOPE), miniscopeFrame, CHANGE);
   //Use digitalPinToInterrupt for compatibility with other arduino devices
@@ -55,24 +39,6 @@ void setup() {
 
 ///--------Leave empty for experiment, uncomment for checking------///
 void loop() {
-  /////////////////////////////
-  //Testing 
-  /*frameSimulation = digitalRead(MINISCOPE);
-  Serial.write("Miniscope pulse state is: ");
-  Serial.println(frameSimulation); 
-  */
-  //digitalWrite(TESTMINI, HIGH);
-  //delay(1000);
-  /*
-  frameSimulation = digitalRead(MINISCOPE);
-  Serial.write("Miniscope pulse state is: ");
-  Serial.println(frameSimulation);
-
-  Serial.write("Bpod state is: ");
-  Serial.println(frameSimulation);
-  */
-  //digitalWrite(TESTMINI, LOW); 
-  //delay(1000);
 }
 
 ///-------Interrup function for miniscope frame capturing and serial output-----------///

@@ -1,7 +1,7 @@
 import os
 import serial
 import serial.tools.list_ports
-from time import strftime, gmtime, time
+from time import time
 import socket #To establish udp connection to the behavior computer
 import json
 from labdatatools import rclone_upload_data
@@ -80,13 +80,7 @@ with open(miniscope_config_out,'w') as f :
     json.dump(miniscope_config, f)
 
 
-#%%-----Create the mscopelog file file and write a header---------
-# rootDirectory = "C:/Users/Anne/Documents/Bpod Local/Data"
-
-# animalID = input("Please specify the animal name: ")
-# fileTime = strftime("%Y%m%d_%H%M%S", gmtime())
-# #Find the respective directory
-
+#%%-----Create the mscopelog file and write a header---------
 logFileName = (animal_id + "_" + session_date_time + "_miniscope.mscopelog")
 #logFileDirectory = os.path.join(rootDirectory, animalID, fileTime, "miniscope")
 

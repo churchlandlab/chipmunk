@@ -27,11 +27,7 @@ BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 
 SamplingFreq = 192000; %The frequency of the (Fenix) sound card
 
-if isfield(BpodSystem.ProtocolSettings,'obsID') %If there is an observer it will be the main subject and the videos will be saved to its folder
-    [subjectFolder,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{2});
-else
-    [subjectFolder,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-end
+[subjectFolder,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{1});
 
 %--------------------------------------------------------------------------
 %% Start labcams
@@ -142,13 +138,6 @@ S.soundCalibrationModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log1
 % to the soundcard (not the stimuli though). In this implementation the
 % trial start cue and the go cue after fixation are generated at the same
 % loudness (S.goCueLoudness).
-% if isfield(S, 'obsID') %Add a separate early withdrawal punishment sound during observer fixation training.
-%     generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-%     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
-% else
-% generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-%     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, [],[])
-% end
 
 % Fixed stimulus properties that remain unchanged
 stimTrainDuration = 1;
@@ -208,13 +197,6 @@ BpodSystem.Data.ValidTrials = 0;
 BpodSystem.Data.LeftSideRewardAmount = 0; %The cumulatively harvested amount of water on the left side, a scalar
 BpodSystem.Data.RightSideRewardAmount = 0;
 BpodSystem.Data.CorrectResponse = 0;
-if isfield(S, 'obsID')
-    BpodSystem.Data.ObsOutcomeRecord = NaN;
-    BpodSystem.Data.ObsCompletedTrials = 0;
-    BpodSystem.Data.ObsEarlyWithdrawal = 0;
-    BpodSystem.Data.ObsDidNotHarvest = 0;
-    BpodSystem.Data.ObsRewardAmount = 0;
-end
 %Arrays with a zero do alreay contain information that is read out by
 %refreshing the figures whereas the NaN containing variables are yet
 %undefined
@@ -235,19 +217,6 @@ PerformancePlotDemonstrator(BpodSystem.GUIHandles.PerformancePlotDemonstrator,'i
 PsychometricPlotDemonstrator(BpodSystem.GUIHandles.PsychometricPlotDemonstrator,'init');
 WaitTimeDiffPlotDemonstrator(BpodSystem.GUIHandles.WaitTimeDiffPlotDemonstrator,'init',true);
 StateMachineLogicPlot(sma, BpodSystem.GUIHandles.StateLogic);
-
-%Check whether an observer figure is required
-if isfield(S, 'obsID')
-    %Set up the observer display
-    ObserverFigure('init');
-
-    %Initialize the plots on the observer figure
-    InterTrialIntervalPlotObserver(BpodSystem.GUIHandles.InterTrialIntervalPlotObserver,'init');
-    WaitTimePlotObserver(BpodSystem.GUIHandles.WaitTimePlotObserver, 'init', outcomePlotLimits);
-    %Make sure to have run OutcomePlotDemonstrator first to get the display
-    %limits!
-    InitiationTimePlotObserver(BpodSystem.GUIHandles.InitiationTimePlotObserver,'init');
-end
 
 %Initialize the notook to keep track of unexpected events, etc.
 BpodNotebook('init');
@@ -302,16 +271,6 @@ for currentTrial = 1:maxTrialNum
             %have been initialized and it needs to exist. Otherwise the content
             %of the UIcontrols cannot be evaluated.
 
-            %             %Re-compute the the task sounds when updating. This is the only
-            %             %static element that can be user-modified.
-            %             if isfield(S, 'obsID') %Add a separate early withdrawal punishment sound during observer fixation training.
-            %                 generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-            %                     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, trialDelays, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
-            %             else
-            %                 generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-            %                     S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, trialDelays,[],[])
-            %             end
-
             update = 0; %Finish updating
         end
 
@@ -319,9 +278,6 @@ for currentTrial = 1:maxTrialNum
         %updated, for example the minWaitTime. Again, make sure to have the
         %observer if there is an observer.
         DemonstratorFigure('refresh', S); %Do this only after updating the user input to  avoid overriding it!
-        if isfield(S, 'obsID')
-            ObserverFigure('refresh'); %Refresh the display of the trial outcomes
-        end
         %----------------------------------------------------------------------
         %% Randomly select the stimulus modality for the current trial
         ModalityRecord(currentTrial) = drawStimModality;
@@ -386,102 +342,25 @@ for currentTrial = 1:maxTrialNum
         stimulusDuration = 0.015; %In s
         stimTrainDuration = 1; %In s
 
-        %--------The case for the poisson stimulus train---
         if BpodSystem.ProtocolSettings.isPoissonStim
-            %Generate a poisson stimulus train by discretizing the stimulus duration
-            %into a set of bins, whose duration is the sum of the tone/flash duration
-            %and the minimum interval between each stimulus and then randomly
-            %assigning tone-interval pairs to the bins
-
-            %Specify the minimum interval between individual stimuli
-            minInterval = 0.025;   % in s
-
-            %Get the stimulus train
+            minInterval = 0.025;
             interStimulusIntervalList = poissonStimulusTrain(stimTrainDuration, stimulusDuration, minInterval, stimulusRate);
-
-            if ModalityRecord(currentTrial) == 1
-                visualIsiList = interStimulusIntervalList;
-                auditoryIsiList = NaN;
-            elseif ModalityRecord(currentTrial) == 2
-                auditoryIsiList = interStimulusIntervalList;
-                visualIsiList = interStimulusIntervalList;
-            end
-
-            %If this is a multi-sensory trial see whether the
-            %frequencies are to be presented in sync, randomly shuffled or whether
-            %one modality should be non-inforamtive (on the category boundary).
-            if ModalityRecord(currentTrial) == 3 %This is multi-sensory
-                if BpodSystem.ProtocolSettings.syncMultiSensory == 1 %Synchronized: Visual and auditory stimuli are presented at the same time
-                    auditoryIsiList = interStimulusIntervalList;
-                    visualIsiList = interStimulusIntervalList;
-
-                elseif BpodSystem.ProtocolSettings.syncMultiSensory == 0 %Asynchronous: the exisiting trial list is reshuffled
-                    auditoryIsiList = interStimulusIntervalList;
-                    visualIsiList = interStimulusIntervalList(randperm(length(interStimulusIntervalList)));
-
-                elseif BpodSystem.ProtocolSettings.syncMultiSensory == 2 %Visual non-informative: the auditory modality carries information only
-                    auditoryIsiList = interStimulusIntervalList;
-                    visualIsiList = poissonStimulusTrain(stimTrainDuration, stimulusDuration, minInterval, stimulusRate);
-                end
-            end
-
-            %-----The case for the two-interval rate task-----
-        elseif ~BpodSystem.ProtocolSettings.isPoissonStim
-            %Generate a stimulus train composed of two different intervals between
-            %the individual stimuli.
-
-            %Input check -> only a certain range of frequencies can be used for this
-            %task version
+            [visualIsiList, auditoryIsiList] = assignModalityIsi(ModalityRecord(currentTrial), interStimulusIntervalList, ...
+                BpodSystem.ProtocolSettings.syncMultiSensory, 0, ...
+                @() poissonStimulusTrain(stimTrainDuration, stimulusDuration, minInterval, stimulusRate));
+        else
             if stimulusRate > 16
                 stimulusRate = 16;
             end
             if stimulusRate < 9
                 stimulusRate = 9;
             end
-
-            %Specify the two intervals
-            shortInterval = 0.05; %Inter tone/flash interval for high-frequency stimuli (16 Hz) in s
-            longInterval = 0.1; %Inter tone/flash interval for low-frequency stimuli (9 Hz) in s
-
-            %Get a list of inter-stimulus-intervals forming
-            interStimulusIntervalList = twoIntervalStimulusTrain(stimulusRate,shortInterval, longInterval, stimulusDuration, stimTrainDuration);
-
-            if ModalityRecord(currentTrial) == 1
-                visualIsiList = interStimulusIntervalList;
-                auditoryIsiList = NaN;
-            elseif ModalityRecord(currentTrial) == 2
-                auditoryIsiList = interStimulusIntervalList;
-                visualIsiList = interStimulusIntervalList;
-            end
-            %If this is a multi-sensory trial see whether the
-            %frequencies are to be presented in sync, randomly shuffled or whether
-            %one modality should be non-inforamtive (on the category boundary).
-            if ModalityRecord(currentTrial) == 3 %This is multi-sensory
-                if BpodSystem.ProtocolSettings.syncMultiSensory == 1 %Synchronized: Visual and auditory stimuli are presented at the same time
-                    auditoryIsiList = interStimulusIntervalList;
-                    visualIsiList = interStimulusIntervalList;
-
-                elseif BpodSystem.ProtocolSettings.syncMultiSensory == 0 %Asynchronous: the exisiting trial list is reshuffled
-                    auditoryIsiList = interStimulusIntervalList;
-                    visualIsiList = interStimulusIntervalList(randperm(length(interStimulusIntervalList)));
-                    offsetStimModalities = 0.02; %Introduce a slight offset to ensure no overlap between the modalitties
-                    visualIsiList(1) = visualIsiList(1) + offsetStimModalities; %Add the shift to the first zero-interval
-                    %CAUTION: By adding the offset one can end up with stimulus
-                    %trains that are longer than 1 s!
-
-                elseif BpodSystem.ProtocolSettings.syncMultiSensory == 2 %Visual "non-informative": the auditory modality carries information only
-                    %CAUTION: This was changed by LO such that the visual stimuli are
-                    %always next to the category boundary!
-                    auditoryIsiList = interStimulusIntervalList;
-
-                    visualStimFreq = categoryBoundary-0.5 + round(rand); %Takes values of 12 or 13
-                    visualIsiList = twoIntervalStimulusTrain(visualStimFreq,shortInterval, longInterval, stimulusDuration, stimTrainDuration);
-                    offsetStimModalities = 0.02; %Introduce a slight offset to ensure no overlap between the modalitties
-                    visualIsiList(1) = visualIsiList(1) + offsetStimModalities; %Add the shift to the first zero-interval
-                    %CAUTION: By adding the offset one can end up with stimulus
-                    %trains that are longer than 1 s!
-                end
-            end
+            shortInterval = 0.05;
+            longInterval = 0.1;
+            interStimulusIntervalList = twoIntervalStimulusTrain(stimulusRate, shortInterval, longInterval, stimulusDuration, stimTrainDuration);
+            [visualIsiList, auditoryIsiList] = assignModalityIsi(ModalityRecord(currentTrial), interStimulusIntervalList, ...
+                BpodSystem.ProtocolSettings.syncMultiSensory, 0.02, ...
+                @() twoIntervalStimulusTrain(categoryBoundary-0.5+round(rand), shortInterval, longInterval, stimulusDuration, stimTrainDuration));
         end
 
         %--------------------------------------------------------------------------
@@ -529,16 +408,8 @@ for currentTrial = 1:maxTrialNum
         % wrong choices and whether trials are self-initiated.
         %For more info check the respective SMA function.
 
-        %Generate and upload the task sounds here.
-        %In a future version maybe one can separate the fixed ones from the
-        %changing one...
-        if isfield(S, 'obsID') %Add a separate early withdrawal punishment sound during observer fixation training.
-            generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-                S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, trialDelays, S.obsEarlyPunishLoudness, S.obsEarlyPunishTimeout)
-        else
-            generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
-                S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, trialDelays, [],[])
-        end
+        generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
+            S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, trialDelays)
 
         SendStateMatrix(sma); %Send to Bpod
 
@@ -604,92 +475,7 @@ for currentTrial = 1:maxTrialNum
         %% Check on Bpod status and save and close if not used anymore
 
         if BpodSystem.Status.BeingUsed == 0
-            % Close video object
-            if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
-                if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-                    fwrite(udplabcams,sprintf('log=end'));fgetl(udplabcams);
-                    fwrite(udplabcams,sprintf('softtrigger=0'));fgetl(udplabcams);
-                    fwrite(udplabcams,sprintf('manualsave=0'));fgetl(udplabcams);
-                    pause(1)
-                    fwrite(udplabcams,sprintf('quit=1'));
-                    fclose(udplabcams);
-                    clear udplabcams
-                end
-            end
-            SessionData = BpodSystem.Data;
-            if ~strcmpi(BpodSystem.ProtocolSettings.demonID,'Virtual') %This is when an observer is exposed to the empty cage
-                save(BpodSystem.Path.CurrentDataFile{1},'SessionData') %The file path for the demonstrator is always generated and is in position 1
-
-                %Find notes associated with trials if that function is used
-                trializedNoteIdx = [];
-                for k=1:length(BpodSystem.Data.Notes)
-                    if ~isempty(BpodSystem.Data.Notes{k})
-                        trializedNoteIdx(end+1) = k;
-                    end
-                end
-                if ~isempty(trializedNoteIdx)
-                    notesFile = fopen(fullfile(fileparts(BpodSystem.Path.CurrentDataFile{1}), 'notes.txt'), 'w');
-                    for k=1:length(trializedNoteIdx)
-                        fprintf(notesFile, [sprintf('Trial %d: ', round(trializedNoteIdx(k))) BpodSystem.Data.Notes{trializedNoteIdx(k)} '\n']);
-                    end
-                    fclose(notesFile);
-                end
-            end
-
-            if isfield(BpodSystem.ProtocolSettings,'obsID')
-                save(BpodSystem.Path.CurrentDataFile{2},'SessionData') %If there is an observer, save to her/his folder as well wit hthe .obsmat suffix
-            end
-            PsychToolboxSoundServer('Close');
-
-            if pacedFlag
-                LEDswitch()%switch off at the end
-            end
-
-            %Now copy the saved file over to the server
-            % if ~isempty(BpodSystem.ProtocolSettings.serverPath) %Only copy to a server when one is specified
-                if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
-                    %Do not copy fake subject or virtual (no demonstrator present)
-                    [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-                    system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata put ', fPath, ' --ask']);
-                    % if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
-                    %     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
-                    % end
-                    % splitPath = strsplit(BpodSystem.Path.CurrentDataFile{1},filesep);
-                    % mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2})) % Create a folder for the session date and time
-                    % 
-                    % sourceFolder = fileparts(BpodSystem.Path.CurrentDataFile{1});
-                    % [copyStatus(1), copyErrorMsg{1}] = copyfile(sourceFolder, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2},splitPath{end-1}),'f');
-                    %Now copy the entire chipunk folder into the created server
-                    %folders
-                end
-
-                if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
-                    if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
-                        [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                        system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata put ', fPath, ' --ask']);
-                        % if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
-                        %     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
-                        % end
-                        % splitPath = strsplit(BpodSystem.Path.CurrentDataFile{2},filesep);
-                        % mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2}))% Create a folder for the session date and time
-                        % 
-                        % sourceFolder = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                        % [copyStatus(1), copyErrorMsg{1}] = copyfile(sourceFolder, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2},splitPath{end-1}),'f');
-                        %Now copy the entire chipunk folder into the created server
-                        %folders
-                    end
-                end
-
-            %     if exist('copyStatus') % In case the session features no observer and the demonstrator is FakeSubject
-            %         if sum(copyStatus) == 0 %Check for errors
-            %             warning('on')
-            %             warning('%s\n',copyErrorMsg{:})
-            %             warning('off','all')
-            %         end
-            %     end
-            % end
-
-            clear BpodSystem.GUIHandles.ParamEdit
+            shutdownChipmunk();
             disp('*********************************************************************')
             return;
         end
@@ -707,18 +493,6 @@ for currentTrial = 1:maxTrialNum
         else %Increase the wait times only when the mouse has been waiting successfully
             if BpodSystem.Data.OutcomeRecord(TrialsDone) > -1 % If the last trial was initiated and the animal waited long enough
                 S.minWaitTime = S.minWaitTime + S.minWaitTimeStep;
-            end
-        end
-
-        if isfield(BpodSystem.ProtocolSettings, 'obsID') %Increase the wait time for the observer
-            if S.minObsTimeStep > 0
-                if S.minObsTime >= 2 %Hard coded here, never have to wait longer than 2 s
-                    S.minObsTimeStep = 0;
-                else
-                    if BpodSystem.Data.ObsOutcomeRecord(TrialsDone) == 1
-                        S.minObsTime = S.minObsTime + S.minObsTimeStep;
-                    end
-                end
             end
         end
 
@@ -749,107 +523,83 @@ for currentTrial = 1:maxTrialNum
         PsychometricPlotDemonstrator(BpodSystem.GUIHandles.PsychometricPlotDemonstrator,'refresh');
         WaitTimeDiffPlotDemonstrator(BpodSystem.GUIHandles.WaitTimeDiffPlotDemonstrator,'refresh',true);
 
-
-        if isfield(BpodSystem.ProtocolSettings,'obsID')
-            InterTrialIntervalPlotObserver(BpodSystem.GUIHandles.InterTrialIntervalPlotObserver,'refresh');
-            WaitTimePlotObserver(BpodSystem.GUIHandles.WaitTimePlotObserver, 'refresh', outcomePlotLimits);
-            InitiationTimePlotObserver(BpodSystem.GUIHandles.InitiationTimePlotObserver,'refresh',1); %Add the flag to fit the distribution
-        end
-
         %-----------------------------------------------------------------------
         %% Make sure to keep the data if an error occurs
     catch ME
         warning('on')
         warning('chipmunk encounered an error and will save the data and end...')
         warning('off','all')
-        % Close video object
-        if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
-            if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-                fwrite(udplabcams,sprintf('log=end'));fgetl(udplabcams);
-                fwrite(udplabcams,sprintf('softtrigger=0'));fgetl(udplabcams);
-                fwrite(udplabcams,sprintf('manualsave=0'));fgetl(udplabcams);
-                fwrite(udplabcams,sprintf('quit=1'));
-                fclose(udplabcams);
-                clear udplabcams
-            end
+        BpodSystem.Status.BeingUsed = 0;
+        shutdownChipmunk();
+        disp('*********************************************************************')
+        disp('chipmunk ended due to an error, see below')
+        rethrow(ME)
+    end
+end
+
+    function shutdownChipmunk()
+        % ponytail: one shutdown for the stop button and for errors.
+        global BpodSystem
+        if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
+            fwrite(udplabcams,sprintf('log=end')); fgetl(udplabcams);
+            fwrite(udplabcams,sprintf('softtrigger=0')); fgetl(udplabcams);
+            fwrite(udplabcams,sprintf('manualsave=0')); fgetl(udplabcams);
+            pause(1)
+            fwrite(udplabcams,sprintf('quit=1'));
+            fclose(udplabcams);
         end
         SessionData = BpodSystem.Data;
-        if ~strcmpi(BpodSystem.ProtocolSettings.demonID,'Virtual') %This is when an observer is exposed to the empty cage
-            save(BpodSystem.Path.CurrentDataFile{1},'SessionData') %The file path for the demonstrator is always generated and is in position 1
-
-            %Find notes associated with trials if that function is used
+        if ~strcmpi(BpodSystem.ProtocolSettings.demonID,'Virtual')
+            save(BpodSystem.Path.CurrentDataFile{1},'SessionData')
             trializedNoteIdx = [];
-            for k=1:length(BpodSystem.Data.Notes)
-                if ~isempty(BpodSystem.Data.Notes{k})
-                    trializedNoteIdx(end+1) = k;
+            for noteIdx = 1:length(BpodSystem.Data.Notes)
+                if ~isempty(BpodSystem.Data.Notes{noteIdx})
+                    trializedNoteIdx(end+1) = noteIdx;
                 end
             end
             if ~isempty(trializedNoteIdx)
                 notesFile = fopen(fullfile(fileparts(BpodSystem.Path.CurrentDataFile{1}), 'notes.txt'), 'w');
-                for k=1:length(trializedNoteIdx)
-                    fprintf(notesFile, [sprintf('Trial %d: ', round(trializedNoteIdx(k))) BpodSystem.Data.Notes{trializedNoteIdx(k)} '\n']);
+                for noteIdx = 1:length(trializedNoteIdx)
+                    fprintf(notesFile, [sprintf('Trial %d: ', round(trializedNoteIdx(noteIdx))) BpodSystem.Data.Notes{trializedNoteIdx(noteIdx)} '\n']);
                 end
                 fclose(notesFile);
             end
         end
-
-        if isfield(BpodSystem.ProtocolSettings,'obsID')
-            save(BpodSystem.Path.CurrentDataFile{2},'SessionData') %If there is an observer, save to her/his folder as well wit hthe .obsmat suffix
-        end
         PsychToolboxSoundServer('Close');
-
         if pacedFlag
-            LEDswitch()%switch off at the end
+            LEDswitch()
         end
-        %Now copy the saved file over to the server
-        % if ~isempty(BpodSystem.ProtocolSettings.serverPath) %Only copy to a server when one is specified
-            if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
-                %Do not copy fake subject or virtual (no demonstrator present)
-                %For this version use labdata to put the file on hodgkin
-                [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-                system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata put ', fPath, ' --ask']);
-                % if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
-                %     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID))
-                % end
-                % splitPath = strsplit(BpodSystem.Path.CurrentDataFile{1},filesep);
-                % mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2})) % Create a folder for the session date and time
-                % 
-                % sourceFolder = fileparts(BpodSystem.Path.CurrentDataFile{1});
-                % [copyStatus(1), copyErrorMsg{1}] = copyfile(sourceFolder, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.demonID,splitPath{end-2},splitPath{end-1}),'f');
-                %Now copy the entire chipunk folder into the created server
-                %folders
-            end
-
-            if isfield(BpodSystem.ProtocolSettings, 'obsID') %Check whether there is an observer
-                if ~isempty(BpodSystem.ProtocolSettings.obsID) && ~(strcmp(BpodSystem.ProtocolSettings.obsID,'FakeSubject'))  %See whether it is our fake subject
-                    [fPath, fName, fExt] = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                    system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata put ', fPath, ' --ask']);
-                    % if ~isfolder(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
-                    %     mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID))
-                    % end
-                    % splitPath = strsplit(BpodSystem.Path.CurrentDataFile{2},filesep);
-                    % mkdir(fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2}))% Create a folder for the session date and time
-                    % 
-                    % sourceFolder = fileparts(BpodSystem.Path.CurrentDataFile{2});
-                    % [copyStatus(1), copyErrorMsg{1}] = copyfile(sourceFolder, fullfile(BpodSystem.ProtocolSettings.serverPath,BpodSystem.ProtocolSettings.obsID,splitPath{end-2},splitPath{end-1}),'f');
-                    %Now copy the entire chipunk folder into the created server
-                    %folders
-                end
-            end
-
-            if exist('copyStatus')
-                if sum(copyStatus) == 0 %Check for errors
-                    warning('on')
-                    warning('%s\n',copyErrorMsg{:})
-                    warning('off','all')
-                end
-            end
-        % end
-        BpodSystem.Status.BeingUsed = 0; %Switch the Bpod off
+        if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
+            fPath = fileparts(BpodSystem.Path.CurrentDataFile{1});
+            system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata put ', fPath, ' --ask']);
+        end
         clear BpodSystem.GUIHandles.ParamEdit
-        disp('*********************************************************************')
-        disp('chipmunk ended due to an error, see below') %Inform the user
-        rethrow(ME) %Display the error message
+    end
+end
+
+function [visualIsiList, auditoryIsiList] = assignModalityIsi(modality, isiList, syncMode, offsetFirst, freshList)
+% Shared visual/auditory assignment. offsetFirst is 0 for a Poisson train.
+% freshList runs only for a non-informative visual train (syncMode == 2).
+if modality == 1
+    visualIsiList = isiList;
+    auditoryIsiList = NaN;
+elseif modality == 2
+    auditoryIsiList = isiList;
+    visualIsiList = isiList;
+elseif modality == 3
+    auditoryIsiList = isiList;
+    if syncMode == 1
+        visualIsiList = isiList;
+    elseif syncMode == 0
+        visualIsiList = isiList(randperm(length(isiList)));
+        if offsetFirst
+            visualIsiList(1) = visualIsiList(1) + offsetFirst;
+        end
+    elseif syncMode == 2
+        visualIsiList = freshList();
+        if offsetFirst
+            visualIsiList(1) = visualIsiList(1) + offsetFirst;
+        end
     end
 end
 end

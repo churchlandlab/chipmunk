@@ -1,5 +1,5 @@
-function PerformancePlotDemonstrator(AxesHandle, plotMethod, outcomePlotLimits, displayParam)
-%PerformancePlotDemonstrator(AxesHandle, plotMethod, outcomePlotLimits, displayParam)
+function PerformancePlotDemonstrator(AxesHandle, plotMethod, outcomePlotLimits)
+%PerformancePlotDemonstrator(AxesHandle, plotMethod, outcomePlotLimits)
 %
 %Function to plot the demonstrator performance on left side trials, on 
 %right side trials and on both as a function of trial number. This function
@@ -12,16 +12,6 @@ function PerformancePlotDemonstrator(AxesHandle, plotMethod, outcomePlotLimits, 
 %         outcomePlotLimits: 1 x 2 vector with the lower and the upper
 %                            display limits from the demonstrator outcome
 %                            plot.
-%         displayParam (optional): A struct containing the following fields:
-%                       -performanceWindow: How many trials should be
-%                       considered for the performance calculation, default
-%                       = 24.
-%                       -displayInterval: The interval at which new lines
-%                       and dots will be displayed, default = 4.
-%                       -initialDisplayWindow: The initial upper x-axis
-%                       (trial number) limit, defualt = 200.
-%                       -minValidTrials: Minimum number of valid trials to
-%                       display the performance, default = 3.
 %
 %Adapted from PerformancePlot, LO, 1/22/21
 %--------------------------------------------------------------------------
@@ -29,18 +19,10 @@ function PerformancePlotDemonstrator(AxesHandle, plotMethod, outcomePlotLimits, 
 %Input check and assignments
 global BpodSystem
 
-if ~exist('displayParam') || isempty(displayParam) %input check
-    performanceWindow = 24; %over these many trials the performance will be calculated
-    displayInterval = 4; %At this frequency the performance will be plotted.
-    %The overlap between the points will be displayInterval/performanceWindow
-    initialDisplayWindow = 200; %Start populating the plot until 200 are reached and squeeze afterwards
-    minValidTrials = 3; %The minimum of completed trials to display the performance
-else
-    performanceWindow = displayParam.performanceWindow;
-    displayInterval = displayParam.displayInterval;
-    initialDisplayWindow = displayParam.initialDisplayWindow;
-    minValidTrials = displayParam.minValidTrials;
-end
+performanceWindow = 24;
+displayInterval = 4;
+initialDisplayWindow = 200;
+minValidTrials = 3;
 
 %Assign colors
 plottingColors = [0.8 0.46 0.1]; %Performance on left trials in orange

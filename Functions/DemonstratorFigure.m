@@ -184,18 +184,7 @@ switch figMethod
         %---
         %Experiment panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,'Units', 'normal', 'Position',[0,2/3-0.05,1,1/3],'style', 'text', 'String',BpodSystem.ProtocolSettings.experimentName);
-        
-        BpodSystem.GUIHandles.DemonChangeExpButton = uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,...
-            'Units', 'normal', 'Position', [0.1,0.1,0.8,0.4],'Style','pushbutton','String','Change experiment',...
-            'Callback',{@changeExpButton});
-%         %-----
-%         %Initiation panel
-%         uicontrol('Parent', BpodSystem.GUIHandles.DemonInitiationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','initiationWindow','HorizontalAlignment','right');
-% 
-%         BpodSystem.GUIHandles.ParamEdit.initiationWindow = uicontrol('Parent', BpodSystem.GUIHandles.DemonInitiationPanel,...
-%             'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.initiationWindow);
-%         
-        
+         
         %-----
         %Virtual observer panel
         uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','virtualObsInitMin','HorizontalAlignment','right');
@@ -246,36 +235,27 @@ switch figMethod
             'Units', 'normal', 'Position',[2/3+0.025,0,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.interTrialDurLambda);
         %---------
         %Post stimulation panel
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,0.75-0.02,2/3,0.2],'style', 'text', 'String','extraStimDur','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,0.5-0.02,2/3,0.2],'style', 'text', 'String','extraStimDurStep','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,0.25-0.02,2/3,0.2],'style', 'text', 'String','timeToChoose','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,0-0.02,2/3,0.2],'style', 'text', 'String','noChoiceTimeout','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','extraStimDur','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','timeToChoose','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,0,2/3,1/3],'style', 'text', 'String','noChoiceTimeout','HorizontalAlignment','right');
         
         BpodSystem.GUIHandles.ParamEdit.extraStimDur = uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,0.75,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.extraStimDur);
-        BpodSystem.GUIHandles.ParamEdit.extraStimDurStep = uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,0.5,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.extraStimDurStep);
+            'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.extraStimDur);
         BpodSystem.GUIHandles.ParamEdit.timeToChoose = uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,0.25,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.timeToChoose);
+            'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.timeToChoose);
         BpodSystem.GUIHandles.ParamEdit.noChoiceTimeout = uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,0,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.noChoiceTimeout);
+            'Units', 'normal', 'Position',[2/3+0.025,0,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.noChoiceTimeout);
         %--------
         %Punishment panel
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[0,0.75-0.02,2/6,0.2],'style', 'text', 'String','wrongPunishType','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[0,0.5-0.02,2/6,0.2],'style', 'text', 'String','wrongPunishLoudness','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[0,0.25-0.02,2/6,0.2],'style', 'text', 'String','wrongPunishTimeout','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[3/6,0.75-0.02,2/6,0.2],'style', 'text', 'String','earlyPunishType','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[3/6,0.5-0.02,2/6,0.2],'style', 'text', 'String','earlyPunishLoudness','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[3/6,0.25-0.02,2/6,0.2],'style', 'text', 'String','earlyPunishTimeout','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[0,0.5,2/6,0.25],'style', 'text', 'String','wrongPunishLoudness','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[0,0.25,2/6,0.25],'style', 'text', 'String','wrongPunishTimeout','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[3/6,0.5,2/6,0.25],'style', 'text', 'String','earlyPunishLoudness','HorizontalAlignment','right');
+        uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[3/6,0.25,2/6,0.25],'style', 'text', 'String','earlyPunishTimeout','HorizontalAlignment','right');
         
-        BpodSystem.GUIHandles.ParamEdit.wrongPunishType = uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,...
-            'Units', 'normal', 'Position',[2/6+0.025,0.75,1/6-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.wrongPunishType);
         BpodSystem.GUIHandles.ParamEdit.wrongPunishLoudness = uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,...
             'Units', 'normal', 'Position',[2/6+0.025,0.5,1/6-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.wrongPunishLoudness);
         BpodSystem.GUIHandles.ParamEdit.wrongPunishTimeout = uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,...
             'Units', 'normal', 'Position',[2/6+0.025,0.25,1/6-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.wrongPunishTimeout);
-        BpodSystem.GUIHandles.ParamEdit.earlyPunishType = uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,...
-            'Units', 'normal', 'Position',[5/6+0.025,0.75,1/6-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.earlyPunishType);
         BpodSystem.GUIHandles.ParamEdit.earlyPunishLoudness = uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,...
             'Units', 'normal', 'Position',[5/6+0.025,0.5,1/6-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.earlyPunishLoudness);
         BpodSystem.GUIHandles.ParamEdit.earlyPunishTimeout = uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,...
@@ -433,12 +413,4 @@ save(BpodSystem.Path.Settings,'ProtocolSettings');
 update = 1;
 
 display('Saved settings and will update in the next round.')
-end
- 
-function changeExpButton(h, ev) %this callback delays the evaluation of the inputs until the next trial is started and sets update to true
-global changeExp
-changeExp = 1; %Make sure to enter into update mode when the function is called the next time
-global BpodSystem
-uiresume(BpodSystem.GUIHandles.Figures.FigureAllFigures); %wait for spout control and clear handle afterwards %???
-set(h,'String','Starting new experiment'); %Change the button string value
 end

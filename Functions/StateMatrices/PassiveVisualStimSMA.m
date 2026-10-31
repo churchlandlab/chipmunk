@@ -26,9 +26,6 @@ global BpodSystem
 %--------------------------------------------------------------------------
 %% Generate the variable trial timers etc.
 
-%Set up these delays even if they are unused here
-trialStartDelay = 0; %Possibility to introduce a delay when the observer fixates,
-% one may use the pre-stim delay paramters to randomly generate this delay.
 interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTrialDurLambda, BpodSystem.ProtocolSettings.interTrialDurMin, BpodSystem.ProtocolSettings.interTrialDurMax);
 % Impose a random interval between the trials. In earlier versions this was
 % not present for the observer and a random inter trial inerval was only
@@ -63,7 +60,6 @@ end
 
 %Create the struct to hold the task delays
 trialDelays = struct();
-trialDelays.trialStartDelay = trialStartDelay;
 trialDelays.preStimDelay = preStimDelay;
 trialDelays.waitTime = waitTime;
 trialDelays.postStimDelay = postWaitDelay;

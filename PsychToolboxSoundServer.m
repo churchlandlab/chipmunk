@@ -63,64 +63,23 @@ switch Function
             AudioDevices = PsychPortAudio('GetDevices');
             nDevices = length(AudioDevices);
             CandidateDevices = []; nCandidates = 0;
-            isWASAPI = zeros(1,100);
-            isFENIX = zeros(1,100);
-            isWASAPIWinXonar = zeros(1,100);
-            BpodSystem.PluginObjects.SoundServerType = 0;
-            if ispc
-                for x = 1:nDevices
-                    if isempty(strfind(AudioDevices(x).DeviceName, 'SPDIF'))
-                        if strcmp(AudioDevices(x).HostAudioAPIName, 'ASIO')
-                            if AudioDevices(x).NrOutputChannels > 3
-                                nCandidates = nCandidates + 1;
-                                CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
-                                if ~isempty(strfind(AudioDevices(x).DeviceName, 'FENIX'))
-                                    isFENIX(nCandidates) = 1;
-                                end
-                            end
-                        elseif strcmp(AudioDevices(x).HostAudioAPIName, 'Windows WASAPI')
-                            if AudioDevices(x).NrOutputChannels > 3
-                                nCandidates = nCandidates + 1;
-                                CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
-                                isWASAPI(nCandidates) = 1;
-                                if ~isempty(strfind(AudioDevices(x).DeviceName, 'XONAR'))
-                                    isWASAPIWinXonar(nCandidates) = 1;
-                                end
-                                if ~isempty(strfind(AudioDevices(x).DeviceName, 'FENIX'))
-                                    isFENIX(nCandidates) = 1;
-                                end
-                            end
-                        end
-                    end
-                end
-            elseif ismac
-                error('Error: PsychToolboxSoundServer does not work on OS X.')
-            else
-                for x = 1:nDevices
-                    DeviceName = AudioDevices(x).DeviceName;
-                    if sum(strcmp(DeviceName, {'HDA C-Media: Generic Analog (hw:1,0)', 'HDA C-Media: Generic Analog (hw:2,0)', 'XONA', 'ASUS'})) > 0 % Assumes ASUS Xonar series or other Asio Soundcard
-                        if AudioDevices(x).NrOutputChannels > 3
-                            nCandidates = nCandidates + 1;
-                            CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
-                        end
+            % ponytail: Linux device names only. This rig is Ubuntu.
+            for x = 1:nDevices
+                DeviceName = AudioDevices(x).DeviceName;
+                if sum(strcmp(DeviceName, {'HDA C-Media: Generic Analog (hw:1,0)', 'HDA C-Media: Generic Analog (hw:2,0)', 'XONA', 'ASUS'})) > 0
+                    if AudioDevices(x).NrOutputChannels > 3
+                        nCandidates = nCandidates + 1;
+                        CandidateDevices(nCandidates) = AudioDevices(x).DeviceIndex;
                     end
                 end
             end
-            isWASAPI = isWASAPI(1:nCandidates);
             if nCandidates > 0
                 for x = 1:nCandidates
                     disp(['Candidate device found! Trying candidate ' num2str(x) ' of ' num2str(nCandidates)])
-                    if isWASAPIWinXonar(x)
-                        bufferSize = SF/100;
-                    else
-                        bufferSize = 32;
-                    end
+                    bufferSize = 32;
                     try
                         CandidateDevice = PsychPortAudio('Open', CandidateDevices(x), 9, 4, SF, nOutputChannels, bufferSize);
                         BpodSystem.SystemSettings.SoundDeviceID = CandidateDevices(x);
-                        if isFENIX(x) == 1
-                            BpodSystem.PluginObjects.SoundServerType = 1;
-                        end
                         PsychPortAudio('Close', CandidateDevice);
                         disp('Success! A compatible sound card was detected and stored in Bpod settings.')
                     catch
@@ -175,9 +134,6 @@ switch Function
         end
         if BpodSystem.EmulatorMode == 0
             if nOutputChannels > 2
-                if BpodSystem.PluginObjects.SoundServerType == 1
-                    Data = Data*0.75; % Avoid saturation on Fenix
-                end
                 if Siz(1) == 1 % If mono, send the same signal on both channels
                     Data(2,:) = Data;
                 end

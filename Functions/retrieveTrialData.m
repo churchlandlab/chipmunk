@@ -14,8 +14,8 @@ function retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,revis
 % -TrialSidesList: List of sides assigned for the individual trials,
 %                  contains 0 (left) and 1 (right).
 % -delays: Struct containing the imposed trial delays. This should contain
-%          the following fields: trialStartDelay, preStimDelay, waitTime,
-%          stimTrainDuration, postStimDelay.
+%          preStimDelay, waitTime, postStimDelay, interTrialInterval, and
+%          virtualObsInitDelay.
 % -reviseChoiceFlag: Logical value containing true if the animal could
 %                    could poke into the other port after chosing the wrong
 %                    one at first and still be rewarded.
@@ -91,10 +91,6 @@ end
 %*****----New version-------**********
 trialDelays.ExtraStimulusDuration = BpodSystem.ProtocolSettings.extraStimDur;
 BpodSystem.Data.TrialDelays(TrialsDone) = trialDelays;
-%*****-----Depreciated but retained for non-datajoint analyses
-if isfield(trialDelays,'trialStartDelay')
-    BpodSystem.Data.TrialStartDelay(TrialsDone) = trialDelays.trialStartDelay;
-end
 if isfield(trialDelays,'interTrialInterval')
  BpodSystem.Data.InterTrialInterval(TrialsDone) = trialDelays.interTrialInterval; %This is redundant in the case of an observer being present
 end
@@ -184,49 +180,3 @@ end
             BpodSystem.Data.RightSideRewardAmount = BpodSystem.Data.RightSideRewardAmount + BpodSystem.ProtocolSettings.rightRewardVolume;
         end
     end
-
-%And now we check the data for the observer...
-if isfield(BpodSystem.ProtocolSettings,'obsID')
-  %Extract first the outcome information  
-    
-    % Set the default case
-    BpodSystem.Data.ObsCompletedTrials(TrialsDone) = 0;
-    BpodSystem.Data.ObsEarlyWithdrawal(TrialsDone) = 0;
-    BpodSystem.Data.ObsDidNotHarvest(TrialsDone) = 0;
-    BpodSystem.Data.ObsDidNotInitiate(TrialsDone) = 0;
- if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsReward(1))
-     BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = 1;
-     BpodSystem.Data.ObsCompletedTrials(TrialsDone) = 1;
-     BpodSystem.Data.ObsRewardAmount = BpodSystem.Data.ObsRewardAmount + BpodSystem.ProtocolSettings.obsRewardVolume; %Add this here
- elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsEarlyWithdrawal(1))
-     BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = -1;
-     BpodSystem.Data.ObsEarlyWithdrawal(TrialsDone) = 1;
- elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsDidNotHarvest(1))
-     BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = 2;
-     BpodSystem.Data.ObsDidNotHarvest(TrialsDone) = 1;
- elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsDidNotInitiate(1))
-  BpodSystem.Data.ObsOutcomeRecord(TrialsDone) = -2;
-  BpodSystem.Data.ObsDidNotInitiate(TrialsDone) = 1;
- end
-
- %Get the time it took the observer to initiate
- BpodSystem.Data.ObsInitiationTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(2) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
- 
- %Next check on the wait time
- BpodSystem.Data.ObsSetWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsCheckFixationSuccess(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.PlayStimulus(1); %This is the intervall, in which Teensy will count
- if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1))
- BpodSystem.Data.ObsActualWaitTime(TrialsDone) = min(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.ObserverDeck1_2(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.ObserverDeck1_2 > BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1))) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.ObsInitFixation(1);
- else
- BpodSystem.Data.ObsActualWaitTime(TrialsDone) = NaN;    
- end
- %Take the first breaking as the start and the first joining as the end of
- %the observer fixation.
-
- %Finally get the inter-trial intervals, this is important to be able to
- %react when the observer holds up the demonstrator
- if TrialsDone == 1
-        BpodSystem.Data.InterTrialInterval(TrialsDone) = NaN;
- else
-     BpodSystem.Data.InterTrialInterval(TrialsDone) = BpodSystem.Data.TrialStartTimestamp(TrialsDone) - BpodSystem.Data.TrialStartTimestamp(TrialsDone-1);
- end
-end
