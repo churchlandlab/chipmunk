@@ -8,11 +8,11 @@ This repo contains the code, setup description, assembly instructions, and parts
 
 ## Task window
 
-Screenshots captured on Mercury. The performance view replays all 244 trials from recorded session GRB064 `20261030_151009`; the Task control view uses saved FakeSubject test settings.
+Screenshots captured on Mercury. The performance view replays GRB006 `20240723_142451`: 831 trials, including 397 completed choices. The outcome panel shows the 200 most recent trials; the performance and psychometric plots use the full session. The Task control view uses saved FakeSubject test settings.
 
 The **Stimuli & performance** tab shows the stimulus, outcomes, performance and psychometric plots. The psychometric legend follows the three modality curves.
 
-![Solo performance tab replaying 244 recorded trials](images/gui/solo-performance.png)
+![Solo performance tab replaying GRB006's July 23 session with 200 recent outcomes and full-session performance curves](images/gui/solo-performance.png)
 
 The **Task control** tab contains the state diagram, `baseWait`, fixation timing and trial delays.
 
