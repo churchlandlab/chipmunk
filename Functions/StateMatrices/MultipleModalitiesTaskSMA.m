@@ -49,7 +49,6 @@ else
 end
 
 interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTrialDurLambda, BpodSystem.ProtocolSettings.interTrialDurMin, BpodSystem.ProtocolSettings.interTrialDurMax);
-virtualObsInitDelay = generate_random_delay(BpodSystem.ProtocolSettings.virtualObsInitLambda, BpodSystem.ProtocolSettings.virtualObsInitMin, BpodSystem.ProtocolSettings.virtualObsInitMax);
 preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
 
 if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
@@ -66,7 +65,7 @@ trialDelays.preStimDelay = preStimDelay;
 trialDelays.waitTime = waitTime;
 trialDelays.postStimDelay = postWaitDelay;
 trialDelays.interTrialInterval = interTrialInterval;
-trialDelays.virtualObsInitDelay = virtualObsInitDelay;
+trialDelays.virtualObsInitDelay = 0; %Kept so saved data and the trial-start cue keep their fields
 
 sma = NewStateMatrix();
 
@@ -86,7 +85,7 @@ sma = AddState(sma, 'Name', 'DemonWaitForCenterFixation', ...
     'OutputActions', withLights({}, pwmSide));
 
 sma = AddState(sma, 'Name', 'DemonInitFixation',...
-    'Timer', virtualObsInitDelay, ...
+    'Timer', 0, ...
     'StateChangeConditions', {'Tup','PreStimPeriod','Port2Out','DemonEarlyWithdrawal'},...
     'OutputActions', withLights({'SoftCode',2}, pwmSide));
 

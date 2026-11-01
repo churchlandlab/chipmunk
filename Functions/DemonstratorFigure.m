@@ -46,8 +46,6 @@ switch figMethod
         BpodSystem.GUIHandles.DemonTabGroup.StimPerform = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'Stimuli & performance');
         BpodSystem.GUIHandles.DemonTabGroup.TaskControl = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'Task control');
         BpodSystem.GUIHandles.DemonTabGroup.Reward = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'Reward');
-        BpodSystem.GUIHandles.DemonTabGroup.ExtDev = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'External devices');
-        BpodSystem.GUIHandles.DemonTabGroup.MetaData = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'Display & metadata');
         
         %-------------------------------------------------------------------------
         %Start with the the stimulus and performance tab
@@ -167,10 +165,6 @@ switch figMethod
         %Set the different Task control panels
         BpodSystem.GUIHandles.DemonExperimentPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.05, 0.32, 0.3, 0.12],'Title','Experiment','FontWeight','bold');
-%          BpodSystem.GUIHandles.DemonInitiationPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
-%             'Position', [0.35, 0.32, 0.3, 0.12],'Title','Demonstrator initiation','FontWeight','bold');
-         BpodSystem.GUIHandles.virtualObsPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
-            'Position', [0.35, 0.32, 0.3, 0.12],'Title','Virtual observer','FontWeight','bold');
         BpodSystem.GUIHandles.DemonFixationPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.35, 0.2, 0.3, 0.12],'Title','Fixation','FontWeight','bold');
         BpodSystem.GUIHandles.DemonPreStimPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
@@ -187,19 +181,6 @@ switch figMethod
         uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,'Units', 'normal', 'Position',[0,1/3-0.05,2/3,1/3],'style', 'text', 'String','baseWait','HorizontalAlignment','right');
         BpodSystem.GUIHandles.ParamEdit.baseWait = uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.baseWait);
-         
-        %-----
-        %Virtual observer panel
-        uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','virtualObsInitMin','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','virtualObsInitMax','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,'Units', 'normal', 'Position',[0,0/3,2/3,1/3],'style', 'text', 'String','virtualObsInitLambda','HorizontalAlignment','right');
-        
-        BpodSystem.GUIHandles.ParamEdit.virtualObsInitMin = uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.virtualObsInitMin);
-        BpodSystem.GUIHandles.ParamEdit.virtualObsInitMax = uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.virtualObsInitMax);
-        BpodSystem.GUIHandles.ParamEdit.virtualObsInitLambda = uicontrol('Parent', BpodSystem.GUIHandles.virtualObsPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,0/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.virtualObsInitLambda);
         %------
         %Fixation panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonFixationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','minWaitTime','HorizontalAlignment','right');
@@ -240,14 +221,11 @@ switch figMethod
         %Post stimulation panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','extraStimDur','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','timeToChoose','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,0,2/3,1/3],'style', 'text', 'String','noChoiceTimeout','HorizontalAlignment','right');
         
         BpodSystem.GUIHandles.ParamEdit.extraStimDur = uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.extraStimDur);
         BpodSystem.GUIHandles.ParamEdit.timeToChoose = uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.timeToChoose);
-        BpodSystem.GUIHandles.ParamEdit.noChoiceTimeout = uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,0,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.noChoiceTimeout);
         %--------
         %Punishment panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[0,0.5,2/6,0.25],'style', 'text', 'String','wrongPunishLoudness','HorizontalAlignment','right');
@@ -298,28 +276,7 @@ switch figMethod
         
         BpodSystem.GUIHandles.ParamEdit.demonWeight = uicontrol('Parent', BpodSystem.GUIHandles.DemonWeightPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,0.75,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.demonWeight);
-        
-        %--------------------------------------------------------------------------
-        %Do the external device tab
-        
-        %Initialize panels
-        BpodSystem.GUIHandles.LabcamsPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.ExtDev, 'Units', 'Normal',...
-            'Position', [0.05, 0.8, 0.3, 0.16],'Title','Labcams','FontWeight','bold');
-        BpodSystem.GUIHandles.MiniscopePanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.ExtDev, 'Units', 'Normal',...
-            'Position', [0.35, 0.8, 0.3, 0.16],'Title','Miniscope','FontWeight','bold');
-        %---------
-        %Labcams panel
-        uicontrol('Parent', BpodSystem.GUIHandles.LabcamsPanel,'Units', 'normal', 'Position',[0,0.75,2/3,0.2],'style', 'text', 'String','labcamsAddress','HorizontalAlignment','right');
-        
-        BpodSystem.GUIHandles.ParamEdit.labcamsAddress = uicontrol('Parent', BpodSystem.GUIHandles.LabcamsPanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,0.75,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.labcamsAddress);
-        %---------
-        %Miniscope panel
-        uicontrol('Parent', BpodSystem.GUIHandles.MiniscopePanel,'Units', 'normal', 'Position',[0,0.75,2/3,0.2],'style', 'text', 'String','miniscopeID','HorizontalAlignment','right');
-        
-        BpodSystem.GUIHandles.ParamEdit.miniscopeID = uicontrol('Parent', BpodSystem.GUIHandles.MiniscopePanel,...
-            'Units', 'normal', 'Position',[2/3+0.025,0.75,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.miniscopeID);
-        
+
         %------------------------------------------------------------------
         
         %%

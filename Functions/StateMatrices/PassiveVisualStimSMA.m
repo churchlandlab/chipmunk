@@ -7,7 +7,6 @@ global BpodSystem
 %% Generate the variable trial timers etc.
 
 interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTrialDurLambda, BpodSystem.ProtocolSettings.interTrialDurMin, BpodSystem.ProtocolSettings.interTrialDurMax);
-virtualObsInitDelay = generate_random_delay(BpodSystem.ProtocolSettings.virtualObsInitLambda, BpodSystem.ProtocolSettings.virtualObsInitMin, BpodSystem.ProtocolSettings.virtualObsInitMax);
 
 preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
 %This delay may help reducing anticipatory signals to the
@@ -30,7 +29,7 @@ trialDelays.preStimDelay = preStimDelay;
 trialDelays.waitTime = waitTime;
 trialDelays.postStimDelay = postWaitDelay;
 trialDelays.interTrialInterval = interTrialInterval;
-trialDelays.virtualObsInitDelay = virtualObsInitDelay;
+trialDelays.virtualObsInitDelay = 0; %Kept so saved data and the trial-start cue keep their fields
 
 %--------------------------------------------------------------------------
 %% Assemble the state matrix
