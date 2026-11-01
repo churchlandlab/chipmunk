@@ -6,6 +6,29 @@ Freely moving auditory and visual discrimination task for mice (adapted from Rap
 
 This repo contains the code, setup description, assembly instructions, and parts design to build a freely moving behavior setup. The task is a visual and/or auditory accumulation of evidence task. The stimuli are stochastic ticks and/or flashes. `baseWait`, in the Experiment panel, is 0.5 s (the default) or 1 s. With `minWaitTime` set to `exp`, the mouse holds the center port for `baseWait` plus a random extra wait that averages 0.1 s. The `minWaitTime` staircase stops at `baseWait + 0.1`.
 
+## Task window
+
+Screenshots from FakeSubject testing on Mercury; no animal data are shown.
+
+The **Stimuli & performance** tab shows the stimulus, outcomes, performance and psychometric plots. The psychometric legend follows the three modality curves.
+
+![Solo stimuli and performance tab during a FakeSubject hardware test](images/gui/solo-performance.png)
+
+The **Task control** tab contains the state diagram, `baseWait`, fixation timing and trial delays.
+
+![Solo task control tab with baseWait and timing settings](images/gui/solo-task-control.png)
+
+### Check the psychometric plot
+
+From the repository root, in a fresh MATLAB session:
+
+```matlab
+addpath('tests');
+check_psychometric_plot;
+```
+
+This checks tabbed legend rendering, resizing, modality-specific probabilities and unequal frequency counts without connecting Bpod hardware.
+
 ## Setup instructions
 
 You can find a spreadsheet with a parts list [here](hardware_setup/parts_list.xlsx). The designs for custom parts are in `/custom_parts`. If you have any doubts about how a certain part is supposed to look like refer to [this image of a finished setup](images/rig.jpg)

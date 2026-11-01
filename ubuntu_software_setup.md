@@ -68,6 +68,14 @@ Read on 2026-10-31:
 
 ---
 
+## Verify the task window
+
+Launch `chipmunk_solo` with FakeSubject and `VisualTask`. On **Task control**, check that `baseWait` is 0.5 for the half-second task or 1 for the one-second task. The screenshot uses saved FakeSubject test settings.
+
+![Task control tab showing the solo state diagram and wait settings](images/gui/solo-task-control.png)
+
+See the [task-window screenshots and MATLAB plot check](README.md#task-window) for the performance tab and a hardware-free graphics check.
+
 ## Labcams Setup
 1. **Install Labcams**:
    Instructions are found [here](https://github.com/jcouto/labcams?tab=readme-ov-file#instalation-on-ubuntu-2004).
