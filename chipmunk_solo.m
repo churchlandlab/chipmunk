@@ -118,8 +118,8 @@ end
 
 %--------------------------------------------------------------------------
 %% Get the polynomial coefficients of the sound calibration
-load(fullfile(BpodSystem.Path.LocalDir,'Calibration Files','WhiteNoiseCalibration.mat')) %loading from external calibration file
-S.soundCalibrationModelParams = polyfit(reshape(TargetSPLs,1,[]),reshape(10*log10(NoiseAmplitudes),1,[]),1);
+soundCalibration = load(fullfile(BpodSystem.Path.LocalDir,'Calibration Files','WhiteNoiseCalibration.mat'));
+S.soundCalibrationModelParams = polyfit(reshape(soundCalibration.TargetSPLs,1,[]),reshape(10*log10(soundCalibration.NoiseAmplitudes),1,[]),1);
 
 %--------------------------------------------------------------------------
 %% Task control sounds and static task parameters
@@ -525,7 +525,6 @@ end
 
     function shutdownChipmunk()
         % ponytail: one shutdown for the stop button and for errors.
-        global BpodSystem
         if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
             fwrite(udplabcams,sprintf('log=end')); fgetl(udplabcams);
             fwrite(udplabcams,sprintf('softtrigger=0')); fgetl(udplabcams);
