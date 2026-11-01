@@ -28,47 +28,47 @@ SamplingFreq = 192000; %The frequency of the (Fenix) sound card
 
 %--------------------------------------------------------------------------
 %% Start labcams
-%if there is a labcam address field and it is not empty start labcams
-
-if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
-    %%if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
+udplabcams = [];
+if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
     try %could be assigned but if no camera available it will throw an error
         tmp = strsplit(BpodSystem.ProtocolSettings.labcamsAddress,':');
         udpAddress = tmp{1};
         udpPort = str2num(tmp{2});
         udplabcams = udp(udpAddress,udpPort);
+        udplabcams.Timeout = 2;
         fopen(udplabcams);
         %check if labcams is connected already.
         fwrite(udplabcams,'ping');
-        if udplabcams.BytesAvailable
-            fgetl(udplabcams);
+        reply = fgetl(udplabcams);
+        if ~isempty(reply)
             disp(' -> labcams connected.');
         else
             disp(' -> starting labcams');
             system('export LD_LIBRARY_PATH=""; export QT_PLUGIN_PATH=/usr/lib/x86_64-linux-gnu/qt5/plugins/platforms/; gnome-terminal -- labcams -w')
-                    for i =  1:5
-                        fwrite(udplabcams,'ping')
-                        tmp = fgetl(udplabcams);
-                        pause(0.1)
-                        if ~isempty(tmp)
-                            break
-                        end
-                    end
-                    if isempty(tmp)
-                        clear udplabcams
-                    end
-            if exist('udplabcams', 'var')
-                videoDataPath = subjectFolder;
-                fwrite(udplabcams,['expname=' videoDataPath filesep bhvFile])
-                fwrite(udplabcams,'load_reference=/home/anne/reference_image')
-                fgetl(udplabcams);
-                fwrite(udplabcams,'manualsave=0')
-                fgetl(udplabcams);
-                fwrite(udplabcams,'softtrigger=1') %change this to 0 for ephys recordings
-                fgetl(udplabcams);
+            udplabcams.Timeout = 5;
+            for i = 1:5
+                fwrite(udplabcams,'ping');
+                reply = fgetl(udplabcams);
+                if ~isempty(reply)
+                    break
+                end
+            end
+            if isempty(reply)
+                error('labcams did not respond to ping.');
             end
         end
+        udplabcams.Timeout = 2;
+        % Always configure this session, including when labcams was already open.
+        fwrite(udplabcams,'softtrigger=0'); fgetl(udplabcams);
+        fwrite(udplabcams,'manualsave=0'); fgetl(udplabcams);
+        fwrite(udplabcams,['expname=' fullfile(subjectFolder,bhvFile)]); fgetl(udplabcams);
+        fwrite(udplabcams,'load_reference=/home/anne/reference_image'); fgetl(udplabcams);
+        fwrite(udplabcams,'softtrigger=1'); fgetl(udplabcams);
     catch
+        if ~isempty(udplabcams)
+            delete(udplabcams);
+            udplabcams = [];
+        end
         warning('A problem occurred with labcams, no video will be recorded')
     end
 end
@@ -231,7 +231,7 @@ if pacedFlag
 end
 %--------------------------------------------------------------------------
 %% Start saving labcams if connected
-if exist('udplabcams','var')
+if ~isempty(udplabcams)
     fwrite(udplabcams,'softtrigger=0')
     pause(1)
     fgetl(udplabcams);
@@ -414,11 +414,8 @@ for currentTrial = 1:maxTrialNum
 
         %--------------------------------------------------------------------------
         %% Add to the camera log and run the state machine
-        if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
-            if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-                
-                fwrite(udplabcams,sprintf('log=trial_start[%4.0f]: %d',toc(tstart)/60,currentTrial))
-            end
+        if ~isempty(udplabcams)
+            fwrite(udplabcams,sprintf('log=trial_start[%4.0f]: %d',toc(tstart)/60,currentTrial))
         end
 
         if pacedFlag
@@ -453,10 +450,8 @@ for currentTrial = 1:maxTrialNum
         %% Write the trial end to the labcams camlog
 
         %The log file is so nice, thx João!
-        if isfield(BpodSystem.ProtocolSettings,'labcamsAddress')
-            if ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-                fwrite(udplabcams,sprintf('log=trial_end:%d',currentTrial))
-            end
+        if ~isempty(udplabcams)
+            fwrite(udplabcams,sprintf('log=trial_end:%d',currentTrial))
         end
 
         %------------------------------------------------------------------
@@ -525,13 +520,19 @@ end
 
     function shutdownChipmunk()
         % ponytail: one shutdown for the stop button and for errors.
-        if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
-            fwrite(udplabcams,sprintf('log=end')); fgetl(udplabcams);
-            fwrite(udplabcams,sprintf('softtrigger=0')); fgetl(udplabcams);
-            fwrite(udplabcams,sprintf('manualsave=0')); fgetl(udplabcams);
-            pause(1)
-            fwrite(udplabcams,sprintf('quit=1'));
-            fclose(udplabcams);
+        try
+            if ~isempty(udplabcams)
+                fwrite(udplabcams,sprintf('log=end')); fgetl(udplabcams);
+                fwrite(udplabcams,sprintf('softtrigger=0')); fgetl(udplabcams);
+                fwrite(udplabcams,sprintf('manualsave=0')); fgetl(udplabcams);
+                pause(1)
+                fwrite(udplabcams,sprintf('quit=1'));
+                fclose(udplabcams);
+                delete(udplabcams);
+                udplabcams = [];
+            end
+        catch
+            warning('Could not close labcams cleanly; saving behavioral data.');
         end
         SessionData = BpodSystem.Data;
         if ~strcmpi(BpodSystem.ProtocolSettings.demonID,'Virtual')
