@@ -19,8 +19,8 @@ elif (len(portsList) > 1):
     teensyCOM = serial.Serial(teensyPortID, 9600) #Establish connection at matching rate!
     print("Connected to teensy on " + teensyPortID)
 else:
-    print("No COM port available. Please check teensy connection.")
-    
+    raise SystemExit("No COM port available. Please check teensy connection.")
+
 
 #%%----Establish connection with the behavior computer and fetch info about
 #      the animal, session name and miniscope.
@@ -52,7 +52,7 @@ f.close()
 
 #Assign the correct directory, matching the animal and the session
 data_directory = os.path.join(miniscope_config['dataDirectory'], animal_id, session_date_time, "miniscope") #Assign and create the directory
-os.makedirs(data_directory)
+os.makedirs(data_directory, exist_ok=True)
 
 config_directory = os.path.join(miniscope_config['dataDirectory'], animal_id, session_date_time)
 #Since the miniscope software will create subdirectories of the one passed as input
@@ -69,7 +69,7 @@ with open(miniscope_config_out,'w') as f :
 #%%-----Create the mscopelog file and write a header---------
 logFileName = (animal_id + "_" + session_date_time + "_miniscope.mscopelog")
 logFilePath = os.path.join(data_directory, logFileName)
-output_file = open(logFilePath, "w+")
+output_file = open(logFilePath, "a") # a restart for the same session appends; the frame count restarts at 0
 
 print("Prepared a config file for miniscope acquisition. Please start miniscope recording with the following file:")
 print(f"{miniscope_config_out}")
@@ -92,11 +92,13 @@ try:
             print(f"Synchronization ran for {round(current_time - acquisition_start)} s.")
             last_report = current_time
 except KeyboardInterrupt:
-    # Stop the Teensy interrupts, close the log, then upload.
-    teensyCOM.write(str.encode('0')) # byte 48
+    pass
+finally:
     output_file.close()
+    teensyCOM.write(str.encode('0')) # byte 48 stops the interrupts
     teensyCOM.close()
-    del server_socket
+    server_socket.close()
     print("Synchronization ended")
-    print("Starting to upload the miniscope data...")
-    rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
+
+print("Starting to upload the miniscope data...")
+rclone_upload_data(subject = animal_id, session = session_date_time, datatype = 'miniscope')
