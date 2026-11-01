@@ -37,7 +37,7 @@ ha = struct(); %define empty struct for ui handles
 userInput = struct();
 
 %Generating the different UI panels to group the user inputs
-Demon = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.75, 2/3, 0.25],'Title','Demonstarator','FontWeight','bold');
+Demon = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.75, 2/3, 0.25],'Title','Demonstrator','FontWeight','bold');
 Setup = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.5, 2/3, 0.25],'Title','Setup','FontWeight','bold');
 Labcams = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0.25, 2/3, 0.25],'Title','Labcams','FontWeight','bold');
 Miniscope = uipanel('Parent', initPanel, 'Units', 'normal', 'Position', [0, 0, 2/3, 0.25],'Title','Miniscope','FontWeight','bold');
@@ -63,11 +63,11 @@ ha.rigNo = uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.55,2/3,0.4
 ha.researcher = uicontrol('Parent', Setup,'Units', 'normal', 'Position',[0.55,1/3,0.4,1/3],'style', 'edit');
 
 ha.labcamsAddress = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0.55,2/3,0.4,1/3],'style', 'edit','String',BpodSystem.ProtocolSettings.labcamsAddress);
-%Check whether labcams is installed in the default location (C:\Users\Anne)
-%and use the file created by default when setting up labcams. Another file
-%can be selected by a button press later.
-if isdir('C:\Users\Anne\labcams')
-    ha.labcamsConfigDir = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0,0,0,0],'style', 'edit','String','C:\Users\Anne\labcams');
+%On the behavior computers labcams lives in ~/labcams, with default.json.
+%Another file can be selected by a button press later.
+labcamsDir = fullfile(getenv('HOME'), 'labcams');
+if isfolder(labcamsDir)
+    ha.labcamsConfigDir = uicontrol('Parent', Labcams,'Units', 'normal', 'Position',[0,0,0,0],'style', 'edit','String',labcamsDir);
     %Store the directory info in a hidden uicontrol, this is to not need to
     %diplay the entire path along with the config file name, which would be
     %annoying...
@@ -113,7 +113,7 @@ sessionSpecifier = char(datetime('now', 'Format',['uuuuMMdd','_','HHmmss'])); %g
 %Find the Demonstrator in the data folder structure or create its folders
 %and data file
 BpodSystem.Path.CurrentDataFile = []; %Make sure to overrite any remainder from other sessions to be able to store values in a cell array
-if ~strcmp(userInput.demonID,'Virtual') || ~strcmp(userInput,'Dummy') %For the main subject FakeSubject is chosen, while for the other one Dummy will be the assigned name, no folder is created for Dummy
+if ~any(strcmp(userInput.demonID, {'Virtual', 'Dummy'})) %Skip folder creation for a virtual or dummy subject. FakeSubject still gets a folder.
     if ~isfolder(fullfile(BpodSystem.Path.DataFolder,userInput.demonID)) %check whether the demonstrator exists
         mkdir(fullfile(BpodSystem.Path.DataFolder,userInput.demonID));
     end

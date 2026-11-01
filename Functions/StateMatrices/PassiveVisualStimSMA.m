@@ -1,48 +1,13 @@
 function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = PassiveVisualStimSMA(~)
-% [sma, trialDelays, reviseChoiceFlag, pacedFlag] = DemonstratorTaskSMA(correctSideOnCurrent);
-%
-% SMA assemly function for the DemonstratorTask. In this condition a
-% demonstrator can self-initiate trials by poking into the center port after
-% a set inter trial interval
-% The choices will either be rewarded or punished with a sound and timeout.
-%
-% INPUTS (optional): -correctSideOnCurrent: The side designated to be
-%                                           rewarded during the current trial
-%                                           if chosen.
-%
-% Outputs: - sma: The state machine to be sent to Bpod to run the trial.
-%          - taskDelays: A struct containing the pre-stimulus delay and the
-%                        wait time generated for the current trial.
-%          -reviseChoiceFlag: Boolean whether the mouse can change its mind
-%                             after first reporting.
-%           -pacedFlag: Indicates whether the demonstrator trials are paced
-%                      by an observer or virtually (pacedFlag = true) or
-%                      whether it can self initiate (pacedFlag = false).
-%
-% LO, 4/1/2021, LO, 1/13/2022, 4/10/2022
-%-------------------------------------------------------------------------
+% Play one visual stimulus and end the trial. No poke, reward, or punishment.
+% The argument is ignored. Startup calls this with no arguments.
 global BpodSystem
 
 %--------------------------------------------------------------------------
 %% Generate the variable trial timers etc.
 
 interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTrialDurLambda, BpodSystem.ProtocolSettings.interTrialDurMin, BpodSystem.ProtocolSettings.interTrialDurMax);
-% Impose a random interval between the trials. In earlier versions this was
-% not present for the observer and a random inter trial inerval was only
-% imposed on the demonstrator to mimick the time it takes the observer to
-% initiate a new trial. In this version of chipmunk where the demonstrator
-% initiates and waits for the observer the inter trial interval has two
-% functions: it keeps the demonstrator from poking too early when the
-% observer can't yet fixate in the observer deck and instructs the observer
-% that it can only poke when the demonstrator is already fixating.
-
 virtualObsInitDelay = generate_random_delay(BpodSystem.ProtocolSettings.virtualObsInitLambda, BpodSystem.ProtocolSettings.virtualObsInitMin, BpodSystem.ProtocolSettings.virtualObsInitMax);
-%The delay between demonstrator poking and virtual observer initiating.
-%This is separtely assigned because the tone needs to be terminated before
-%the trial can move on to the pre stimulus delay period. A pre/stimulus
-%period is still necessary because the continuous tone for the simulated
-%observer initation would allow the demonstrator to get a precise timing of
-%the stimlus onset.
 
 preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
 %This delay may help reducing anticipatory signals to the
