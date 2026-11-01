@@ -250,6 +250,7 @@ pause(0.5) %Introduce a small break before starting the trials. This gives
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 tstart = tic;
+BpodSystem.GUIData.SessionStart = tstart; %For the elapsed-time display
 for currentTrial = 1:maxTrialNum
     try %This is to make sure that the data will be saved even if some error occurs during its execution
         disp("---------------New Loop Starts!---------------");

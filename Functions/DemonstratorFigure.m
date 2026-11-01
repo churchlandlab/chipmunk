@@ -141,17 +141,13 @@ switch figMethod
             'Callback',{@startButton});
         %----
         %Summary display panel
-        uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[0.05,0.75,2/3,0.2],'style', 'text', 'String','Trials done:','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[0.05,0.55,2/3,0.2],'style', 'text', 'String','Completed trials:','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[0.05,0.35,2/3,0.2],'style', 'text', 'String','Correct trials:','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[0.05,0.15,2/3,0.2],'style', 'text', 'String','Early withdrawals:','HorizontalAlignment','right');
-        uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[0.05,-0.05,2/3,0.2],'style', 'text', 'String','No choice trials:','HorizontalAlignment','right');
-        
-        BpodSystem.GUIHandles.LabelsVal.trialsDone = uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,0.75,1/3-0.1,0.2],'style', 'text', 'String','0','HorizontalAlignment','left');
-        BpodSystem.GUIHandles.LabelsVal.completedTrials = uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,0.55,1/3-0.1,0.2],'style', 'text', 'String','0','HorizontalAlignment','left');
-        BpodSystem.GUIHandles.LabelsVal.correctTrials = uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,0.35,1/3-0.1,0.2],'style', 'text', 'String','0','HorizontalAlignment','left');
-        BpodSystem.GUIHandles.LabelsVal.earlyWithdrawals = uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,0.15,1/3-0.1,0.2],'style', 'text', 'String','0','HorizontalAlignment','left');
-        BpodSystem.GUIHandles.LabelsVal.noChoiceTrials = uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,-0.05,1/3-0.1,0.2],'style', 'text', 'String','0','HorizontalAlignment','left');
+        summaryLabels = {'Trials done:','Completed trials:','Correct trials:','Early withdrawals:','No choice trials:','Elapsed:'};
+        summaryFields = {'trialsDone','completedTrials','correctTrials','earlyWithdrawals','noChoiceTrials','elapsed'};
+        for k = 1:numel(summaryFields)
+            y = 0.8 - 0.17*(k-1);
+            uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[0.05,y,2/3,0.17],'style', 'text', 'String',summaryLabels{k},'HorizontalAlignment','right');
+            BpodSystem.GUIHandles.LabelsVal.(summaryFields{k}) = uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,y,1/3-0.1,0.17],'style', 'text', 'String','0','HorizontalAlignment','left');
+        end
         
         %--------------------------------------------------------------------------
         %Now assemble the task control tab
@@ -322,6 +318,7 @@ switch figMethod
         BpodSystem.GUIHandles.LabelsVal.correctTrials.String = num2str(sum(BpodSystem.Data.CorrectResponse));
         BpodSystem.GUIHandles.LabelsVal.earlyWithdrawals.String = num2str(sum(BpodSystem.Data.EarlyWithdrawal));
         BpodSystem.GUIHandles.LabelsVal.noChoiceTrials.String = num2str(sum(BpodSystem.Data.DidNotChoose));
+        BpodSystem.GUIHandles.LabelsVal.elapsed.String = char(duration(0,0,toc(BpodSystem.GUIData.SessionStart),'Format','hh:mm')); %Updates once per trial
         
         BpodSystem.GUIHandles.LabelsVal.leftSideReward.String = num2str(BpodSystem.Data.LeftSideRewardAmount);
         BpodSystem.GUIHandles.LabelsVal.rightSideReward.String = num2str(BpodSystem.Data.RightSideRewardAmount);
