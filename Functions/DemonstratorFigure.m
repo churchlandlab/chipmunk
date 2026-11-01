@@ -184,6 +184,9 @@ switch figMethod
         %---
         %Experiment panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,'Units', 'normal', 'Position',[0,2/3-0.05,1,1/3],'style', 'text', 'String',BpodSystem.ProtocolSettings.experimentName);
+        uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,'Units', 'normal', 'Position',[0,1/3-0.05,2/3,1/3],'style', 'text', 'String','baseWait','HorizontalAlignment','right');
+        BpodSystem.GUIHandles.ParamEdit.baseWait = uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,...
+            'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.baseWait);
          
         %-----
         %Virtual observer panel

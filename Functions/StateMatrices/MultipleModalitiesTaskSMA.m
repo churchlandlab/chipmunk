@@ -53,8 +53,9 @@ virtualObsInitDelay = generate_random_delay(BpodSystem.ProtocolSettings.virtualO
 preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
 
 if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
-    postWaitDelay = generate_random_delay(1/0.1, 0.01, 0.5);
-    waitTime = 0.5 + postWaitDelay;
+    baseWait = BpodSystem.ProtocolSettings.baseWait;
+    postWaitDelay = generate_random_delay(1/0.1, 0.01, baseWait); %mean 0.1 s
+    waitTime = baseWait + postWaitDelay;
 else
     waitTime = BpodSystem.ProtocolSettings.minWaitTime;
     postWaitDelay = 0;

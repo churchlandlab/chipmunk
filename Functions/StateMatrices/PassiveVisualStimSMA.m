@@ -16,8 +16,9 @@ preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLam
 
 %Check for the wait time
 if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
-    postWaitDelay = generate_random_delay(1/0.1, 0.01, 0.5); %set lambda such that the mean is 0.1 : mean = 1/lambda
-    waitTime = 0.5 + postWaitDelay; %Add the delay to the 1 s of stimulus
+    baseWait = BpodSystem.ProtocolSettings.baseWait;
+    postWaitDelay = generate_random_delay(1/0.1, 0.01, baseWait); %mean 0.1 s
+    waitTime = baseWait + postWaitDelay;
 else
     waitTime = BpodSystem.ProtocolSettings.minWaitTime; %This is to be consisten with previous versions.
     postWaitDelay = 0;

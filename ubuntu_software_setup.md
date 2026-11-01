@@ -55,7 +55,7 @@ Read on 2026-10-31:
 
 2. **Bpod Setup**:
    - Copy `/home/anne/Bpod_Gen2` from earth. That is Bpod 1.8.0 (`BpodSoftwareVersion` 1.80, files dated 2024-03-01). It is not a git commit.
-   - Clone this repository to `/home/anne/Bpod Local/Protocols/half_second_chipmunk_solo`. The folder name has to match `half_second_chipmunk_solo.m`. Labcams lives at `/home/anne/labcams`. If you make changes, create a branch and remember to commit changes regularly.
+   - Clone this repository to `/home/anne/Bpod Local/Protocols/chipmunk_solo`. The folder name has to match `chipmunk_solo.m`. Labcams lives at `/home/anne/labcams`. If you make changes, create a branch and remember to commit changes regularly.
 
 3. **Camera Software**:
    - Download and install **SpinView (SpinnakerSDK)**:

@@ -1,13 +1,17 @@
-function half_second_chipmunk_solo
+function chipmunk_solo
 
 global BpodSystem
 
 %Add the path to the external functions for chipmunk
-addpath(genpath(fullfile(BpodSystem.Path.ProtocolFolder,'half_second_chipmunk_solo','Functions')));
+addpath(genpath(fullfile(BpodSystem.Path.ProtocolFolder,'chipmunk_solo','Functions')));
 
 %% Initialize the protocol
 %Load the settings for the respective experiment and start the protocol
 S = initChipmunk;
+if ~isfield(S, 'baseWait') %Settings saved before baseWait existed ran the half-second task
+    S.baseWait = 0.5;
+    BpodSystem.ProtocolSettings.baseWait = S.baseWait;
+end
 
 %--------------------------------------------------------------------------
 %% Decide on the sound handling
@@ -471,9 +475,9 @@ for currentTrial = 1:maxTrialNum
         % If previous trial was not an early withdrawal, increase wait duration
         if strcmpi(S.minWaitTime,'Exp') %There are no more wait time steps once the exponential delay mode has been reached.
             S.minWaitTimeStep = 0;
-        elseif S.minWaitTime >=0.6
+        elseif S.minWaitTime >= S.baseWait + 0.1 %0.1 s is the mean extra wait in exponential mode
             S.minWaitTimeStep = 0;
-            S.minWaitTime = 0.6;
+            S.minWaitTime = S.baseWait + 0.1;
         else %Increase the wait times only when the mouse has been waiting successfully
             if BpodSystem.Data.OutcomeRecord(TrialsDone) > -1 % If the last trial was initiated and the animal waited long enough
                 S.minWaitTime = S.minWaitTime + S.minWaitTimeStep;
@@ -510,7 +514,7 @@ for currentTrial = 1:maxTrialNum
         %-----------------------------------------------------------------------
         %% Make sure to keep the data if an error occurs
     catch ME
-        warning('half_second_chipmunk_solo encountered an error and will save the data and end...')
+        warning('chipmunk_solo encountered an error and will save the data and end...')
         BpodSystem.Status.BeingUsed = 0;
         shutdownChipmunk();
         disp('*********************************************************************')
