@@ -1,6 +1,80 @@
 from labdata.utils import *
 import warnings
 
+def _stimulus_trains(intervals, pulse_duration, extra_duration):
+    """Intended onsets and duration, using the sound card's actual sample period.
+
+    Both Chipmunk protocols generate at 192 kHz, pad channels to the longest
+    train and repeat that joint waveform. These are not measured exposures.
+    """
+    fs = 192000
+    if not np.isfinite(pulse_duration) or pulse_duration <= 0:
+        raise ValueError('Missing or invalid saved stimulus pulse duration')
+    if not np.isfinite(extra_duration) or extra_duration < 0:
+        raise ValueError('Invalid saved extra stimulus duration')
+    pulse = int(np.floor(pulse_duration * fs + 1e-9))
+    if pulse < 1:
+        raise ValueError('Saved stimulus pulse is shorter than one sample')
+    onsets, lengths = [], []
+    for isi in intervals:
+        isi = np.asarray(isi, dtype=float).ravel()
+        if len(isi) < 2 or not np.all(np.isfinite(isi)) or np.any(isi < 0):
+            raise ValueError('Missing or invalid saved stimulus intervals')
+        gaps = np.floor(isi * fs + .5).astype(np.int64)
+        onsets.append(np.cumsum(gaps[:-1]) + np.arange(len(gaps)-1) * pulse)
+        lengths.append(int(gaps.sum() + (len(gaps)-1) * pulse))
+    period = max(lengths)
+    if period <= 0:
+        raise ValueError('Empty saved stimulus train')
+    total = period + int(np.floor(extra_duration * fs + .5))
+    trains = []
+    for events in onsets:
+        repeated = np.concatenate([events + repeat * period
+                                   for repeat in range((total+period-1)//period)])
+        trains.append(repeated[repeated < total] / fs)
+    return trains, total / fs
+
+
+def _passive_replay(file_name, trialdata):
+    """Preserve the recorded replay separately; MATLAB source references stay 1-based."""
+    from scipy.io import loadmat
+    replay = loadmat(file_name, simplify_cells=True)['SessionData']['PassiveReplay']
+    sources = np.atleast_1d(replay['sourceTrialNumbers'])
+    statuses = np.atleast_1d(replay['trialStatus'])
+    count = int(replay['nRequested'])
+    if (len(sources) != count or len(statuses) != count
+            or not np.all(np.isfinite(sources))
+            or not np.all(sources == sources.astype(int))
+            or np.any(sources < 1) or np.any(sources > len(trialdata))
+            or len(np.unique(sources)) != count
+            or int(replay['nCompleted']) != np.count_nonzero(statuses == 'completed')):
+        raise ValueError('Invalid saved passive replay source references or status counts')
+    for source in sources.astype(int):
+        if not np.isfinite(trialdata.iloc[source-1]['PlayStimulus'][0]):
+            raise ValueError('Replay source trial never reached PlayStimulus')
+    raw = replay['rawEvents']
+    # DataJoint 0.14 cannot round-trip an object array containing only empty cells.
+    raw = [raw] if isinstance(raw, dict) else list(raw)
+    if count == 1 and not raw:
+        raw = [np.array([])]
+    if len(raw) != count:
+        raise ValueError('Invalid saved passive replay attempt count')
+    replay['rawEvents'] = raw
+    # Empty rawEvents on aborted/failed attempts remain empty, never fabricated.
+    return replay
+
+
+def _upsert_generated_row(table, row):
+    """Refresh plugin-produced metadata without REPLACE deleting referenced rows."""
+    row = {name: value for name, value in row.items() if name in table.heading.names}
+    key = {name: row[name] for name in table.primary_key}
+    if table & key:
+        if row.keys() - key.keys():
+            table.update1(row)
+    else:
+        table.insert1(row, allow_direct_insert=True)
+
+
 def load_chipmunk_trialdata(file_name):
     '''Read the behavioral data from .mat or .obsmat and return a
     pandas data frame with the respective data for each trial
@@ -26,9 +100,20 @@ def load_chipmunk_trialdata(file_name):
     try:
         sesdata = loadmat(file_name, squeeze_me=True,
                               struct_as_record=True)['SessionData']
+        # scipy squeezes a one-trial session's vectors and struct arrays to scalars.
+        if np.size(sesdata['Modality'].tolist()) == 1:
+            for field in ('TrialSettings', 'TrialDelays', 'ResponseSide', 'CorrectSide',
+                          'Modality', 'StimulusDuration', 'EventDuration', 'OutcomeRecord',
+                          'ActualWaitTime', 'SetWaitTime', 'PreStimDelay',
+                          'TrialStartTimestamp', 'EarlyWithdrawal', 'DidNotChoose'):
+                if field in sesdata.dtype.names:
+                    sesdata[field][()] = np.atleast_1d(sesdata[field].tolist())
+            for field in ('StimulusRate', 'InterStimulusIntervalList'):
+                if field in sesdata.dtype.names:
+                    sesdata[field][()] = np.asarray(sesdata[field].tolist()).reshape(1, 2)
         if 'Notes' in sesdata.dtype.names:
             notes = sesdata['Notes']
-            notes = '\n'.join([f'trial:{itrial};{note}' for itrial,note in enumerate(notes.tolist()) if len(note)])
+            notes = '\n'.join([f'trial:{itrial};{note}' for itrial,note in enumerate(np.atleast_1d(notes.tolist())) if len(note)])
         else:
             notes = ''
         tset = sesdata['TrialSettings'].tolist()
@@ -52,6 +137,8 @@ def load_chipmunk_trialdata(file_name):
 
         tmp = sesdata['RawEvents'].tolist()
         tmp = tmp['Trial'].tolist()
+        if tmp.ndim == 0:
+            tmp = [tmp]
         uevents = np.unique(np.hstack([t['Events'].tolist().dtype.names for t in tmp])) #Make sure not to duplicate state definitions
         uevents = np.union1d(uevents, ['Port1In', 'Port1Out', 'Port2In', 'Port2Out', 'Port3In', 'Port3Out'])
         ustates = np.unique(np.hstack([t['States'].tolist().dtype.names for t in tmp]))
@@ -70,7 +157,7 @@ def load_chipmunk_trialdata(file_name):
                  if np.size(a[b]) == 0:
                      a[b] = np.array([np.nan])
              trialevents.append(a)
-             a = {u:None for u in ustates}
+             a = {u:np.array([np.nan, np.nan]) for u in ustates}
              s = t['States'].tolist()
              for b in s.dtype.names:
                      a[b] = s[b].tolist()
@@ -78,6 +165,9 @@ def load_chipmunk_trialdata(file_name):
         trialstates = pd.DataFrame(trialstates)
         trialevents = pd.DataFrame(trialevents)
         trialdata = pd.merge(trialevents,trialstates,left_index=True, right_index=True)
+        for name in ('Reward', 'WrongChoice'):
+            if name not in trialdata:
+                trialdata[name] = [np.array([np.nan, np.nan]) for _ in range(len(trialdata))]
         ## Insert a column for DemonWrongChoice in trialdata if necessary
         #if 'DemonWrongChoice' not in trialdata.columns:
         #    trialdata.insert(trialdata.shape[1], 'DemonWrongChoice', [np.array([np.nan, np.nan])] * trialdata.shape[0])
@@ -120,7 +210,7 @@ def load_chipmunk_trialdata(file_name):
             trialdata.insert(trialdata.shape[1], 'stimulus_rate_auditory', tmp)
         
         #Reconstruct the time stamps for the individual stimuli
-        event_times = []
+        event_times, audio_times, train_durations = [], [], []
         if 'StimulusDuration' in sesdata.dtype.fields:
             event_duration = sesdata['StimulusDuration'].tolist()
         elif 'EventDuration' in sesdata.dtype.fields:
@@ -131,25 +221,24 @@ def load_chipmunk_trialdata(file_name):
         trialdata.insert(trialdata.shape[1], 'stimulus_event_duration', event_duration)
         #TODO: Get minimum inter stimulus interval setting -> might not be explicitly stored with the chipmunk file
 
+        delays = sesdata['TrialDelays'].tolist()
+        extra_durations = np.atleast_1d(delays['ExtraStimulusDuration'].tolist())
         for t in range(trialdata.shape[0]):
-            if tmp_modality_numeric[t] < 3: #Unisensory
-                if 'InterStimulusIntervalList' in sesdata.dtype.fields:
-                    temp_isi = sesdata['InterStimulusIntervalList'].tolist().tolist()[t][tmp_modality_numeric[t]-1]
-                    #Index into the corresponding trial and find the isi for the corresponding modality
-                else: 
-                    if tmp_modality_numeric[t] == 1:
-                        temp_isi = sesdata['visualIsis'].tolist().tolist()[t]
-                    elif tmp_modality_numeric[t] == 2:
-                        temp_isi = sesdata['auditoryIsis'].tolist().tolist()[t]
+            modality = tmp_modality_numeric[t]
+            channels = (0, 1) if modality == 3 else (modality-1,)
+            if 'InterStimulusIntervalList' in sesdata.dtype.fields:
+                intervals = [sesdata['InterStimulusIntervalList'].tolist()[t][c] for c in channels]
             else:
-                temp_isi = sesdata['InterStimulusIntervalList'].tolist().tolist()[t][0]
-                #For now assume synchronous and only look at visual stims
-                warnings.warn('[chipmunk]: Found multisensory trials, assumed synchronous condition')
-            temp_trial_event_times = [temp_isi[0]]
-            for k in range(1,temp_isi.shape[0]-1): #Start at 1 because the first Isi is already the timestamp after the play stimulus
-                temp_trial_event_times.append(temp_trial_event_times[k-1] + event_duration[t] + temp_isi[k])
-            event_times.append(temp_trial_event_times + trialdata['PlayStimulus'][t][0]) #Add the timestamp for play stimulus to the event time
+                intervals = [sesdata['visualIsis' if c == 0 else 'auditoryIsis'].tolist()[t] for c in channels]
+            trains, duration = _stimulus_trains(intervals, event_duration[t], extra_durations[t])
+            start = trialdata['PlayStimulus'][t][0]
+            event_times.append(trains[0] + start)
+            distinct_audio = modality == 3 and not np.array_equal(trains[0], trains[1])
+            audio_times.append(trains[1] + start if distinct_audio else None)
+            train_durations.append(duration)
         trialdata.insert(trialdata.shape[1], 'stimulus_event_timestamps', event_times)
+        trialdata['stimulus_audio_timestamps'] = audio_times
+        trialdata['stimulus_train_duration'] = train_durations
         trialdata.insert(trialdata.shape[1], 'stimulus_brightness', sesdata['TrialSettings'].tolist()['stimBrightness'])
         trialdata.insert(trialdata.shape[1], 'stimulus_loudness', sesdata['TrialSettings'].tolist()['stimLoudness'])
 
@@ -307,13 +396,11 @@ def load_chipmunk_trialdata(file_name):
             trialdata.insert(trialdata.shape[1], 'observer_actual_wait_time' , tmp)
             tmp = sesdata['TrialSettings'].tolist()
             trialdata.insert(trialdata.shape[1], 'dobserver_ID' , tmp['obsID'].tolist())
+        if 'PassiveReplay' in sesdata.dtype.names:
+            metadata['passive_replay'] = _passive_replay(file_name, trialdata)
 
     except Exception as err:
-        warnings.warn(f"[chipmunk]: An error occured and {file_name} could not be loaded")
-        print(err)
-        trialdata = None
-        sesdata = None
-        metadata = None
+        raise ValueError(f'[chipmunk]: Could not load {file_name}: {err}') from err
     return trialdata,sesdata,metadata
 
 def _get_state_time(trial, states = [],index = 0):
@@ -360,6 +447,8 @@ def _read_setting(session_data, setting_name):
 
 def process_chipmunk_file(filepath):
     trialdata,session_data,metadata = load_chipmunk_trialdata(filepath)
+    if trialdata is None:
+        raise ValueError(f'Could not parse Chipmunk file: {filepath}')
 
     # process settings from the entire session
     setting_high_rate_side = 'right' if (session_data['SettingsFile'].tolist())['highRateSide'] == 'R' else 'left'
@@ -390,7 +479,11 @@ def process_chipmunk_file(filepath):
                          setting_prob_audio = setting_prob_audio,
                          setting_high_rate_side = setting_high_rate_side,
                          setting_strict_choice = setting_strict_choice,
-                         setting_free_initiation = setting_free_choice)
+                         setting_free_initiation = setting_free_choice,
+                         passive_replay = metadata.pop('passive_replay', None))
+    saved_settings = session_data['TrialSettings'].tolist()
+    passive = ('smaAssembler' in saved_settings.dtype.names and
+               np.all(saved_settings['smaAssembler'] == 'PassiveVisualStimSMA'))
     # process settings from each trial and the outcomes
     trials_dict = []
     trial_settings_dict = []
@@ -406,10 +499,7 @@ def process_chipmunk_file(filepath):
                           t_response = _get_state_time(trial,['Reward','WrongChoice','DemonReward','DemonWrongChoice']),
                           t_response_port_out = _get_state_time(trial, 'response_port_out'),
                           t_end = _get_state_time(trial,['FinishTrial','PrepareNextTrial']))
-        if 'ExtraStimulusDuration' in trialdata.keys():
-            stim_duration = 1. + trial['ExtraStimulusDuration']
-        else:
-            stim_duration = 1.
+        stim_duration = trial.get('stimulus_train_duration', 1. + trial['ExtraStimulusDuration'])
         if not trialtimes['t_earlywithdraw'] is None:
             # trim the stim duration to the withdrawal time
             if not trialtimes['t_stim'] is None:
@@ -419,7 +509,7 @@ def process_chipmunk_file(filepath):
         if not trialtimes['t_response'] is None:
             # trim the stim duration to the withdrawal time
             stim_duration = np.min([stim_duration,trialtimes['t_response']-trialtimes['t_stim']])
-        if trialtimes['t_initiate'] is None:
+        if trialtimes['t_initiate'] is None and trialtimes['t_stim'] is None:
             stim_duration = 0.
 
         response = -1 if trial.response_side == 0 else 0
@@ -451,8 +541,9 @@ def process_chipmunk_file(filepath):
                                         stim_rate_audio = trial.stimulus_rate_auditory if np.isfinite(trial.stimulus_rate_auditory) else None,
                                         stim_rate_vision = trial.stimulus_rate_visual if np.isfinite(trial.stimulus_rate_visual) else None,
                                         category_boundary = trial.category_boundary,
-                                        rewarded_position = 'right' if trial.correct_side == 1 else 'left',
+                                        rewarded_position = None if passive else ('right' if trial.correct_side == 1 else 'left'),
                                         stim_events = [f for f in trial.stimulus_event_timestamps],
+                                        stim_events_audio = trial.get('stimulus_audio_timestamps'),
                                         stim_event_duration = trial.stimulus_event_duration,
                                         min_isi = trial.min_isi,
                                         is_poisson = trial.is_poisson,
@@ -475,7 +566,7 @@ def process_chipmunk_file(filepath):
                     len(np.unique([t['stim_rate_vision'] 
                                    for t in trial_settings_dict 
                                    if not t['stim_rate_vision'] is None]))])
-    settings_dict['setting_task_mode'] = 'detection' if max_stims <= 2 else 'discrimination'
+    settings_dict['setting_task_mode'] = 'passive' if passive else ('detection' if max_stims <= 2 else 'discrimination')
     settings_dict['duration'] = trials_dict[-1]['t_end'] - trials_dict[0]['t_start']
     return (trials_dict, trial_settings_dict,settings_dict),metadata
 
@@ -604,21 +695,23 @@ def extract_chipmunk_camera_data(folder, trial_dict):
     frames = []
     events = []
     trials = pd.DataFrame(trial_dict) # convert to dataframe to handle faster to write
+    response_times = np.asarray([np.nan if t is None else t for t in trials.t_response], dtype=float)
+    withdrawal_times = np.asarray([np.nan if t is None else t for t in trials.t_earlywithdraw], dtype=float)
     conditiontrials = [] # get one random trial per condition
     timepoints = []
-    a = np.where(np.isfinite(trials.t_response.values) & (trials.response.values == 1))[0]
+    a = np.where(np.isfinite(response_times) & (trials.response.values == 1))[0]
     if len(a): 
         conditiontrials += [np.random.choice(a,1)]
         timepoints.append(trials.t_response.values[conditiontrials[-1]])
-    a = np.where(np.isfinite([t if not t is None else np.nan for t in trials.t_response.values]) & (trials.response.values == -1))[0]
+    a = np.where(np.isfinite(response_times) & (trials.response.values == -1))[0]
     if len(a):
         conditiontrials += [np.random.choice(a,1)]
         timepoints.append(trials.t_response.values[conditiontrials[-1]])
-    a = np.where(np.isfinite([t if not t is None else np.nan for t in trials.t_earlywithdraw.values]) & (trials.early_withdrawal.values == 1))[0]
+    a = np.where(np.isfinite(withdrawal_times) & (trials.early_withdrawal.values == 1))[0]
     if len(a): 
         conditiontrials += [np.random.choice(a,1)]
-        timepoints.append(trials.t_response.values[conditiontrials[-1]])
-    conditiontrials = np.hstack(conditiontrials)
+        timepoints.append(withdrawal_times[conditiontrials[-1]])
+    conditiontrials = np.hstack(conditiontrials) if conditiontrials else np.array([], dtype=int)
 
     for icam,(vidfile,log) in enumerate(zip(camfiles,camlogfiles)):
         comm, camlog = read_camlog(log)
@@ -675,9 +768,11 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
     from .pluginschema import Chipmunk
     from labdata.schema import Watering, Session, DecisionTask, Dataset
     d = (Dataset & d).fetch1()
+    if (Chipmunk & d).fetch1('setting_task_mode') == 'passive':
+        return
 
     trials = pd.DataFrame((Chipmunk*Chipmunk.Trial*Chipmunk.TrialParameters & d).fetch(order_by='trial_num'))
-    if len(trials)<50: 
+    if len(trials)<mintrials:
         return
     trials['reward_volume'] = 0.0
     trials.loc[(trials['rewarded'] == 1)&(trials['response'] == 1),'reward_volume'] = np.float32(trials['setting_right_reward_volume'].iloc[0])
@@ -734,8 +829,8 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
                                   n_trials = len(tset),
                                   n_performed = np.nansum((tset.initiated.values == 1)),
                                   n_with_choice = np.nansum((tset.with_choice.values == 1)),
-                                  n_correct = np.nansum(~(tset.with_choice.values == 0) &
-                                                     (tset.rewarded.values == 0)),
+                                  n_correct = np.nansum((tset.with_choice.values == 1) &
+                                                     (tset.rewarded.values == 1)),
                                   performance = performance,
                                   performance_easy = performance_easy,
                                   trial_num = tset.trial_num.values,
@@ -746,13 +841,13 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
                                   intensity_values = stim_int,
                                   reaction_times = reaction_times))    
     # Inserts
-    Watering.insert1(watering,
-                     skip_duplicates = True)
-    DecisionTask.insert1(dtask,
-                         skip_duplicates = True,
-                         allow_direct_insert=True,
-                         ignore_extra_fields=True)
-    DecisionTask.TrialSet.insert(trialsets,
-                                 skip_duplicates = True,
-                                 allow_direct_insert=True,
-                                 ignore_extra_fields=True)
+    water_key = {name: watering[name] for name in Watering.primary_key}
+    if (Watering & water_key) and not (DecisionTask & d & water_key):
+        warnings.warn(f'[chipmunk]: Kept existing unlinked watering for {water_key}.')
+        # Keep it unlinked so a later retry cannot mistake a manual record for ours.
+        dtask['watering_datetime'] = None
+    else:
+        _upsert_generated_row(Watering, watering)
+    _upsert_generated_row(DecisionTask, dtask)
+    for trialset in trialsets:
+        _upsert_generated_row(DecisionTask.TrialSet, trialset)

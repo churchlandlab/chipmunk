@@ -2,6 +2,7 @@
 import ast
 from pathlib import Path
 import unittest
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -10,13 +11,11 @@ ROOT = Path(__file__).resolve().parents[1] / 'labdata_plugin'
 
 
 def parser_namespace():
-    names = {'load_chipmunk_trialdata', '_get_state_time', '_get_port',
-             '_read_setting', 'process_chipmunk_file'}
     source = ast.parse((ROOT / 'utils.py').read_text())
     tree = ast.Module(body=[n for n in source.body
-                           if isinstance(n, ast.FunctionDef) and n.name in names],
+                           if isinstance(n, ast.FunctionDef)],
                       type_ignores=[])
-    namespace = {'np': np, 'pd': pd}
+    namespace = {'np': np, 'pd': pd, 'warnings': warnings}
     exec(compile(tree, str(ROOT / 'utils.py'), 'exec'), namespace)
     return namespace
 
@@ -87,7 +86,7 @@ class ParserFieldsTest(unittest.TestCase):
         line = next(line for line in definition('TrialParameters').splitlines()
                     if line.strip().startswith('required_wait_time'))
         self.assertIn('= NULL', line)
-        self.assertEqual(line.split(':')[1].split('#')[0].strip(), 'float')
+        self.assertEqual(line.split(':')[1].split('#')[0].strip(), 'double')
 
 
 if __name__ == '__main__':

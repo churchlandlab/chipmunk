@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 from labdata.schema import *
 
 username = prefs['database']['database.user']
@@ -15,7 +16,7 @@ class Chipmunk(dj.Imported):
     definition = """
     -> Dataset
     ---
-    duration                     : float       # (seconds)
+    duration                     : double      # (seconds)
     setting_modalities           : enum('visual','audio','visual+audio')
     setting_left_reward_volume   : float
     setting_right_reward_volume  : float
@@ -24,7 +25,8 @@ class Chipmunk(dj.Imported):
     setting_high_rate_side       : enum('left','right')
     setting_strict_choice        : tinyint  # 1: no do overs 0: allow changing choice # ReviseChoiceFlag
     setting_free_initiation      : tinyint  # 1: animal can initiate 0: initiation time limit # PacedFlag
-    setting_task_mode            : enum('detection','discrimination')
+    setting_task_mode            : enum('detection','discrimination','passive')
+    passive_replay = NULL        : longblob    # Recorded replay, separate from active trials; MATLAB sourceTrialNumbers are 1-based
 
     """
 
@@ -37,24 +39,25 @@ class Chipmunk(dj.Imported):
         stim_rate_audio = NULL              : float      # audio stimulus rate [Hz]
         stim_rate_vision = NULL             : float      # visual stimulus rate [Hz]
         category_boundary                   : float
-        rewarded_position                   : enum('left','right')
-        stim_events = NULL                  : longblob   # time of the events
-        stim_event_duration = NULL          : float      # Duration of individual flashes or clicks
-        min_isi = NULL                      : float      # The shortest allowed interval between flashes or clicks
+        rewarded_position = NULL            : enum('left','right')
+        stim_events = NULL                  : longblob   # Intended onsets relative to trial start: visual for multisensory, otherwise the active channel
+        stim_events_audio = NULL            : longblob   # Distinct multisensory audio onsets; NULL means shared timing for multisensory
+        stim_event_duration = NULL          : double     # Duration of individual flashes or clicks
+        min_isi = NULL                      : double     # The shortest allowed interval between flashes or clicks
         is_poisson = NULL                   : tinyint    # 1 if intervals between flashes / clicks are random, 0 if there are only two intervals
         stim_brightness = NULL              : float      # Flash brightness
         stim_loudness = NULL                : float      # Click loudness
-        extra_stim_duration = NULL          : float      # Added time the stimulus train is playing after one full presentation
+        extra_stim_duration = NULL          : double     # Added time the stimulus train is playing after one full presentation
         proportion_left = NULL              : float      # Proportion of left-side trials
         anti_bias_strength = NULL           : float      # Proportion of trials where the anti-bias updates the trial sides
         anti_bias_tau = NULL                : float      # Integration window of choice biases for anti-bias algorithm
-        pre_stim_delay_min = NULL           : float      # Minimal pre-stim delay duration
-        pre_stim_delay_max = NULL           : float      # Maximal pre-stim delay duration
+        pre_stim_delay_min = NULL           : double     # Minimal pre-stim delay duration
+        pre_stim_delay_max = NULL           : double     # Maximal pre-stim delay duration
         pre_stim_delay_lambda = NULL        : float      # Shape parameter for the distribution from which to sample the pre-stim delays
-        pre_stim_delay = NULL               : float      # Sampled pre-stim delay
-        required_wait_time = NULL           : float      # Required center-port wait time [seconds]
-        incorrect_choice_timeout = NULL     : float      # Timeout and tone duration after incorrect choice
-        early_withdrawal_timeout = NULL     : float      # Timeout and noise duration after early withdrawal
+        pre_stim_delay = NULL               : double     # Sampled pre-stim delay
+        required_wait_time = NULL           : double     # Required center-port wait time [seconds]
+        incorrect_choice_timeout = NULL     : double     # Timeout and tone duration after incorrect choice
+        early_withdrawal_timeout = NULL     : double     # Timeout and noise duration after early withdrawal
 
         """
 
@@ -63,18 +66,18 @@ class Chipmunk(dj.Imported):
         # Behavior table for each trial
         -> master.TrialParameters
         ---
-        t_start                      : float      # trial start [seconds] WaitForCenterFixation
-        t_sync    = NULL             : float      # sync pulse [seconds] Sync
-        t_initiate = NULL            : float      # (initiation)[seconds] [Demon]InitFixation
-        t_earlywithdraw = NULL       : float      # [Demon]EarlyWithdrawal
-        t_stim = NULL                : float      # stim onset [seconds] PlayStimulus
-        t_poststim = NULL            : float      # 1s if not extraStimulusTime 
-        t_gocue = NULL               : float      # enter DemonWaitForWithdrawalFromCenter
-        t_react = NULL               : float      # enter DemonWaitForResponse
-        t_response = NULL            : float      # DemonWrongChoice or DemonReward
-        t_response_port_out = NULL   : float      # Removing the nose from the response port
-        t_end                        : float      # FinishTrial [seconds]
-        stim_duration                : float      # default 1second + extrastim duration
+        t_start                      : double     # trial start [seconds] WaitForCenterFixation
+        t_sync    = NULL             : double     # sync pulse [seconds] Sync
+        t_initiate = NULL            : double     # (initiation)[seconds] [Demon]InitFixation
+        t_earlywithdraw = NULL       : double     # [Demon]EarlyWithdrawal
+        t_stim = NULL                : double     # stim onset [seconds] PlayStimulus
+        t_poststim = NULL            : double     # 1s if not extraStimulusTime
+        t_gocue = NULL               : double     # enter DemonWaitForWithdrawalFromCenter
+        t_react = NULL               : double     # enter DemonWaitForResponse
+        t_response = NULL            : double     # DemonWrongChoice or DemonReward
+        t_response_port_out = NULL   : double     # Removing the nose from the response port
+        t_end                        : double     # FinishTrial [seconds]
+        stim_duration                : double     # Intended train duration, limited by recorded withdrawal/response
         
         left_poke = NULL             : longblob   # left poke timestamps and states
         center_poke = NULL           : longblob   # center poke timestamps and states
@@ -101,7 +104,7 @@ class Chipmunk(dj.Imported):
             file_keys = File() & (Dataset.DataFiles() & key)
             filenames = file_keys.get() # downloads if not there.
             assert not len(filenames) is None, ValueError(f'Dataset {key} is not in {prefs["local_paths"]}')
-            from .utils import process_chipmunk_file
+            from .utils import process_chipmunk_file, _upsert_generated_row
             (trialdicts,
              trial_parametersdicts,
              settingsdict), metadata = process_chipmunk_file((File() & filekey).get()[0])
@@ -168,10 +171,14 @@ class Chipmunk(dj.Imported):
             #Insert the weight
             weight = metadata['weight']
             if np.isfinite(weight):
-                Weighing.insert1(dict((Session & key).proj(
+                weighing = dict((Session & key).proj(
                     weighing_datetime = 'session_datetime').fetch(
-                        'subject_name',
-                        'weighing_datetime',as_dict=True)[0],weight = weight))
+                        'subject_name', 'weighing_datetime',as_dict=True)[0])
+                existing = Weighing & weighing
+                if not existing:
+                    Weighing.insert1(dict(weighing, weight=weight))
+                elif not np.isclose(existing.fetch1('weight'), weight, rtol=1e-6):
+                    warnings.warn(f'[chipmunk]: Existing weighing differs from MAT for {key}; kept existing weight.')
 
             if not len(trialdicts):
                 print(f'[chipmunk]: There are no trials for {key}')
@@ -197,9 +204,7 @@ class Chipmunk(dj.Imported):
             DatasetEvents.insert1(stream,
                                   skip_duplicates = True,
                                   allow_direct_insert = True)
-            DatasetEvents.Digital.insert1(digital,
-                                          skip_duplicates = True,
-                                          allow_direct_insert = True)
+            _upsert_generated_row(DatasetEvents.Digital, digital)
 
             for c in cameras:
                 c['file_path'] = str(c['file_path']).replace(localpath,'').strip(pathlib.os.sep)
@@ -207,22 +212,16 @@ class Chipmunk(dj.Imported):
                 assert len(storage), ValueError(f'File {c["file_path"]} is not backed up - cannot add.')
                 c['storage'] = storage[0]
 
-            DatasetVideo.insert([dict(key,**c) for c in cameras],
-                                skip_duplicates = True,
-                                ignore_extra_fields = True)
-            DatasetVideo.File.insert([dict(key,**c) for c in cameras],
-                                     skip_duplicates = True,
-                                     ignore_extra_fields = True)
-            DatasetVideo.Frame.insert([dict(key,**f) for f in frames],
-                                      skip_duplicates = True,
-                                      ignore_extra_fields = True)
+            for camera in cameras:
+                _upsert_generated_row(DatasetVideo, dict(key, **camera))
+                _upsert_generated_row(DatasetVideo.File, dict(key, **camera))
+            for frame in frames:
+                _upsert_generated_row(DatasetVideo.Frame, dict(key, **frame))
             # should also run chipmunk_insert_decision_task but has to be changed to allow.
             from .utils import chipmunk_insert_decision_task
             chipmunk_insert_decision_task(key)
             
-            if 'LABDATA_DELETE_FILES_AFTER_POPULATE' in os.environ.keys():  # noqa: SIM118
-                [os.unlink(f) for f in filenames]
-                print('Deleted files after populating because "LABDATA_DELETE_FILES_AFTER_POPULATE" is defined.')
+            # Input cleanup must happen after a successful commit, outside make().
 
     @classmethod
     def trial_query(cls, **key):

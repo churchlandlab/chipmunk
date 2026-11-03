@@ -18,8 +18,7 @@ def records(values, n):
     return result
 
 
-def session_data(port_mode='missing_out', **gap_fields):
-    n = 3
+def session_data(port_mode='missing_out', n=3, **gap_fields):
     settings = dict(leftRewardVolume=3., rightRewardVolume=3., stimBrightness=100.,
                     stimLoudness=50., propLeft=.5, antiBiasStrength=.2,
                     antiBiasTau=10., preStimDelayMin=.1, preStimDelayMax=.2,
