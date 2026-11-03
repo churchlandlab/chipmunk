@@ -40,9 +40,16 @@ def load_chipmunk_trialdata(file_name):
             experimenter = tset['researcher'][0]
         else:
             experimenter = None
+        if 'demonWeight' in tset.dtype.fields:
+            weight = tset['demonWeight'][0]
+        else:
+            weight = np.nan
+
         metadata = dict(notes = notes,
                         setup_name = setup_name,
-                        experimenter = experimenter)
+                        experimenter = experimenter,
+                        weight = weight)
+
         tmp = sesdata['RawEvents'].tolist()
         tmp = tmp['Trial'].tolist()
         uevents = np.unique(np.hstack([t['Events'].tolist().dtype.names for t in tmp])) #Make sure not to duplicate state definitions
@@ -112,9 +119,15 @@ def load_chipmunk_trialdata(file_name):
         #Reconstruct the time stamps for the individual stimuli
         event_times = []
         if 'StimulusDuration' in sesdata.dtype.fields:
-            event_duration = sesdata['StimulusDuration'].tolist()[0]
+            event_duration = sesdata['StimulusDuration'].tolist()
+        elif 'EventDuration' in sesdata.dtype.fields:
+            event_duration = sesdata['EventDuration'].tolist()
         else:
-            event_duration = 0.015 #This value was never change in the code and was used in the earliest chipmunk implementations
+            event_duration = [None] * trialdata.shape[0]
+            #event_duration = [0.015]*trialdata.shape[0] #This value is hard-coded in chipmunk but can change in chipmunk_solo as of March 2026
+        trialdata.insert(trialdata.shape[1], 'stimulus_event_duration', event_duration)
+        #TODO: Get minimum inter stimulus interval setting -> might not be explicitly stored with the chipmunk file
+
         for t in range(trialdata.shape[0]):
             if tmp_modality_numeric[t] < 3: #Unisensory
                 if 'InterStimulusIntervalList' in sesdata.dtype.fields:
@@ -131,9 +144,12 @@ def load_chipmunk_trialdata(file_name):
                 warnings.warn('[chipmunk]: Found multisensory trials, assumed synchronous condition')
             temp_trial_event_times = [temp_isi[0]]
             for k in range(1,temp_isi.shape[0]-1): #Start at 1 because the first Isi is already the timestamp after the play stimulus
-                temp_trial_event_times.append(temp_trial_event_times[k-1] + event_duration + temp_isi[k])
+                temp_trial_event_times.append(temp_trial_event_times[k-1] + event_duration[t] + temp_isi[k])
             event_times.append(temp_trial_event_times + trialdata['PlayStimulus'][t][0]) #Add the timestamp for play stimulus to the event time
         trialdata.insert(trialdata.shape[1], 'stimulus_event_timestamps', event_times)
+        trialdata.insert(trialdata.shape[1], 'stimulus_brightness', sesdata['TrialSettings'].tolist()['stimBrightness'])
+        trialdata.insert(trialdata.shape[1], 'stimulus_loudness', sesdata['TrialSettings'].tolist()['stimLoudness'])
+
         #Insert the outcome record for faster access to the different trial outcomes
         if 'OutcomeRecord' in sesdata.dtype.fields:
             trialdata.insert(0, 'outcome_record', sesdata['OutcomeRecord'].tolist())
@@ -151,8 +167,42 @@ def load_chipmunk_trialdata(file_name):
         except Exception as err:
             print('[chipmunk]: For this version of chipmunk the task delays struct was not implemented yet.\nDid not generate the respective columns in the data frame.')
 
+        trialdata.insert(trialdata.shape[1], 'required_wait_time', sesdata['SetWaitTime'].tolist())
         tmp = sesdata['ActualWaitTime'].tolist()
         trialdata.insert(trialdata.shape[1], 'actual_wait_time' , tmp)
+        trialdata.insert(trialdata.shape[1], 'pre_stim_delay', sesdata['PreStimDelay'].tolist())
+        if 'wrongPunishTimeout' in sesdata['TrialSettings'].tolist().dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'incorrect_choice_timeout', sesdata['TrialSettings'].tolist()['wrongPunishTimeout'].tolist())
+        elif 'PunishDuration' in sesdata['TrialSettings'].tolist().dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'incorrect_choice_timeout', sesdata['TrialSettings'].tolist()['PunishDuration'].tolist())
+        if 'earlyPunishTimeout' in sesdata['TrialSettings'].tolist().dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'early_withdrawal_timeout', sesdata['TrialSettings'].tolist()['earlyPunishTimeout'].tolist())
+        elif 'EarlyPunishDuration' in sesdata['TrialSettings'].tolist().dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'early_withdrawal_timeout', sesdata['TrialSettings'].tolist()['EarlyPunishDuration'].tolist())
+        if 'antiBiasStrength' in sesdata['TrialSettings'].tolist().dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'anti_bias_strength', sesdata['TrialSettings'].tolist()['antiBiasStrength'].tolist())
+        elif 'UseAntiBias' in sesdata['TrialSettings'].tolist().dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'anti_bias_strength', sesdata['TrialSettings'].tolist()['UseAntiBias'].tolist())
+        if 'antiBiasTau' in sesdata['TrialSettings'].tolist().dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'anti_bias_tau', sesdata['TrialSettings'].tolist()['antiBiasTau'].tolist())
+        elif 'AntiBiasTau' in sesdata['TrialSettings'].tolist().dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'anti_bias_tau', sesdata['TrialSettings'].tolist()['AntiBiasTau'].tolist())
+        if 'propLeft' in sesdata['TrialSettings'].tolist().dtype.fields:
+             trialdata.insert(trialdata.shape[1], 'proportion_left', sesdata['TrialSettings'].tolist()['propLeft'].tolist())
+        elif 'PropLeft' in sesdata['TrialSettings'].tolist().dtype.fields:
+             trialdata.insert(trialdata.shape[1], 'proportion_left', sesdata['TrialSettings'].tolist()['PropLeft'].tolist())
+        trialdata.insert(trialdata.shape[1], 'pre_stim_delay_min' ,sesdata['TrialSettings'].tolist()['preStimDelayMin'].tolist())
+        trialdata.insert(trialdata.shape[1], 'pre_stim_delay_max' ,sesdata['TrialSettings'].tolist()['preStimDelayMax'].tolist())
+        trialdata.insert(trialdata.shape[1], 'pre_stim_delay_lambda' ,sesdata['TrialSettings'].tolist()['preStimDelayLambda'].tolist())
+        if 'isPoissonStim' in sesdata['TrialSettings'].tolist().dtype.fields:
+             trialdata.insert(trialdata.shape[1], 'is_poisson', sesdata['TrialSettings'].tolist()['isPoissonStim'].tolist())
+        elif 'IsPoissonStim' in sesdata['TrialSettings'].tolist().dtype.fields:
+             trialdata.insert(trialdata.shape[1], 'is_poisson', sesdata['TrialSettings'].tolist()['IsPoissonStim'].tolist())
+        if 'minInterStimulusInterval' in sesdata.dtype.fields:
+            trialdata.insert(trialdata.shape[1], 'min_isi', sesdata['minimumInterStimulusInterval'])
+        else:
+            trialdata.insert(trialdata.shape[1], 'min_isi', [0.025]*trialdata.shape[0]) #This value is not generally stored in the .mat file but was unchanged
+
         #TEMPORARY: import the demonstrator and observer id
         tmp = sesdata['TrialSettings'].tolist()
         if 'demonID' in tmp.dtype.fields:
@@ -341,7 +391,7 @@ def process_chipmunk_file(filepath):
     trial_settings_dict = []
     for itrial, trial in trialdata.iterrows():
         trialtimes = dict(trial_num = itrial,
-                          t_start = _get_state_time(trial,['WaitForCenterFixation','GoToCenter','DemonTrialStart']), 
+                          t_start = _get_state_time(trial,['WaitForCenterFixation','GoToCenter','DemonTrialStart', 'TrialStart']),
                           t_sync = _get_state_time(trial,'Sync'),         
                           t_initiate = _get_state_time(trial,['InitFixation','DemonInitFixation']),
                           t_earlywithdraw = _get_state_time(trial,['EarlyWithdrawal','DemonEarlyWithdrawal']), 
@@ -349,6 +399,7 @@ def process_chipmunk_file(filepath):
                           t_gocue = _get_state_time(trial,['WaitForWithdrawalFromCenter','DemonWaitForWithdrawalFromCenter']),
                           t_react = _get_state_time(trial,['WaitForResponse','DemonWaitForResponse']),
                           t_response = _get_state_time(trial,['Reward','WrongChoice','DemonReward','DemonWrongChoice']),
+                          t_response_port_out = _get_state_time(trial, 'response_port_out'),
                           t_end = _get_state_time(trial,['FinishTrial','PrepareNextTrial']))
         if 'ExtraStimulusDuration' in trialdata.keys():
             stim_duration = 1. + trial['ExtraStimulusDuration']
@@ -371,6 +422,9 @@ def process_chipmunk_file(filepath):
         
         trials_dict.append(dict(trialtimes,
                                 stim_duration = stim_duration,
+                                stimulus_event_duration = trial['stimulus_event_duration'],
+                                stimulus_brightness = trial['stimulus_brightness'],
+                                stimulus_loudness = trial['stimulus_loudness'],
                                 left_poke = _get_port(trial,'Port1'),
                                 center_poke = _get_port(trial,'Port2'),
                                 right_poke = _get_port(trial,'Port3'),
@@ -396,7 +450,23 @@ def process_chipmunk_file(filepath):
                                         stim_rate_vision = trial.stimulus_rate_visual if np.isfinite(trial.stimulus_rate_visual) else None,
                                         category_boundary = trial.category_boundary,
                                         rewarded_position = 'right' if trial.correct_side == 1 else 'left',
-                                        stim_events = [f for f in trial.stimulus_event_timestamps]))
+                                        stim_events = [f for f in trial.stimulus_event_timestamps],
+                                        stim_event_duration = trial.stimulus_event_duration,
+                                        min_isi = trial.min_isi,
+                                        is_poisson = trial.is_poisson,
+                                        stim_brightness = trial.stimulus_brightness,
+                                        stim_loudness = trial.stimulus_loudness,
+                                        extra_stim_duration = trial.ExtraStimulusDuration,
+                                        proportion_left = trial.proportion_left,
+                                        anti_bias_strength = trial.anti_bias_strength,
+                                        anti_bias_tau = trial.anti_bias_tau,
+                                        pre_stim_delay_min = trial.pre_stim_delay_min,
+                                        pre_stim_delay_max= trial.pre_stim_delay_max,
+                                        pre_stim_delay_lambda = trial.pre_stim_delay_lambda,
+                                        pre_stim_delay = trial.pre_stim_delay,
+                                        required_wait_time = trial.required_wait_time,
+                                        incorrect_choice_timeout = trial.incorrect_choice_timeout,
+                                        early_withdrawal_timeout = trial.early_withdrawal_timeout))
     max_stims = np.max([len(np.unique([t['stim_rate_audio'] 
                                    for t in trial_settings_dict 
                                    if not t['stim_rate_audio'] is None])),
