@@ -52,6 +52,7 @@ class Chipmunk(dj.Imported):
         pre_stim_delay_max = NULL           : float      # Maximal pre-stim delay duration
         pre_stim_delay_lambda = NULL        : float      # Shape parameter for the distribution from which to sample the pre-stim delays
         pre_stim_delay = NULL               : float      # Sampled pre-stim delay
+        required_wait_time = NULL           : float      # Required center-port wait time [seconds]
         incorrect_choice_timeout = NULL     : float      # Timeout and tone duration after incorrect choice
         early_withdrawal_timeout = NULL     : float      # Timeout and noise duration after early withdrawal
 

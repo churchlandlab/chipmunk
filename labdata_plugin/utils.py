@@ -422,9 +422,6 @@ def process_chipmunk_file(filepath):
         
         trials_dict.append(dict(trialtimes,
                                 stim_duration = stim_duration,
-                                stimulus_event_duration = trial['stimulus_event_duration'],
-                                stimulus_brightness = trial['stimulus_brightness'],
-                                stimulus_loudness = trial['stimulus_loudness'],
                                 left_poke = _get_port(trial,'Port1'),
                                 center_poke = _get_port(trial,'Port2'),
                                 right_poke = _get_port(trial,'Port3'),
