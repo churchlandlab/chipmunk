@@ -53,6 +53,7 @@ def load_chipmunk_trialdata(file_name):
         tmp = sesdata['RawEvents'].tolist()
         tmp = tmp['Trial'].tolist()
         uevents = np.unique(np.hstack([t['Events'].tolist().dtype.names for t in tmp])) #Make sure not to duplicate state definitions
+        uevents = np.union1d(uevents, ['Port1In', 'Port1Out', 'Port2In', 'Port2Out', 'Port3In', 'Port3Out'])
         ustates = np.unique(np.hstack([t['States'].tolist().dtype.names for t in tmp]))
         trialevents = []
         trialstates = [] #Extract all trial states and events
@@ -66,6 +67,8 @@ def load_chipmunk_trialdata(file_name):
                      a[b] = np.array([s[b].tolist()])
                  else:
                         a[b] = s[b].tolist()
+                 if np.size(a[b]) == 0:
+                     a[b] = np.array([np.nan])
              trialevents.append(a)
              a = {u:None for u in ustates}
              s = t['States'].tolist()
@@ -198,10 +201,12 @@ def load_chipmunk_trialdata(file_name):
              trialdata.insert(trialdata.shape[1], 'is_poisson', sesdata['TrialSettings'].tolist()['isPoissonStim'].tolist())
         elif 'IsPoissonStim' in sesdata['TrialSettings'].tolist().dtype.fields:
              trialdata.insert(trialdata.shape[1], 'is_poisson', sesdata['TrialSettings'].tolist()['IsPoissonStim'].tolist())
-        if 'minInterStimulusInterval' in sesdata.dtype.fields:
-            trialdata.insert(trialdata.shape[1], 'min_isi', sesdata['minimumInterStimulusInterval'])
-        else:
-            trialdata.insert(trialdata.shape[1], 'min_isi', [0.025]*trialdata.shape[0]) #This value is not generally stored in the .mat file but was unchanged
+        min_isi = 0.025  # Legacy tasks did not save this fixed setting.
+        for field in ('MinInterval', 'minimumInterStimulusInterval', 'minInterStimulusInterval'):
+            if field in sesdata.dtype.fields:
+                min_isi = sesdata[field].tolist()
+                break
+        trialdata.insert(trialdata.shape[1], 'min_isi', min_isi)
 
         #TEMPORARY: import the demonstrator and observer id
         tmp = sesdata['TrialSettings'].tolist()
