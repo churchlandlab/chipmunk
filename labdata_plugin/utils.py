@@ -36,7 +36,7 @@ def _stimulus_trains(intervals, pulse_duration, extra_duration):
 
 
 def _passive_replay(file_name, trialdata):
-    """Preserve the recorded replay separately; MATLAB source references stay 1-based."""
+    """Replay observations on the active session clock, with zero-based source keys."""
     from scipy.io import loadmat
     replay = loadmat(file_name, simplify_cells=True)['SessionData']['PassiveReplay']
     sources = np.atleast_1d(replay['sourceTrialNumbers'])
@@ -53,15 +53,47 @@ def _passive_replay(file_name, trialdata):
         if not np.isfinite(trialdata.iloc[source-1]['PlayStimulus'][0]):
             raise ValueError('Replay source trial never reached PlayStimulus')
     raw = replay['rawEvents']
-    # DataJoint 0.14 cannot round-trip an object array containing only empty cells.
     raw = [raw] if isinstance(raw, dict) else list(raw)
     if count == 1 and not raw:
         raw = [np.array([])]
     if len(raw) != count:
         raise ValueError('Invalid saved passive replay attempt count')
-    replay['rawEvents'] = raw
-    # Empty rawEvents on aborted/failed attempts remain empty, never fabricated.
-    return replay
+    names = np.atleast_1d(replay['stateNames']).tolist()
+    rows = []
+    for index, events in enumerate(raw):
+        if not isinstance(events, dict) or 'States' not in events:
+            if statuses[index] == 'not_started':
+                continue
+            raise ValueError('Passive replay has no recorded event timestamps')
+        states = np.atleast_1d(events['States']).astype(float)
+        times = np.atleast_1d(events['StateTimestamps']).astype(float)
+        if (not np.all(np.isfinite(states)) or not np.all(states == states.astype(int))
+                or np.any(states < 1) or np.any(states > len(names))
+                or len(times) < len(states) or not np.all(np.isfinite(times))
+                or np.any(np.diff(times) < 0)):
+            raise ValueError('Invalid passive replay state timestamps')
+        start = float(events['TrialStartTimestamp'])
+        if not np.isfinite(start):
+            raise ValueError('Invalid passive replay trial start timestamp')
+        observed = {names[int(state)-1]:start + float(times[i])
+                    for i,state in reversed(list(enumerate(states)))}
+        if 'PlayStimulus' not in observed:
+            if statuses[index] == 'completed':
+                raise ValueError('Completed replay has no recorded stimulus onset')
+            continue
+        row = dict(passive_trial_num=index, source_trial_num=int(sources[index])-1,
+                   t_sync=observed.get('Sync'), t_stim=observed['PlayStimulus'],
+                   t_stim_end=observed.get('StopStimulus'))
+        if ((row['t_sync'] is not None and row['t_sync'] > row['t_stim'])
+                or (row['t_stim_end'] is not None and row['t_stim_end'] < row['t_stim'])
+                or (rows and row['t_stim'] < rows[-1]['t_stim'])):
+            raise ValueError('Passive replay times are not ordered on the session clock')
+        rows.append(row)
+    if rows and 'trial_start_time' in trialdata:
+        active_end = _get_state_time(trialdata.iloc[-1], ['FinishTrial', 'PrepareNextTrial'], index=-1)
+        if active_end is not None and rows[0]['t_stim'] < active_end:
+            raise ValueError('Passive replay clock precedes the end of the active session')
+    return rows
 
 
 def _upsert_generated_row(table, row):
@@ -210,7 +242,7 @@ def load_chipmunk_trialdata(file_name):
             trialdata.insert(trialdata.shape[1], 'stimulus_rate_auditory', tmp)
         
         #Reconstruct the time stamps for the individual stimuli
-        event_times, audio_times, train_durations = [], [], []
+        event_times, train_durations = [], []
         if 'StimulusDuration' in sesdata.dtype.fields:
             event_duration = sesdata['StimulusDuration'].tolist()
         elif 'EventDuration' in sesdata.dtype.fields:
@@ -233,11 +265,8 @@ def load_chipmunk_trialdata(file_name):
             trains, duration = _stimulus_trains(intervals, event_duration[t], extra_durations[t])
             start = trialdata['PlayStimulus'][t][0]
             event_times.append(trains[0] + start)
-            distinct_audio = modality == 3 and not np.array_equal(trains[0], trains[1])
-            audio_times.append(trains[1] + start if distinct_audio else None)
             train_durations.append(duration)
         trialdata.insert(trialdata.shape[1], 'stimulus_event_timestamps', event_times)
-        trialdata['stimulus_audio_timestamps'] = audio_times
         trialdata['stimulus_train_duration'] = train_durations
         trialdata.insert(trialdata.shape[1], 'stimulus_brightness', sesdata['TrialSettings'].tolist()['stimBrightness'])
         trialdata.insert(trialdata.shape[1], 'stimulus_loudness', sesdata['TrialSettings'].tolist()['stimLoudness'])
@@ -397,7 +426,7 @@ def load_chipmunk_trialdata(file_name):
             tmp = sesdata['TrialSettings'].tolist()
             trialdata.insert(trialdata.shape[1], 'dobserver_ID' , tmp['obsID'].tolist())
         if 'PassiveReplay' in sesdata.dtype.names:
-            metadata['passive_replay'] = _passive_replay(file_name, trialdata)
+            metadata['passive_trials'] = _passive_replay(file_name, trialdata)
 
     except Exception as err:
         raise ValueError(f'[chipmunk]: Could not load {file_name}: {err}') from err
@@ -480,7 +509,7 @@ def process_chipmunk_file(filepath):
                          setting_high_rate_side = setting_high_rate_side,
                          setting_strict_choice = setting_strict_choice,
                          setting_free_initiation = setting_free_choice,
-                         passive_replay = metadata.pop('passive_replay', None))
+                         passive_replay = int(bool(metadata.get('passive_trials', []))))
     saved_settings = session_data['TrialSettings'].tolist()
     passive = ('smaAssembler' in saved_settings.dtype.names and
                np.all(saved_settings['smaAssembler'] == 'PassiveVisualStimSMA'))
@@ -543,7 +572,6 @@ def process_chipmunk_file(filepath):
                                         category_boundary = trial.category_boundary,
                                         rewarded_position = None if passive else ('right' if trial.correct_side == 1 else 'left'),
                                         stim_events = [f for f in trial.stimulus_event_timestamps],
-                                        stim_events_audio = trial.get('stimulus_audio_timestamps'),
                                         stim_event_duration = trial.stimulus_event_duration,
                                         min_isi = trial.min_isi,
                                         is_poisson = trial.is_poisson,

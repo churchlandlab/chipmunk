@@ -9,8 +9,8 @@ The plugin reads Chipmunk and Chipmunk Solo MAT files. Active trials remain in
 `stim_events` contains intended pulse onsets relative to each trial start,
 including repeats in `ExtraStimulusDuration`. It represents the visual channel
 for multisensory trials, or the active channel for unisensory trials.
-`stim_events_audio` contains multisensory audio onsets only when they differ;
-NULL means shared timing for multisensory trials. No synchrony flag is needed.
+Multisensory trials use one shared event list: the supported workflow is
+synchronous visual/audio stimulation. There is no supplemental audio column.
 
 Both MATLAB protocols generate at 192 kHz. Reconstruction rounds gaps to samples,
 pads channels to their shared length, and repeats the resulting waveform.
@@ -25,16 +25,23 @@ FLOAT setting columns retain their existing precision.
 
 ## Passive replay
 
-`Chipmunk.passive_replay` stores the saved `SessionData.PassiveReplay` record,
-separately from active trial rows. It retains selection/order, statuses,
-durations, raw events, state-name mapping and error information. MATLAB's
-`sourceTrialNumbers` remain **one-based**; subtract one to join to `trial_num`.
-Invalid source references or completion counts raise a parsing error.
+`Chipmunk.passive_replay` is 0 or 1, based on the presence of recorded replay
+observations. `Chipmunk.Passive` stores one row per replayed trial:
 
-Raw event cells are stored as Python lists for DataJoint 0.14 serialization.
-Empty failed/aborted records remain empty. Older aborted files with no timestamps
-cannot supply a replay onset, duration or partial exposure; do not infer one
-from the intended duration or session completion status.
+- The inherited Chipmunk key plus zero-based `passive_trial_num` identifies order.
+- `source_trial_num` is a foreign key to the original `Chipmunk.Trial`. MATLAB's
+  one-based source references are converted to zero-based trial numbers.
+- Nullable DOUBLE `t_sync`, `t_stim` and `t_stim_end` are recorded Sync,
+  PlayStimulus and StopStimulus onsets. They share the active session's Bpod
+  clock: raw TrialStartTimestamp plus the relative state time. No clock reset
+  or stitching by intended duration occurs.
+
+Source-trial settings are referenced rather than copied. No replay status or
+summary columns are stored. Missing event records fail import instead of
+fabricating timestamps or a false zero flag; unstarted selections produce no
+observation rows. Raw MAT files retain the original status/error information.
+The Solo protocol's one-second first-onset target affects future recordings;
+historical replay timestamps retain their actual measured gaps.
 
 ## Repopulation
 
@@ -50,5 +57,6 @@ for `n_correct`; passive sessions do not create decision-task summaries.
 
 Input files are retained regardless of `LABDATA_DELETE_FILES_AFTER_POPULATE`.
 File cleanup belongs outside `make()`, after a successful population commit.
-Changing these definitions does not migrate existing SQL tables. Back up current
-rows and affected metadata before a separate, explicitly scoped live rebuild.
+Changing these definitions does not migrate existing SQL tables. Full backups
+must include all four Chipmunk tables, including Passive. Back up current rows
+and affected metadata before a separate, explicitly scoped live rebuild.

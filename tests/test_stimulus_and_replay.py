@@ -38,17 +38,13 @@ class StimulusReplayTest(unittest.TestCase):
             with self.subTest(isi=isi,pulse=pulse,extra=extra):
                 with self.assertRaises(ValueError): fn([isi],pulse,extra)
 
-    def test_distinct_audio_is_stored_without_a_synchrony_flag(self):
+    def test_synchronous_channels_share_one_event_list(self):
         data=session_data()
         data['Modality'][:]=3
-        for t in range(3): data['InterStimulusIntervalList'][t,1]=[.01,.1,.2]
-        (_,params,_),_=self.parse(data)
-        self.assertIsNotNone(params[0]['stim_events_audio'])
-        self.assertNotIn('synchrony',params[0])
-        np.testing.assert_allclose(params[0]['stim_events_audio'],[.21,.325])
         for t in range(3): data['InterStimulusIntervalList'][t,1]=data['InterStimulusIntervalList'][t,0]
         (_,params,_),_=self.parse(data)
-        self.assertTrue(all(p['stim_events_audio'] is None for p in params))
+        self.assertTrue(all('stim_events_audio' not in p for p in params))
+        np.testing.assert_allclose(params[0]['stim_events'],[.2,.415,.63,.845])
 
     def test_passive_trials_have_no_choice_or_reward_and_keep_duration(self):
         data=session_data()
@@ -69,17 +65,21 @@ class StimulusReplayTest(unittest.TestCase):
             self.assertGreater(t['stim_duration'],0)
             self.assertIsNone(p['rewarded_position'])
 
-    def test_replay_is_separate_and_preserves_unknown_aborted_timing(self):
+    def test_replay_rows_use_session_clock_and_zero_based_source_keys(self):
         data=session_data()
+        raw=np.empty((1,2),dtype=object)
+        for i in range(2):
+            raw[0,i]=dict(TrialStartTimestamp=100.+i*2,
+                States=np.arange(1,6),StateTimestamps=[0.,.1,.2,1.2,1.25,1.26])
         data['PassiveReplay']=dict(sourceTrialNumbers=[1,3],nRequested=2,
-            nCompleted=0,status='aborted',trialStatus=np.array(['aborted','not_started'],dtype=object),
-            rawEvents=np.array([{},np.array([])],dtype=object),stateNames=np.array([],dtype=object))
-        (trials,_,settings),_=self.parse(data)
+            nCompleted=2,status='completed',trialStatus=np.array(['completed','completed'],dtype=object),
+            rawEvents=raw,stateNames=np.array(['Sync','InterTrialInterval','PlayStimulus','StopStimulus','FinishTrial'],dtype=object))
+        (trials,_,settings),metadata=self.parse(data)
         self.assertEqual(len(trials),3)
-        replay=settings['passive_replay']
-        np.testing.assert_array_equal(replay['sourceTrialNumbers'],[1,3])
-        self.assertEqual(replay['rawEvents'][0],{})
-        self.assertEqual(replay['nCompleted'],0)
+        self.assertEqual(settings['passive_replay'],1)
+        self.assertEqual(metadata['passive_trials'],[
+            dict(passive_trial_num=0,source_trial_num=0,t_sync=100.,t_stim=100.2,t_stim_end=101.2),
+            dict(passive_trial_num=1,source_trial_num=2,t_sync=102.,t_stim=102.2,t_stim_end=103.2)])
         data['PassiveReplay']['sourceTrialNumbers']=[0,4]
         with self.assertRaisesRegex(ValueError,'source references'):
             self.parse(data)
@@ -88,17 +88,26 @@ class StimulusReplayTest(unittest.TestCase):
         (trials,params,_),_=self.parse(session_data(n=1))
         self.assertEqual((len(trials),len(params)),(1,1))
 
-    def test_failed_replay_empty_cells_use_portable_lists(self):
+    def test_no_events_do_not_become_a_false_zero_flag(self):
         data=session_data()
         raw=np.empty((1,3),dtype=object)
         for i in range(3): raw[0,i]=np.array([])
         data['PassiveReplay']=dict(sourceTrialNumbers=[1,2,3],nRequested=3,
             nCompleted=0,status='failed',trialStatus=np.array(['failed','not_started','not_started'],dtype=object),
             rawEvents=raw,stateNames=np.array([],dtype=object))
-        (_,_,settings),_=self.parse(data)
-        self.assertIsInstance(settings['passive_replay']['rawEvents'],list)
-        self.assertEqual(len(settings['passive_replay']['rawEvents']),3)
-        self.assertTrue(all(np.size(x)==0 for x in settings['passive_replay']['rawEvents']))
+        with self.assertRaisesRegex(ValueError,'no recorded event timestamps'):
+            self.parse(data)
+
+    def test_enabled_setting_without_replay_is_zero(self):
+        (_,_,settings),metadata=self.parse(session_data())
+        self.assertEqual(settings['passive_replay'],0)
+        self.assertEqual(metadata.get('passive_trials',[]),[])
+
+    def test_passive_definition_links_source_trial_without_status(self):
+        ddl=definition('Passive')
+        self.assertIn("master.Trial.proj(source_trial_num='trial_num')",ddl)
+        self.assertNotIn('status',ddl)
+        self.assertIn('passive_trial_num',ddl)
 
     def test_time_columns_preserve_double_precision(self):
         for line in definition('Trial').splitlines():

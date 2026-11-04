@@ -26,7 +26,7 @@ class Chipmunk(dj.Imported):
     setting_strict_choice        : tinyint  # 1: no do overs 0: allow changing choice # ReviseChoiceFlag
     setting_free_initiation      : tinyint  # 1: animal can initiate 0: initiation time limit # PacedFlag
     setting_task_mode            : enum('detection','discrimination','passive')
-    passive_replay = NULL        : longblob    # Recorded replay, separate from active trials; MATLAB sourceTrialNumbers are 1-based
+    passive_replay = 0           : tinyint     # 1 if recorded passive replay observations are present, otherwise 0
 
     """
 
@@ -41,7 +41,6 @@ class Chipmunk(dj.Imported):
         category_boundary                   : float
         rewarded_position = NULL            : enum('left','right')
         stim_events = NULL                  : longblob   # Intended onsets relative to trial start: visual for multisensory, otherwise the active channel
-        stim_events_audio = NULL            : longblob   # Distinct multisensory audio onsets; NULL means shared timing for multisensory
         stim_event_duration = NULL          : double     # Duration of individual flashes or clicks
         min_isi = NULL                      : double     # The shortest allowed interval between flashes or clicks
         is_poisson = NULL                   : tinyint    # 1 if intervals between flashes / clicks are random, 0 if there are only two intervals
@@ -90,6 +89,17 @@ class Chipmunk(dj.Imported):
         response = 0                 : tinyint    # -1:left, 0:no response, 1:right
         """
     
+    class Passive(dj.Part):
+        definition = """
+        -> master
+        passive_trial_num                   : int        # Replay order, starting at zero
+        ---
+        -> master.Trial.proj(source_trial_num='trial_num')
+        t_sync = NULL                       : double     # Replay sync time on the active session's Bpod clock [seconds]
+        t_stim = NULL                       : double     # Recorded replay stimulus onset on the same clock [seconds]
+        t_stim_end = NULL                   : double     # Recorded StopStimulus onset on the same clock [seconds]
+        """
+
     from typing import no_type_check
     @no_type_check
     def make(self, key, **_kwargs):
@@ -108,6 +118,7 @@ class Chipmunk(dj.Imported):
             (trialdicts,
              trial_parametersdicts,
              settingsdict), metadata = process_chipmunk_file((File() & filekey).get()[0])
+            passive_trials = metadata.pop('passive_trials', [])
             computer_name = None
             if not metadata['setup_name'] is None:
                 # add if not there
@@ -187,6 +198,7 @@ class Chipmunk(dj.Imported):
             self.insert1(dict(key,**settingsdict))
             self.TrialParameters.insert([dict(key,**d) for d in trial_parametersdicts])
             self.Trial.insert([dict(key,**d) for d in trialdicts])
+            self.Passive.insert([dict(key,**d) for d in passive_trials])
             # get example frames for each camera
             # align the video to the behavior data
             from .utils import extract_chipmunk_camera_data
