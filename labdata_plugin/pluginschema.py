@@ -201,8 +201,8 @@ class Chipmunk(dj.Imported):
             self.Passive.insert([dict(key,**d) for d in passive_trials])
             # get example frames for each camera
             # align the video to the behavior data
-            from .utils import extract_chipmunk_camera_data
-            cameras, frames, camera_events = extract_chipmunk_camera_data(file_keys.get(),trialdicts)
+            from .utils import extract_chipmunk_camera_data, _session_sync_times
+            cameras, frames, camera_events = extract_chipmunk_camera_data(file_keys.get(),trialdicts,passive_trials)
             riglogevents = []
             if len(camera_events):
                 riglogevents.extend(camera_events)
@@ -210,8 +210,8 @@ class Chipmunk(dj.Imported):
             stream = dict(key,stream_name = 'bpod')
             digital = dict(stream,
                            event_name = 'sync',
-                           event_timestamps = [t['t_sync'] for t in trialdicts], 
-                           event_values = [t['trial_num'] for t in trialdicts])
+                           event_timestamps = _session_sync_times(trialdicts, passive_trials),
+                           event_values = np.arange(len(trialdicts) + len(passive_trials)))
             
             DatasetEvents.insert1(stream,
                                   skip_duplicates = True,

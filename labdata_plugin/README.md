@@ -60,3 +60,12 @@ File cleanup belongs outside `make()`, after a successful population commit.
 Changing these definitions does not migrate existing SQL tables. Full backups
 must include all four Chipmunk tables, including Passive. Back up current rows
 and affected metadata before a separate, explicitly scoped live rebuild.
+
+## Replay synchronization
+
+The Bpod sync event includes active and replay Sync timestamps in acquisition
+order. Its event values are pulse ordinals, not source-trial foreign keys;
+source trial identity remains in Passive.source_trial_num. Camera GPIO alignment
+uses the same complete pulse list. Replay sessions with unmatched camera GPIO
+pulses fail population rather than silently omitting camera alignment or using
+active-only network comments. Active-only camera fallback remains unchanged.

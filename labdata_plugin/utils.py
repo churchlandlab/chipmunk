@@ -618,7 +618,15 @@ def read_camlog(log):
                          engine = 'c')
     return comments,camlog
 
-def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts):
+def _session_sync_times(trials, passive_trials=()):
+    """All recorded Bpod sync pulses, including replay, on the session clock."""
+    times = np.asarray([row['t_sync'] for row in [*trials, *passive_trials]], dtype=float)
+    if not np.all(np.isfinite(times)) or np.any(np.diff(times) <= 0):
+        raise ValueError('Session sync timestamps must be finite and strictly increasing')
+    return times
+
+
+def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_trials=()):
     '''
     Handles the camera sync for the chipmunk task. 
     These frametimes may have to be interpolated when .
@@ -630,7 +638,7 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts):
     Joao Couto - 2025
     '''
 
-    trialmarkers = [t['t_sync'] for t in trialdicts]
+    trialmarkers = _session_sync_times(trialdicts, passive_trials)
     trialmarkers_trials = [t['trial_num'] for t in trialdicts]
     if not camlog.shape[1] == 3:# then there are syncs
         raise(ValueError('The camera log has the wrong shape?')) # there is an issue, raise...
@@ -669,6 +677,8 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts):
                                                          np.arange(len(vid)))
             else:
                 RuntimeWarning(f'Length of sync pulses did not match camera {len(rig_t)},{len(events)}.')
+    if frametimes is None and passive_trials:
+        raise ValueError('Replay camera alignment requires matching GPIO sync pulses')
     if frametimes is None: # then it didnt work, use the comments
         # use_the_trial_onsets
         frame_num = np.array([int(re.findall("\d+,",c)[0].strip(',')) for c in list(filter(lambda x: 'start' in x, comm))])
@@ -701,7 +711,7 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts):
                           event_values = g))
     return frametimes, events
 
-def extract_chipmunk_camera_data(folder, trial_dict):
+def extract_chipmunk_camera_data(folder, trial_dict, passive_trials=()):
     '''
     Extract key frames and frametimes from droplets camera recordings.
 
@@ -756,10 +766,12 @@ def extract_chipmunk_camera_data(folder, trial_dict):
                 os.system(cmd) # re-encode the video using ffmpeg. Note that this may drop frames if some are missing in the original data
                 vid = VideoReader(str(output))
         try:
-            frametimes, camera_events = _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trial_dict)
+            frametimes, camera_events = _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trial_dict, passive_trials)
         except Exception as err:
             print(vidfile)
             print(err)
+            if passive_trials:
+                raise ValueError(f'Replay camera alignment failed for {vidfile}') from err
             print(f'Skipping camera {vidfile}')
             continue
         
