@@ -443,12 +443,13 @@ def _get_state_time(trial, states = [],index = 0):
     if type(states) is str:
         states = [states]
     time =  np.nan # in case the state does not exist..
-    for state  in states:
+    for state in states:
         statekeys = [k for k in trial.keys() if state in k]
         if len(statekeys):
-            time = trial[statekeys[0]][index]
-            if np.isfinite(time):
-                break
+            if trial[statekeys[0]] is not None:                
+                time = trial[statekeys[0]][index]
+                if np.isfinite(time):
+                    break
     if not np.isfinite(time):
         return None
     return time + trial.trial_start_time
