@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-03",
+  "subject": "GRB064",
+  "mode": "Mercury MATLAB R2022b + isolated Jupiter SpikeGLX simulated four-shank NP2014, no physical probe",
+  "preview": {
+    "regions": 119,
+    "sharedSource": "D:/VVASP",
+    "loadedBeforeAcquisition": true,
+    "bankReferenceUm": 2500,
+    "bankReferenceMarkers": 4,
+    "nativeMATLABCaptures": "Private; not committed"
+  },
+  "nativeVerification": {
+    "anatomyApplied": true,
+    "savedFields": [
+      "~anatomy_shank0",
+      "~anatomy_shank1",
+      "~anatomy_shank2",
+      "~anatomy_shank3"
+    ],
+    "allFourPayloadsExactlyMatchSource": true,
+    "sourceAndProfileHashesMatchCurrentJupiterFiles": true,
+    "customMetadataPrefix": "rmt_",
+    "simulationFlagSaved": true,
+    "binaryBytes": 71904140,
+    "savedChannels": 385,
+    "binarySizeFrameSHA1": "PASS"
+  },
+  "localTests": [
+    "exactly four dashed bank markers at 2500 \u00b5m",
+    "anatomy plot/selection and source validation",
+    "recording workflow, ownership and reload locks"
+  ],
+  "cleanup": {
+    "simulatorStopped": true,
+    "temporaryMercuryOnlyFirewallRuleRemoved": true,
+    "manualTestLauncherDisabled": true,
+    "testDataPreserved": true,
+    "productionRuntimeUnchanged": true
+  },
+  "publicScreenshot": "Synthetic example only; real surgery plan remains private",
+  "limits": [
+    "Saved metadata confirms native API application/persistence; the Windows SpikeGLX shank-view window was not visually inspected.",
+    "Simulated probe verification does not establish physical-probe/headstage or histology accuracy."
+  ]
+}

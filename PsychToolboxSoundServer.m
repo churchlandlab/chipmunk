@@ -51,15 +51,10 @@ switch Function
                 BpodSystem.SystemSettings.SoundDeviceID = [];
             end
             PsychPortAudio('Verbosity', 0);
-            if isfield(BpodSystem.PluginObjects, 'SoundServer')
-                try
-                    PsychPortAudio('Close', BpodSystem.PluginObjects.SoundServer);
-                catch
-                end
-            else
+            if ~isfield(BpodSystem.PluginObjects, 'SoundServer')
                 InitializePsychSound(1);
             end
-            PsychPortAudio('Close');
+            PsychPortAudio('Close'); % closes every open device
             AudioDevices = PsychPortAudio('GetDevices');
             nDevices = length(AudioDevices);
             CandidateDevices = []; nCandidates = 0;
@@ -122,8 +117,10 @@ switch Function
             PsychPortAudio('Close');
             disp('PsychToolbox sound server successfully closed.')
         else
-            BpodSystem.PluginObjects = rmfield(BpodSystem.PluginObjects, 'SoundServer');
             disp('Emulator sound server successfully closed.')
+        end
+        if isfield(BpodSystem.PluginObjects, 'SoundServer')
+            BpodSystem.PluginObjects = rmfield(BpodSystem.PluginObjects, 'SoundServer');
         end
     case 'load'
         SlaveID = varargin{1};

@@ -15,7 +15,7 @@ function interStimulusIntervalList = twoIntervalStimulusTrain(stimulusRate, shor
 % OUTPUT: -interStimulusIntervalList: -Vector containing the
 %                                       inter-stimulus-intervals
 %                                       constituting the stimulus train.
-%                                       1 = short interval, 2 = long interval
+%                                       in seconds.
 %         
 % LO, 4/17/2021
 %----------------------------------------

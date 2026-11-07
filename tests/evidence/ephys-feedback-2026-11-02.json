@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-02",
+  "mode": "Mercury Bpod emulator + live Jupiter XIO; no animal",
+  "sessions": [
+    {
+      "session": "20261102_090852",
+      "directory": "C:/Users/anne/ChipmunkEphysTests/FakeSubject/20261102_090852/ephys",
+      "activeTrials": 3,
+      "replays": 0,
+      "matSHA256": "3ee6df3e0c1e236660e945e5fbbb74a6a8e0c78f6387b7d57f074b658998ff62"
+    },
+    {
+      "session": "20261102_090500",
+      "directory": "C:/Users/anne/ChipmunkEphysTests/FakeSubject/20261102_090500/ephys",
+      "activeTrials": 3,
+      "replays": 0,
+      "matSHA256": "8fda4a4dd10236778e4cb9e0cde8cac87d1eacc9a6a9abb80fe6711c27250528"
+    },
+    {
+      "session": "20261102_090535",
+      "directory": "C:/Users/anne/ChipmunkEphysTests/FakeSubject/20261102_090535/ephys",
+      "activeTrials": 3,
+      "replays": 3,
+      "matSHA256": "48320c61d5a9d0ea8eac6f5b39fad5ce43111d9dda8fa616e041458682417ded"
+    }
+  ],
+  "sameSubjectSessionHierarchy": true,
+  "actionLogSaved": true,
+  "prepareRecordingOff": true,
+  "startRecordingConfirmedBeforeTrials": true,
+  "outputValidation": {
+    "running": "0",
+    "saving": "0",
+    "dataDir": "D:/data",
+    "files": [
+      {
+        "path": "C:\\Users\\anne\\ChipmunkEphysTests\\FakeSubject\\20261102_090852\\ephys\\FakeSubject_20261102_090852_g0\\FakeSubject_20261102_090852_g0_t0.obx0.obx.bin",
+        "bytes": 806680,
+        "sha1": "17D5D483A5210D556348BB284928D7D13CFF1AE0"
+      },
+      {
+        "path": "C:\\Users\\anne\\ChipmunkEphysTests\\FakeSubject\\20261102_090852\\ephys\\FakeSubject_20261102_090852_g1\\FakeSubject_20261102_090852_g1_t0.obx0.obx.bin",
+        "bytes": 1148152,
+        "sha1": "EEFC8B57AB2D530DACEA382AEC053DEB30609D3C"
+      },
+      {
+        "path": "C:\\Users\\anne\\ChipmunkEphysTests\\FakeSubject\\20261102_090500\\ephys\\FakeSubject_20261102_090500_g0\\FakeSubject_20261102_090500_g0_t0.obx0.obx.bin",
+        "bytes": 799696,
+        "sha1": "067E06F38F72764FC17A7F393CB593B89F06E6A2"
+      },
+      {
+        "path": "C:\\Users\\anne\\ChipmunkEphysTests\\FakeSubject\\20261102_090500\\ephys\\FakeSubject_20261102_090500_g1\\FakeSubject_20261102_090500_g1_t0.obx0.obx.bin",
+        "bytes": 1207808,
+        "sha1": "4EA08592F4A535BFF87CBC184E543002A58AD42C"
+      },
+      {
+        "path": "C:\\Users\\anne\\ChipmunkEphysTests\\FakeSubject\\20261102_090535\\ephys\\FakeSubject_20261102_090535_g0\\FakeSubject_20261102_090535_g0_t0.obx0.obx.bin",
+        "bytes": 831360,
+        "sha1": "0C21BBB3EB31E1FE9923F929ACE536B184C4BC2F"
+      },
+      {
+        "path": "C:\\Users\\anne\\ChipmunkEphysTests\\FakeSubject\\20261102_090535\\ephys\\FakeSubject_20261102_090535_g1\\FakeSubject_20261102_090535_g1_t0.obx0.obx.bin",
+        "bytes": 2083368,
+        "sha1": "F81F5918B3422F4F515DE6578B80931654753FEF"
+      }
+    ]
+  },
+  "productionRollout": {
+    "runtimeCommit": "7dfd5bc79c4a933f6cb477a04ba4ab0b056ab00b",
+    "validated": true,
+    "candidate": "/home/anne/chipmunk-candidates/20261102-ephys-feedback/chipmunk_solo",
+    "rollback": "/home/anne/chipmunk-rollbacks/20261102-ephys-feedback/rollback.py",
+    "settingsPreserved": 22,
+    "calibrationFilesPreserved": 4,
+    "productionDataRoot": "D:/data",
+    "testOnlyDevicesPersisted": false
+  }
+}

@@ -1,38 +1,7 @@
-function retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,reviseChoiceFlag, ModalityRecord,...
-    stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList);
-% retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,reviseChoiceFlag, ModalityRecord,...
-%    stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList);
-%
-% Add outcome data of the last trial to the data structure in BpodSystem.
-% Note that this function has no outputs because all the values are stored
-% inside the global variable BpodSystem.Data
-%
-% INPUTS:
-% -RawEvents: The output received from Bpod after running the state machine
-%             with all the events, states and timers.
-% -TrialsDone: The number of completed trials.
-% -TrialSidesList: List of sides assigned for the individual trials,
-%                  contains 0 (left) and 1 (right).
-% -delays: Struct containing the imposed trial delays. This should contain
-%          preStimDelay, waitTime, postStimDelay, interTrialInterval, and
-%          virtualObsInitDelay.
-% -reviseChoiceFlag: Logical value containing true if the animal could
-%                    could poke into the other port after chosing the wrong
-%                    one at first and still be rewarded.
-% -ModalityRecord: The stimulus modality code, 1 = visual, 2 = auditory, 
-%                  3 = multi-sensory
-% -stimulusDuration: The duration of the individual stimulus event (s)
-% -stimTrainDuration: Duration of the stimulus train (s)
-% -categoryBoundary
-% -interStimulusIntervalList: The list of intervals between the individual
-%                             stimuli inside the stim train. The auditory
-%                             and visual ISI lists are somewhat redundant
-%                             to this input...
-% -visualIsiList
-% -auditoryIsiList
-%
-% LO, 5/26/2021, 7/13/2021
-%--------------------------------------------------------------------------
+function retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,~, ModalityRecord,...
+    stimulusDuration, stimTrainDuration, categoryBoundary, interStimulusIntervalList, ...
+    visualIsiList, auditoryIsiList, trialBrightness, minInterval)
+% Append one trial, preserving legacy field names used by ingestion.
 global BpodSystem
 
 BpodSystem.Data = AddTrialEvents(BpodSystem.Data, RawEvents);
@@ -40,32 +9,26 @@ BpodSystem.Data = AddTrialEvents(BpodSystem.Data, RawEvents);
 %struct. These include the trial settings, state machine info, events and
 %states
 
-%Add the settings used for this trial
-BpodSystem.Data.TrialSettings(TrialsDone) = BpodSystem.ProtocolSettings;
+%Add the settings used for this trial. stimBrightness in this snapshot is
+%the value that actually built the waveform, not the session default.
+trialSettings = BpodSystem.ProtocolSettings;
+trialSettings.stimBrightness = trialBrightness;
+BpodSystem.Data.TrialSettings(TrialsDone) = trialSettings;
 
-%Go first thorugh the demonstrator data
-%The side and outcome info
+% Choice-state fields are absent in passive sessions.
+states = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States;
 BpodSystem.Data.CorrectSide(TrialsDone) = TrialSidesList(TrialsDone);
-BpodSystem.Data.Rewarded(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonReward(1));
-BpodSystem.Data.EarlyWithdrawal(TrialsDone) = ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1));
+BpodSystem.Data.Rewarded(TrialsDone) = visited(states, 'DemonReward');
+BpodSystem.Data.EarlyWithdrawal(TrialsDone) = visited(states, 'DemonEarlyWithdrawal');
 
-BpodSystem.Data.DidNotChoose(TrialsDone) = 0; %Assume default false
-if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States,'DemonDidNotChoose') %In the observer fixation training this state does not exist
-    if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonDidNotChoose(1));
-        BpodSystem.Data.DidNotChoose(TrialsDone) = 1;
-    end
-end
-
-BpodSystem.Data.DidNotInitiate(TrialsDone) = 0; %Assume default false
-if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States,'DemonDidNotInitiate') %In the paced version check whether the demonstrator did the trial
-    if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonDidNotInitiate(1))
-        BpodSystem.Data.DidNotInitiate(TrialsDone) = 1;
-    end
-end
+BpodSystem.Data.DidNotChoose(TrialsDone) = visited(states, 'DemonDidNotChoose');
+BpodSystem.Data.DidNotInitiate(TrialsDone) = false; % Legacy compatibility field; solo trials are self-initiated.
 
 %Get simulus related information
 BpodSystem.Data.Modality(TrialsDone) = ModalityRecord(TrialsDone);
 BpodSystem.Data.StimulusDuration(TrialsDone) = stimulusDuration;
+BpodSystem.Data.StimulusBrightness(TrialsDone) = trialBrightness;
+BpodSystem.Data.MinInterval(TrialsDone) = minInterval;
 BpodSystem.Data.CategoryBoundary(TrialsDone) = categoryBoundary;
 BpodSystem.Data.StimTrainDuration(TrialsDone) = stimTrainDuration;
 
@@ -88,71 +51,43 @@ else
 end
 
 % The delays and wait times
-%*****----New version-------**********
+
 trialDelays.ExtraStimulusDuration = BpodSystem.ProtocolSettings.extraStimDur;
 BpodSystem.Data.TrialDelays(TrialsDone) = trialDelays;
 if isfield(trialDelays,'interTrialInterval')
- BpodSystem.Data.InterTrialInterval(TrialsDone) = trialDelays.interTrialInterval; %This is redundant in the case of an observer being present
+ BpodSystem.Data.InterTrialInterval(TrialsDone) = trialDelays.interTrialInterval;
 end
 BpodSystem.Data.PreStimDelay(TrialsDone) = trialDelays.preStimDelay;
 BpodSystem.Data.SetWaitTime(TrialsDone) = trialDelays.waitTime; %This value may update during every loop.
 BpodSystem.Data.TotalStimDuration(TrialsDone) = stimTrainDuration;
 BpodSystem.Data.PostStimDelay(TrialsDone) = trialDelays.postStimDelay;
 BpodSystem.Data.ExtraStimDuration(TrialsDone) = BpodSystem.ProtocolSettings.extraStimDur;
-%****----------------------------------------------
 
 %Compute time spent in center for  each trial with one nose poke in
 %and out of the center port.
 BpodSystem.Data.ActualWaitTime(TrialsDone) = NaN;
-if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1)) %A wait time only exists when the demonstrator initiates
-    if ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonWaitForResponse(1))
+if visited(states, 'DemonInitFixation') %A wait time only exists when the demonstrator initiates
+    if visited(states, 'DemonWaitForResponse')
         BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonWaitForWithdrawalFromCenter(2) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
-    elseif ~isnan(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1))
+    elseif visited(states, 'DemonEarlyWithdrawal')
         BpodSystem.Data.ActualWaitTime(TrialsDone) = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonEarlyWithdrawal(1) - BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonInitFixation(1);
     end
 end
 
-ResponseSideRecord = NaN; %Pre-set the response to NaN and change if the trial was valid
-if reviseChoiceFlag %Check for the actual response side if the animal can revise its decision
-    if ~(BpodSystem.Data.EarlyWithdrawal(TrialsDone) || BpodSystem.Data.DidNotChoose(TrialsDone) || BpodSystem.Data.DidNotInitiate(TrialsDone))
-        %Three scenarios where the demonstrator doesn't choose: No
-        %initiation, early withdrawal, no choice after waiting.
-        %Only if none of them applies execute below
-        P1visits = []; P3visits = [];
-        if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events, 'Port1In')
-            P1visits = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port1In(find(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port1In > BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonCenterFixationPeriod(1)));
-        end
-        if isfield(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events, 'Port3In')
-            P3visits = BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port3In(find(BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.Events.Port3In > BpodSystem.Data.RawEvents.Trial{1,TrialsDone}.States.DemonCenterFixationPeriod(1)));
-        end
-        if isempty(P3visits)
-            ResponseSideRecord = 0;
-        elseif isempty(P1visits)
-            ResponseSideRecord = 1;
-        else
-            ResponseSideRecord = P1visits(1) > P3visits(1); % the case when the animal changes its mind after trying
-        end
-    else
-        ResponseSideRecord = NaN; %If the trial was invalid
-    end
-    
-else %The case where wrong choices are punished
-    if ~(BpodSystem.Data.EarlyWithdrawal(TrialsDone) || BpodSystem.Data.DidNotChoose(TrialsDone) || BpodSystem.Data.DidNotInitiate(TrialsDone))
-        if (TrialSidesList(TrialsDone)==0 && BpodSystem.Data.Rewarded(TrialsDone)) || (TrialSidesList(TrialsDone)==1 && ~BpodSystem.Data.Rewarded(TrialsDone))
-            ResponseSideRecord = 0;
-        elseif (TrialSidesList(TrialsDone)==0 && ~BpodSystem.Data.Rewarded(TrialsDone)) || (TrialSidesList(TrialsDone)==1 && BpodSystem.Data.Rewarded(TrialsDone))
-            ResponseSideRecord = 1;
-        end
-    else
-        ResponseSideRecord = NaN;
+ResponseSideRecord = NaN;
+if visited(states, 'DemonWaitForResponse') && ...
+        ~BpodSystem.Data.EarlyWithdrawal(TrialsDone) && ~BpodSystem.Data.DidNotChoose(TrialsDone)
+    ResponseSideRecord = TrialSidesList(TrialsDone);
+    if ~BpodSystem.Data.Rewarded(TrialsDone)
+        ResponseSideRecord = 1 - ResponseSideRecord;
     end
 end
 
 BpodSystem.Data.ResponseSide(TrialsDone) = ResponseSideRecord;
 if ~isnan(ResponseSideRecord)
-BpodSystem.Data.CorrectResponse(TrialsDone) = ResponseSideRecord == TrialSidesList(TrialsDone);
+    BpodSystem.Data.CorrectResponse(TrialsDone) = ResponseSideRecord == TrialSidesList(TrialsDone);
 else
-BpodSystem.Data.CorrectResponse(TrialsDone) = 0;
+    BpodSystem.Data.CorrectResponse(TrialsDone) = 0;
 end
 BpodSystem.Data.ValidTrials(TrialsDone) = ~isnan(ResponseSideRecord);
 
@@ -172,11 +107,16 @@ if BpodSystem.Data.DidNotInitiate(TrialsDone) == 1
     BpodSystem.Data.OutcomeRecord(TrialsDone) = -2;
 end
 
-%Update the earned reward volume
-    if BpodSystem.Data.Rewarded(TrialsDone) == 1 %Only if rewarded, but not necessarily only if correct because of the possibility to revise choice
-        if BpodSystem.Data.CorrectSide(TrialsDone) == 0 %The left side was rewarded
-            BpodSystem.Data.LeftSideRewardAmount = BpodSystem.Data.LeftSideRewardAmount + BpodSystem.ProtocolSettings.leftRewardVolume;
-        elseif BpodSystem.Data.CorrectSide(TrialsDone) == 1 %The left side was rewarded
-            BpodSystem.Data.RightSideRewardAmount = BpodSystem.Data.RightSideRewardAmount + BpodSystem.ProtocolSettings.rightRewardVolume;
-        end
+% Accumulate water actually delivered.
+if BpodSystem.Data.Rewarded(TrialsDone)
+    if TrialSidesList(TrialsDone) == 0
+        BpodSystem.Data.LeftSideRewardAmount = BpodSystem.Data.LeftSideRewardAmount + BpodSystem.ProtocolSettings.leftRewardVolume;
+    else
+        BpodSystem.Data.RightSideRewardAmount = BpodSystem.Data.RightSideRewardAmount + BpodSystem.ProtocolSettings.rightRewardVolume;
     end
+end
+end
+
+function result = visited(states, name)
+result = isfield(states, name) && any(isfinite(states.(name)(:)));
+end

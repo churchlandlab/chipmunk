@@ -1,0 +1,134 @@
+{
+  "date": "2026-11-04",
+  "runtimeCommit": "db1fee9d45795e53681222668e00351d50c9bb02",
+  "fullWorkflowCommit": "c0ec4cd74cb63dca9f909bee49034b6b65e24d8a",
+  "finalDelta": "Camera partial-start rollback; its suite was rerun from the final installed checkout.",
+  "mode": "Mercury MATLAB R2022b/Bpod emulator; production Jupiter SpikeGLX v20251218 API4.1.3; live XIO slot20; no neural probe",
+  "fixed": [
+    "Require confirmed owned recording before each active trial and replay",
+    "Reconnect once during shutdown; verify session ownership and report unconfirmed stops",
+    "Reconcile a lost StartRun acknowledgement using the unique session directory and run name",
+    "Invalidate session-folder cache after changing hosts; lock destination while run state is uncertain",
+    "Block task Start on camera acknowledgement/connection failures and roll back partial camera start",
+    "Give stimulus plot lines explicit axes parents to prevent ephys redraws deleting them"
+  ],
+  "regressions": [
+    "check_ephys_workflow: delayed confirmation, lost start acknowledgement, foreign-run protection, disconnected shutdown, host/folder change guards, missing camera, empty/error replies, connection failure and partial camera start",
+    "check_spikeglx_disconnect: no background reconnect loop; explicit recovery",
+    "check_stimulus_plot_parents: original implementation fails; fixed implementation passes interleaved axes changes",
+    "check_passive_replay: reconstruction, aborts, errors and MAT roundtrip"
+  ],
+  "sessions": [
+    {
+      "test": "edge-workflow-results",
+      "session": "20261103_203057",
+      "trials": 3,
+      "sha256": "7c826f0e890e30307cabf8209e2ba02701a4f3e9d3d5112da4db3f0c99ff059f",
+      "shutdownError": ""
+    },
+    {
+      "test": "edge-workflow-results",
+      "session": "20261103_203136",
+      "trials": 3,
+      "sha256": "ed53e5033e99af2be56ee43ddc71e4ac2b50bbe675712f008bc2c04723be043c",
+      "replays": 3,
+      "replayStatus": "completed",
+      "shutdownError": ""
+    },
+    {
+      "test": "edge-loss-active",
+      "session": "20261104_005741",
+      "trials": 1,
+      "sha256": "693f408bc9bc32e3389219cddcc4217808768c359344f6f2a804a2769998df81",
+      "recordingFailure": "Ephys recording is no longer confirmed; session stopped. ",
+      "shutdownError": ""
+    },
+    {
+      "test": "edge-loss-replay",
+      "session": "20261104_005819",
+      "trials": 3,
+      "sha256": "37f89e01aea34ad1843505a8be7db046f0872ba01879ce4763845290068bd179",
+      "replays": 0,
+      "replayStatus": "failed",
+      "recordingFailure": "Ephys recording is no longer confirmed; session stopped. ",
+      "shutdownError": ""
+    }
+  ],
+  "installedLauncher": "half_second_chipmunk_ephys",
+  "installedSession": {
+    "session": "20261104_010343",
+    "trials": 3,
+    "replays": 3,
+    "replayStatus": "completed",
+    "runName": "ephys",
+    "directory": "D:/data/FakeSubject/20261104_010343",
+    "sha256": "69c347072fa17c7d0021e709b62743e850a46209651da9f442cd15f01c23909d"
+  },
+  "binaryValidation": [
+    {
+      "path": "D:\\data\\FakeSubject\\20261103_203057\\ephys_g0\\ephys_g0_t0.obx0.obx.bin",
+      "bytes": 1237368,
+      "channels": 4,
+      "seconds": 5.104143029898746,
+      "slot": null,
+      "sha1": "B777DD8D847CF738CB058FFDCE6EA1891718F902",
+      "pass": true
+    },
+    {
+      "path": "D:\\data\\FakeSubject\\20261103_203136\\ephys_g0\\ephys_g0_t0.obx0.obx.bin",
+      "bytes": 1990584,
+      "channels": 4,
+      "seconds": 8.211159048098839,
+      "slot": null,
+      "sha1": "701817D733B012978CC4965AB7A13098D017A540",
+      "pass": true
+    },
+    {
+      "path": "D:\\data\\FakeSubject\\20261104_005741\\ephys_g0\\ephys_g0_t0.obx0.obx.bin",
+      "bytes": 762312,
+      "channels": 4,
+      "seconds": 3.144537018419882,
+      "slot": null,
+      "sha1": "2956CA88D15AE32AE7E0EF2187B2F13C8CA77788",
+      "pass": true
+    },
+    {
+      "path": "D:\\data\\FakeSubject\\20261104_005819\\ephys_g0\\ephys_g0_t0.obx0.obx.bin",
+      "bytes": 1084824,
+      "channels": 4,
+      "seconds": 4.474899026212798,
+      "slot": null,
+      "sha1": "AB42C4B421D578B8CE5E1C9ACA05067B2D22A055",
+      "pass": true
+    },
+    {
+      "path": "D:\\data\\FakeSubject\\20261104_010343\\ephys_g0\\ephys_g0_t0.obx0.obx.bin",
+      "bytes": 2136784,
+      "channels": 4,
+      "seconds": 8.814234051631496,
+      "slot": null,
+      "sha1": "2A01C161EA1CEA45184806AB097EE6C573BE78F6",
+      "pass": true
+    }
+  ],
+  "deployment": {
+    "root": "/home/anne/chipmunk-candidates/20261104-ephys-recovery/chipmunk_solo",
+    "allThreeProtocolLinksUpdated": true,
+    "rollback": "python3 /home/anne/chipmunk-rollbacks/20261104-ephys-recovery/rollback.py",
+    "rollbackRoundTripVerified": true,
+    "subjectSettingsPreserved": 24,
+    "calibrationFilesPreserved": 4,
+    "frameworkConfigurationFilesPreserved": 4,
+    "previousRuntimePreferencesAndLatestRealSessionPreserved": true,
+    "matlabClosed": true,
+    "commandServerEnabled": true,
+    "acquisitionRunning": false,
+    "recordingEnabled": false
+  },
+  "limits": [
+    "Checks happen at trial boundaries; they do not guarantee every sample within a trial was recorded.",
+    "Original user Prepare error and physical probe/headstage crash are not proven to share these causes.",
+    "No physical neural probe/headstage, camera capture or output timing validation. Camera failures use a test transport.",
+    "Emulator audio underrun warnings occurred; camera upload paths were disabled in production XIO session tests."
+  ]
+}

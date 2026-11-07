@@ -15,15 +15,22 @@ function interStimulusIntervalList = poissonStimulusTrain(stimTrainDuration, sti
 % OUTPUT: -interStimulusIntervalList: -Vector containing the
 %                                       inter-stimulus-intervals
 %                                       constituting the stimulus train.
-%                                       1 = short interval, 2 = long interval
+%                                       in seconds.
 %
 % LO, 4/19/2021
 %---------------------------------------------------------------------------
-try %See if the combination of stimulus duration and minimal interval can be fit into the stimulus train 
-    bin_array = zeros(1, stimTrainDuration/(stimulusDuration + minInterval));
-catch
-    disp('The time length of one trial is not divisible by the bin!');
+validateattributes(stimTrainDuration, {'numeric'}, {'scalar','finite','positive'});
+validateattributes(stimulusDuration, {'numeric'}, {'scalar','finite','positive'});
+validateattributes(minInterval, {'numeric'}, {'scalar','finite','nonnegative'});
+validateattributes(stimulusRate, {'numeric'}, {'scalar','finite','integer','nonnegative'});
+nBins = stimTrainDuration / (stimulusDuration + minInterval);
+assert(abs(nBins-round(nBins)) < 1e-9 && nBins >= 1, ...
+    'chipmunk_solo:StimulusBins', 'Pulse plus gap must divide the stimulus train duration.');
+if stimulusRate == 0
+    interStimulusIntervalList = stimTrainDuration;
+    return
 end
+bin_array = zeros(1, round(nBins));
 
 if stimulusRate > length(bin_array)
     stimulusRate = length(bin_array);

@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-02",
+  "mode": "Mercury Bpod emulator + Jupiter physical XIO slot 20; no animal",
+  "coldLaunch": {
+    "version": "SpikeGLX v20251218 api v4.1.3",
+    "startupName": "snsRunName=Ready_20261102_082016_6e5ab14e28d44a5ebe9b0d365cfb7abd",
+    "backup": "C:\\Users\\anne\\ChipmunkTools\\backups\\Ready_20261102_082016_6e5ab14e28d44a5ebe9b0d365cfb7abd-daq.ini",
+    "onlyRunNameChanged": true,
+    "backupByteIdentical": true,
+    "running": 0,
+    "saving": 0,
+    "process": 6304
+  },
+  "sessions": [
+    {
+      "session": "20261102_082043",
+      "activeTrials": 3,
+      "completedReplays": 0,
+      "matSHA256": "82618b2567f117191cc94c8e26a1cbe9018bc32fb589005c676d3bf582c78b09"
+    },
+    {
+      "session": "20261102_082114",
+      "activeTrials": 3,
+      "completedReplays": 3,
+      "matSHA256": "a267c4ae39976f5aea9aafcd363ab74a75caed77e2689c7c70851cbef9c21fcd"
+    }
+  ],
+  "recordingConfirmedBeforeTrials": true,
+  "recordingContinuousThroughReplay": true,
+  "digitalInputTraceSamples": 9091,
+  "digitalLines": 13,
+  "outputValidation": {
+    "running": "0",
+    "saving": "0",
+    "dataDir": "D:/data",
+    "files": [
+      {
+        "file": "FakeSubject_20261102_082043_g0_t0.obx0.obx.bin",
+        "bytes": 813648,
+        "channels": "4",
+        "sha1": "5DADC0F0E52C908E6FEA12CAD2D038FAC82D7A0F"
+      },
+      {
+        "file": "FakeSubject_20261102_082043_g1_t0.obx0.obx.bin",
+        "bytes": 900640,
+        "channels": "4",
+        "sha1": "7DD725B76B15B2C20ADD500FF77FC7251EA24F30"
+      },
+      {
+        "file": "FakeSubject_20261102_082114_g0_t0.obx0.obx.bin",
+        "bytes": 787344,
+        "channels": "4",
+        "sha1": "6DBD07E4C14F1DA28F0C03EC511FB7F8D054D7AC"
+      },
+      {
+        "file": "FakeSubject_20261102_082114_g1_t0.obx0.obx.bin",
+        "bytes": 1606624,
+        "channels": "4",
+        "sha1": "DE685529AB095FB84A9D6226F302B163DB76BAD3"
+      },
+      {
+        "file": "FakeSubject_20261102_082644_g0_t0.obx0.obx.bin",
+        "bytes": 820104,
+        "channels": "4",
+        "sha1": "11286F8A7E53E598680036021C59DD494DD7CB20"
+      },
+      {
+        "file": "FakeSubject_20261102_082644_g1_t0.obx0.obx.bin",
+        "bytes": 808272,
+        "channels": "4",
+        "sha1": "676505E1A61DC1BD24FB69F6F0CC0577F25F72B1"
+      }
+    ]
+  },
+  "limits": [
+    "No neural probe connected: live anatomy overlay unverified",
+    "No output loopback: physical TTL/audio/LED timing unverified",
+    "Cameras disabled in these sessions; ephys camera timing unverified",
+    "Emulator emitted ALSA underrun warnings"
+  ],
+  "productionBpodDeployment": {
+    "commit": "a8d5495d0170fb68c4fccf1644f7acb383ef50d7",
+    "candidate": "/home/anne/chipmunk-candidates/20261102-recording/chipmunk_solo",
+    "validated": true,
+    "legacyEphysActiveTrials": 3,
+    "existingSettingsByteIdentical": 22,
+    "calibrationFilesByteIdentical": 4,
+    "backup": "/home/anne/chipmunk-rollbacks/20261102-recording",
+    "testOnlyDeviceSelectionPersisted": false
+  }
+}

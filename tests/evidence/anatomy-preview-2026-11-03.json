@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-03",
+  "change": "Native Bpod Anatomy tab with a source-verified plan preview before acquisition",
+  "localTests": {
+    "fourShankPlotAndRegionSelection": "PASS",
+    "sharedSourceAndStaleRecordChecks": "PASS",
+    "previewDoesNotStartAcquisition": "PASS",
+    "reloadAndSourceChangeLockedDuringAcquisition": "PASS",
+    "recordingLifecycleAndOwnership": "PASS",
+    "repeatedPrepareDoesNotReloadActivePlan": true
+  },
+  "realPlanPreview": {
+    "source": "current Jupiter VVASP profile and original source hashes verified read-only",
+    "regionBands": 102,
+    "nativeMATLABRender": "PASS",
+    "regionSelection": "LGd-co interval shown for shank 0",
+    "privateProfileOrScreenshotCommitted": false
+  },
+  "publicScreenshot": {
+    "path": "docs/screenshots/ephys-anatomy-preview.png",
+    "data": "Synthetic FakeSubject example, not a real surgery record"
+  },
+  "nativeSpikeGLXOverlayCheck": "Verified on simulated NP2014 with GRB064: all four saved shank fields exactly match the source; see grb064-anatomy-2026-11-03.json",
+  "physicalProbeValidation": "Not run; no probe connected",
+  "deployment": "Working change tested locally; production rigs unchanged"
+}

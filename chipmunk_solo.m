@@ -1,19 +1,27 @@
-function chipmunk_solo
+function chipmunk_solo(maxTrialNum)
+if nargin < 1
+    maxTrialNum = 5000;
+end
+validateattributes(maxTrialNum, {'numeric'}, {'scalar','integer','>=',1,'<=',5000});
 
 global BpodSystem
 
 %Add the path to the external functions for chipmunk
 addpath(genpath(fullfile(BpodSystem.Path.ProtocolFolder,'chipmunk_solo','Functions')));
+addpath(fullfile(BpodSystem.Path.ProtocolFolder,'chipmunk_solo','vendor','SpikeGLX-MATLAB-SDK','API'));
 
 %% Initialize the protocol
 %Load the settings for the respective experiment and start the protocol
-S = initChipmunk;
+initChipmunk;
+ensurePassiveReplaySettings();
+ensureStimulusManipulationSettings();
+ensureOptionalRecordingSettings();
+S = BpodSystem.ProtocolSettings;
+ephysOn = ephysRecordingEnabled(S);
 if ~isfield(S, 'baseWait') %Settings saved before baseWait existed ran the half-second task
     S.baseWait = 0.5;
     BpodSystem.ProtocolSettings.baseWait = S.baseWait;
 end
-
-%--------------------------------------------------------------------------
 %% Decide on the sound handling
 
 %Find sound card for stimuli
@@ -25,26 +33,45 @@ BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 SamplingFreq = 192000; %The frequency of the (Fenix) sound card
 
 [subjectFolder,bhvFile,~] = fileparts(BpodSystem.Path.CurrentDataFile{1});
-
-%--------------------------------------------------------------------------
 %% Start labcams
 udplabcams = [];
+if ephysOn,BpodSystem.PluginObjects.labcams=[];end
 if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.ProtocolSettings.labcamsAddress)
     try %could be assigned but if no camera available it will throw an error
         tmp = strsplit(BpodSystem.ProtocolSettings.labcamsAddress,':');
         udpAddress = tmp{1};
-        udpPort = str2num(tmp{2});
+        udpPort = str2double(tmp{2});
         udplabcams = udp(udpAddress,udpPort);
         udplabcams.Timeout = 2;
         fopen(udplabcams);
-        %check if labcams is connected already.
+        launchCommand = labcamsLaunchCommand(BpodSystem.ProtocolSettings.labcamsConfig);
+        % Check whether an existing app must reload the explicitly selected config.
         fwrite(udplabcams,'ping');
         reply = fgetl(udplabcams);
+        if ~isempty(reply) && ~isempty(BpodSystem.ProtocolSettings.labcamsConfig)
+            fwrite(udplabcams,'quit=1');
+            udplabcams.Timeout = .5;
+            closed = false;
+            for attempt = 1:10
+                pause(.25);
+                flushinput(udplabcams);
+                fwrite(udplabcams,'ping');
+                if isempty(fgetl(udplabcams))
+                    closed = true;
+                    break
+                end
+            end
+            assert(closed, 'chipmunk_solo:CameraRestart', ...
+                'Could not close labcams to apply the selected configuration.');
+            reply = '';
+            udplabcams.Timeout = 2;
+        end
         if ~isempty(reply)
             disp(' -> labcams connected.');
         else
             disp(' -> starting labcams');
-            system('export LD_LIBRARY_PATH=""; export QT_PLUGIN_PATH=/usr/lib/x86_64-linux-gnu/qt5/plugins/platforms/; gnome-terminal -- labcams -w')
+            status = system(launchCommand);
+            assert(status == 0, 'chipmunk_solo:CameraLaunch', 'Could not launch labcams.');
             udplabcams.Timeout = 5;
             for i = 1:5
                 fwrite(udplabcams,'ping');
@@ -63,7 +90,11 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.
         fwrite(udplabcams,'manualsave=0'); fgetl(udplabcams);
         fwrite(udplabcams,['expname=' fullfile(subjectFolder,bhvFile)]); fgetl(udplabcams);
         fwrite(udplabcams,'load_reference=/home/anne/reference_image'); fgetl(udplabcams);
-        fwrite(udplabcams,'softtrigger=1'); fgetl(udplabcams);
+        if ephysOn
+            BpodSystem.PluginObjects.labcams = udplabcams;
+        else
+            fwrite(udplabcams,'softtrigger=1'); fgetl(udplabcams);
+        end
     catch
         if ~isempty(udplabcams)
             delete(udplabcams);
@@ -72,56 +103,16 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.
         warning('A problem occurred with labcams, no video will be recorded')
     end
 end
-
-
-%--------------------------------------------------------------------------
-%% Send animal and session info to the miniscope computer
-if ~isempty(BpodSystem.ProtocolSettings.miniscopeID) %Enforce that the user provides a name to
-    %miniscope that will be used.
-    if ~isempty(BpodSystem.ProtocolSettings.miniscopeAddress)
-        tmp = strsplit(BpodSystem.ProtocolSettings.miniscopeAddress,':'); %Retrieve the miniscope computer's name and port number
-        miniscopeServerName = tmp{1};
-        miniscopeServerPort = str2num(tmp{2});
-
-        miniscopeConnection = udp(miniscopeServerName, miniscopeServerPort); %Establish connection and open to write and read
-        fopen(miniscopeConnection);
-
-        tmp = strsplit(subjectFolder, filesep);
-        %Here the info of the folder structure can be used. The second last
-        %layer is the session (tmp{end-1}) and the third last layer the animal ID (tmp{end-2}) .
-
-        messageSent = [tmp{end-2} ',' tmp{end-1}, ',' BpodSystem.ProtocolSettings.miniscopeID];
-        fwrite(miniscopeConnection, messageSent);
-        %Send info separated by comma
-
-        acknowledgement = []; %Store the message returned from server
-        waitForServer = tic;
-        while isempty(acknowledgement) %Stop when a message arrives or latest after 5 s.
-            acknowledgement = fread(miniscopeConnection, length(messageSent));
-            if toc(waitForServer) > 5 %For some reason this can not be inside the while conditions...
-                break
-            end
-        end
-        messageReturned = string(native2unicode(acknowledgement')); %Flip this first to get a regular string back
-        if strcmp(messageReturned, messageSent) %Check whether the server understood correctly, throw error and return otherwise.
-            disp('Successfully sent session information to miniscope computer!')
-        else
-            if strcmp(messageReturned,"") %See whether the acknowledgment is empty
-                error('The connection attempt to the miniscope computer has timed-out\nMake sure to execute syncMiniscopeToBpod.py and check connection.')
-            else
-                error('Information was not accurately transmitted to the miniscope computer. The server echoed the following message:\n%s', messageReturned)
-            end
-        end
-        fclose(miniscopeConnection); %Just to keep it clean.
-    end
+if ephysOn
+    [sessionFolder,~,~] = fileparts(subjectFolder);
+    [~,sessionSpecifier] = fileparts(sessionFolder);
+    spikeglx_client('set','host',S.spikeGLXHost);
+    spikeglx_client('init','ephys',S.demonID,sessionSpecifier);
+    SpikeGLXControl('init');
 end
-
-%--------------------------------------------------------------------------
 %% Get the polynomial coefficients of the sound calibration
 soundCalibration = load(fullfile(BpodSystem.Path.LocalDir,'Calibration Files','WhiteNoiseCalibration.mat'));
 S.soundCalibrationModelParams = polyfit(reshape(soundCalibration.TargetSPLs,1,[]),reshape(10*log10(soundCalibration.NoiseAmplitudes),1,[]),1);
-
-%--------------------------------------------------------------------------
 %% Task control sounds and static task parameters
 % Set up the task cue sounds and parameters that don't usually change unless
 % the user updates them via the the GUI.
@@ -133,12 +124,9 @@ S.soundCalibrationModelParams = polyfit(reshape(soundCalibration.TargetSPLs,1,[]
 
 % Fixed stimulus properties that remain unchanged
 stimTrainDuration = 1;
-
-%--------------------------------------------------------------------------
 %% Randomly draw trial sides and pre-assign bias arrays
 %Generate a random list of trial sides based on the porportion of left
 %choices in the settings.
-maxTrialNum = 5000; %Constrain the number of trials but at rather high value
 TrialSidesList = double(rand(1,maxTrialNum) > S.propLeft); %Right side trials will be assigned 1 and left trials 0
 % IMPORTANT: get as double so that it does not mess up other functions
 
@@ -163,19 +151,10 @@ lastValidOutcome = NaN;
 %anti-bias arrays and identify biases across invalid trials.
 
 prevPropLeft = S.propLeft; %store this value to update the sides list if necessary
-
-%--------------------------------------------------------------------------
 %% Dummy state matrix
-% Initialize the state matrix associated with this experiment for the
-% display on the plot. If no additional
-[sma, ~, reviseChoiceFlag, pacedFlag] = eval([BpodSystem.ProtocolSettings.smaAssembler '();']);
-
-%--------------------------------------------------------------------------
-% % %% Initialize variables used for display. These variables
-% % OutcomeRecord = nan(1,maxTrialNum);
+% Build an initial state matrix for the task diagram.
+[sma, ~, reviseChoiceFlag, pacedFlag] = feval(BpodSystem.ProtocolSettings.smaAssembler);
 ModalityRecord = nan(1,maxTrialNum);
-
-%--------------------------------------------------------------------------
 %% Initialize arrays for storing values and display
 BpodSystem.Data.OutcomeRecord = NaN;
 BpodSystem.Data.Rewarded = 0;
@@ -196,7 +175,6 @@ BpodSystem.Data.CorrectResponse = 0;
 BpodSystem.Data.TaskPhase = BpodSystem.ProtocolSettings.experimentName;
 BpodSystem.Data.ReviseChoiceFlag = reviseChoiceFlag;
 BpodSystem.Data.PacedFlag = pacedFlag;
-%--------------------------------------------------------------------------
 %% Initialize GUI and plots
 
 %initialize the main figure
@@ -212,7 +190,6 @@ StateMachineLogicPlot(sma, BpodSystem.GUIHandles.StateLogic);
 
 %Initialize the notook to keep track of unexpected events, etc.
 BpodNotebook('init');
-%--------------------------------------------------------------------------
 %% Prepare the trial loop
 
 TrialsDone =  0; %This is the number of already finished trials and is by definition currentTrial-1
@@ -222,16 +199,20 @@ update = 1; %Define the update variable and make sure that we retrieve some chan
 if BpodSystem.Status.BeingUsed %only run this code if protocol is still active
     disp('Set the camera and hit start')
     uiwait(BpodSystem.GUIHandles.Figures.DemonFigure); %Wait for the user to click start
+    if ~BpodSystem.Status.BeingUsed
+        finishSession();
+        return
+    end
 else
+    if ephysOn
+        SpikeGLXControl('shutdown');
+        spikeglx_client('shutdown');
+    end
     return %Peacefully stop execution if the Bpod was switched off up to here.
 end
-
-if pacedFlag
-    LEDswitch()%When the trials are paced by an observer or virtually  switch on LEDs that indicate no initiation possible
-end
-%--------------------------------------------------------------------------
 %% Start saving labcams if connected
-if ~isempty(udplabcams)
+% Ephys sessions wait for SpikeGLX Enable recording before cameras write.
+if ~isempty(udplabcams) && ~ephysOn
     fwrite(udplabcams,'softtrigger=0')
     pause(1)
     fgetl(udplabcams);
@@ -243,14 +224,8 @@ end
 
 pause(0.5) %Introduce a small break before starting the trials. This gives
 %labcams enough time to get started and record at least one non-trial frame
-
-%--------------------------------------------------------------------------
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%------------------------MAIN LOOP-----------------------------------------
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 tstart = tic;
-BpodSystem.GUIData.SessionStart = tstart; %For the elapsed-time display
 for currentTrial = 1:maxTrialNum
     try %This is to make sure that the data will be saved even if some error occurs during its execution
         disp("---------------New Loop Starts!---------------");
@@ -258,24 +233,19 @@ for currentTrial = 1:maxTrialNum
         %% Check for user-inputs and change display of automatically changing
         %parameters on the figures.
         if update == 1 || TrialsDone == 0
+            previousSettings = S;
             S = DemonstratorFigure('update', S);
-            %Updates S and BpodSystem.ProtocolSettings with the input from the
-            %user. When an observer is present the observer figure needs to
-            %have been initialized and it needs to exist. Otherwise the content
-            %of the UIcontrols cannot be evaluated.
-
+            % Apply pending GUI edits only when preparing a new trial.
+            if TrialsDone > 0
+                appendTrialNote(currentTrial, settingsChangeNote(previousSettings, S));
+            end
             update = 0; %Finish updating
         end
 
-        %Refresh the display of controlable parameters that are automatically
-        %updated, for example the minWaitTime. Again, make sure to have the
-        %observer if there is an observer.
+        % Refresh automatic values without overwriting pending edits.
         DemonstratorFigure('refresh', S); %Do this only after updating the user input to  avoid overriding it!
-        %----------------------------------------------------------------------
         %% Randomly select the stimulus modality for the current trial
         ModalityRecord(currentTrial) = drawStimModality;
-
-        %----------------------------------------------------------------------
         %% Check trial side and redraw according to user changes and biases
 
         if prevPropLeft ~= S.propLeft
@@ -312,8 +282,6 @@ for currentTrial = 1:maxTrialNum
                 end
             end
         end
-
-        %--------------------------------------------------------------------------
         %% Find the frequency of the stimulus given the assigned side and modality
 
         % First define the category boundary for this type of trial
@@ -325,16 +293,16 @@ for currentTrial = 1:maxTrialNum
 
         % Find a stimulus rate associated with the designated correct side
         stimulusRate = findStimRate(TrialSidesList(currentTrial), ModalityRecord(currentTrial));
-
-        %--------------------------------------------------------------------------
         %% Generate the stim train according to the chosen frequency and specified task design
 
         % Specify the duration of the stimulus train and of the individual stimulus
-        stimulusDuration = 0.015; %In s
         stimTrainDuration = 1; %In s
+        trialStim = resolveTrialStimulusParams(stimulusRate);
+        stimulusDuration = trialStim.stimulusDuration;
+        minInterval = trialStim.minInterval;
+        trialBrightness = trialStim.brightness;
 
         if BpodSystem.ProtocolSettings.isPoissonStim
-            minInterval = 0.025;
             interStimulusIntervalList = poissonStimulusTrain(stimTrainDuration, stimulusDuration, minInterval, stimulusRate);
             [visualIsiList, auditoryIsiList] = assignModalityIsi(ModalityRecord(currentTrial), interStimulusIntervalList, ...
                 BpodSystem.ProtocolSettings.syncMultiSensory, 0, ...
@@ -348,13 +316,12 @@ for currentTrial = 1:maxTrialNum
             end
             shortInterval = 0.05;
             longInterval = 0.1;
+            minInterval = shortInterval;
             interStimulusIntervalList = twoIntervalStimulusTrain(stimulusRate, shortInterval, longInterval, stimulusDuration, stimTrainDuration);
             [visualIsiList, auditoryIsiList] = assignModalityIsi(ModalityRecord(currentTrial), interStimulusIntervalList, ...
                 BpodSystem.ProtocolSettings.syncMultiSensory, 0.02, ...
                 @() twoIntervalStimulusTrain(categoryBoundary-0.5+round(rand), shortInterval, longInterval, stimulusDuration, stimTrainDuration));
         end
-
-        %--------------------------------------------------------------------------
         %% Construct the stim signal and refresh plots
 
         %Sound parameters
@@ -363,37 +330,39 @@ for currentTrial = 1:maxTrialNum
 
         %Assemble the signal
         if ModalityRecord(currentTrial) == 1 %It's a visual trial
-            visualStimSignal = createVisualStimSignal(interStimulusIntervalList, SamplingFreq, BpodSystem.ProtocolSettings.stimBrightness, stimulusDuration);
+            visualStimSignal = createVisualStimSignal(interStimulusIntervalList, SamplingFreq, trialBrightness, stimulusDuration);
             auditoryStimSignal = zeros(1,length(visualStimSignal)); %Zero-signal
         elseif ModalityRecord(currentTrial) == 2 %It's an auditory trial
             auditoryStimSignal = createAuditoryStimSignal(interStimulusIntervalList, SamplingFreq, stimulusDuration,...
                 soundType, BpodSystem.ProtocolSettings.stimLoudness, addedNoiseLoudness, BpodSystem.ProtocolSettings.soundCalibrationModelParams);
             visualStimSignal = zeros(1,length(auditoryStimSignal)); %Zero-signal
         elseif ModalityRecord(currentTrial) == 3
-            visualStimSignal = createVisualStimSignal(visualIsiList, SamplingFreq, BpodSystem.ProtocolSettings.stimBrightness, stimulusDuration);
+            visualStimSignal = createVisualStimSignal(visualIsiList, SamplingFreq, trialBrightness, stimulusDuration);
             auditoryStimSignal = createAuditoryStimSignal(auditoryIsiList, SamplingFreq, stimulusDuration,...
                 soundType, BpodSystem.ProtocolSettings.stimLoudness, addedNoiseLoudness, BpodSystem.ProtocolSettings.soundCalibrationModelParams);
         end
 
+        % Two-interval multisensory timing can delay the visual channel by 20 ms.
+        nSamples = max(numel(visualStimSignal),numel(auditoryStimSignal));
+        visualStimSignal(end+1:nSamples) = 0;
+        auditoryStimSignal(end+1:nSamples) = 0;
+
         %Refresh the stimulus train plots
         StimulusPlotDemonstrator(BpodSystem.GUIHandles.StimulusPlotV, BpodSystem.GUIHandles.StimulusPlotA, 'refresh', [visualStimSignal; auditoryStimSignal]);
-
-        %--------------------------------------------------------------------------
         %% Repeat parts of the signal for an extended amount of time and upload
         %  the stimuli once finished
 
         stimTrainSignals =  [visualStimSignal; auditoryStimSignal]; %Concatenate here for easier treatment
-        if BpodSystem.ProtocolSettings.extraStimDur > 1/SamplingFreq %Only if we can actually add something
-            prolongedStimTrain = repmat(stimTrainSignals,[1,ceil(BpodSystem.ProtocolSettings.extraStimDur/stimTrainDuration)]); %make enough copies of the stimulus train
-            stimTrainSignals = [stimTrainSignals prolongedStimTrain(:,1:BpodSystem.ProtocolSettings.extraStimDur*SamplingFreq)]; %Pick the necessary length of extra signal
-        end
+        stimTrainSignals = extendStimulusTrain(stimTrainSignals, BpodSystem.ProtocolSettings.extraStimDur, SamplingFreq);
 
         PsychToolboxSoundServer('Load', 1, stimTrainSignals); %Upload the signal
-
-        %--------------------------------------------------------------------------
         %% Assemble and the state matrix for the trial
 
-        [sma, trialDelays, reviseChoiceFlag, pacedFlag]  = eval([BpodSystem.ProtocolSettings.smaAssembler '(' sprintf('%d',TrialSidesList(currentTrial)) ');']);
+        if strcmp(BpodSystem.ProtocolSettings.smaAssembler, 'PassiveVisualStimSMA')
+            [sma, trialDelays, reviseChoiceFlag] = PassiveVisualStimSMA([], size(stimTrainSignals,2) / SamplingFreq);
+        else
+            [sma, trialDelays, reviseChoiceFlag] = feval(BpodSystem.ProtocolSettings.smaAssembler, TrialSidesList(currentTrial));
+        end
         % Get the state matrix, the random delays generated inside the assembler
         % function and a logical value that indicates whether the animals can revise
         % wrong choices and whether trials are self-initiated.
@@ -402,9 +371,12 @@ for currentTrial = 1:maxTrialNum
         generateTaskControlSounds(S.goCueLoudness, S.earlyPunishLoudness, S.earlyPunishTimeout,...
             S.wrongPunishLoudness, S.wrongPunishTimeout, S.soundCalibrationModelParams, trialDelays)
 
+        % Stop may arrive during GUI redraws while the next trial is prepared.
+        if BpodSystem.Status.BeingUsed == 0
+            finishSession();
+            return
+        end
         SendStateMatrix(sma); %Send to Bpod
-
-        %------------------------------------------------------------------
         %% Display preparation time
 
         % After all is prepared check the time to prepare
@@ -412,23 +384,13 @@ for currentTrial = 1:maxTrialNum
             fprintf('Time to retrieve data, update plots and prepare trial number %d: %d seconds\n',round(currentTrial),toc(preparationTime));
             fprintf('----------------------------------------------------------------------------\n\n');
         end
-
-        %--------------------------------------------------------------------------
         %% Add to the camera log and run the state machine
         if ~isempty(udplabcams)
             fwrite(udplabcams,sprintf('log=trial_start[%4.0f]: %d',toc(tstart)/60,currentTrial))
         end
 
-        if pacedFlag
-            LEDswitch() %Switch off and let the state control LEDs
-        end
-
+        assertChipmunkRecording();
         RawEvents = RunStateMatrix; %Finally run the state matrix
-
-        if pacedFlag
-            LEDswitch() %Make sure to switch the LEDs on again if the trials are paced!
-        end
-        %--------------------------------------------------------------------------
         %% Retrieve the trial information to save it
 
         preparationTime = tic; %Start measuring the time to extract, save and prepare
@@ -439,32 +401,29 @@ for currentTrial = 1:maxTrialNum
             %Incorporate trial and outcome information into the Data field inside
             %BpodSystem.
             retrieveTrialData(RawEvents,TrialsDone,TrialSidesList,trialDelays,reviseChoiceFlag, ModalityRecord,...
-                stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList);
+                stimulusDuration, stimTrainDuration, categoryBoundary,interStimulusIntervalList,visualIsiList,auditoryIsiList, ...
+                trialBrightness, minInterval);
+        elseif BpodSystem.Status.BeingUsed == 0
+            % Stop cut this trial short. Its Sync state already sent a BNC2
+            % pulse, but the trial is not saved. Record where that pulse sits:
+            % after this many saved trials (and before any passive replay).
+            BpodSystem.Data.StoppedTrialPulse = TrialsDone - 1;
         else
-            if BpodSystem.Status.BeingUsed == 1 %Do not show this warning if the session is ending
-                warning('There were no events recorded for this trial!')
-            end
+            warning('There were no events recorded for this trial!')
         end
 
         BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data); %Store the notes with the session data
-        %--------------------------------------------------------------------------
         %% Write the trial end to the labcams camlog
 
-        %The log file is so nice, thx João!
         if ~isempty(udplabcams)
             fwrite(udplabcams,sprintf('log=trial_end:%d',currentTrial))
         end
-
-        %------------------------------------------------------------------
         %% Check on Bpod status and save and close if not used anymore
 
         if BpodSystem.Status.BeingUsed == 0
-            shutdownChipmunk();
-            disp('*********************************************************************')
+            finishSession();
             return;
         end
-
-        %----------------------------------------------------------------------
         %% Update wait time and bias arrays according to
         %  the outcome of the trial that was just completed.
 
@@ -498,46 +457,69 @@ for currentTrial = 1:maxTrialNum
             lastValidResponseSide = BpodSystem.Data.ResponseSide(TrialsDone);
             lastValidOutcome = BpodSystem.Data.OutcomeRecord(TrialsDone);
         end
-
-        %-----------------------------------------------------------------------
         %% Update the performance plots
 
         outcomePlotLimits = OutcomePlotDemonstrator(BpodSystem.GUIHandles.OutcomePlotDemonstrator, 'refresh',currentTrial+1,TrialSidesList,BpodSystem.Data.OutcomeRecord);
         PerformancePlotDemonstrator(BpodSystem.GUIHandles.PerformancePlotDemonstrator,'refresh',outcomePlotLimits);
         PsychometricPlotDemonstrator(BpodSystem.GUIHandles.PsychometricPlotDemonstrator,'refresh');
         WaitTimeDiffPlotDemonstrator(BpodSystem.GUIHandles.WaitTimeDiffPlotDemonstrator,'refresh',true);
-
-        %-----------------------------------------------------------------------
         %% Make sure to keep the data if an error occurs
     catch ME
-        warning('chipmunk_solo encountered an error and will save the data and end...')
+        warning('chipmunk_solo encountered an error and will save the data and end: %s', ME.message)
         BpodSystem.Status.BeingUsed = 0;
+        errorPath=path;errorCleanup=onCleanup(@() resetConsole(errorPath));
         shutdownChipmunk();
         disp('*********************************************************************')
         disp('chipmunk ended due to an error, see below')
         rethrow(ME)
     end
 end
+% Exhausting the trial limit must save and close just like Stop.
+finishSession();
+
+    function finishSession()
+        if BpodSystem.Status.BeingUsed
+            RunProtocol('Stop'); % Natural trial-limit completion must also reset the console.
+        end
+        % Bpod Stop removes the protocol folder, including its sound server.
+        stoppedPath = path;
+        pathCleanup = onCleanup(@() resetConsole(stoppedPath));
+        addpath(fileparts(mfilename('fullpath')));
+        % Checkpoint the task so a MATLAB crash during replay cannot lose it (~0.06 s for 428 trials).
+        % shutdownChipmunk writes the final file.
+        if ~isempty(BpodSystem.Path.CurrentDataFile)
+            SessionData = BpodSystem.Data;
+            save(BpodSystem.Path.CurrentDataFile{1},'SessionData');
+        end
+        % The first replay onset targets 1 s after the checkpoint is complete.
+        runPassiveReplaySession(SamplingFreq, udplabcams, tic);
+        shutdownChipmunk();
+    end
+
+    function resetConsole(stoppedPath)
+        pathCleanup = onCleanup(@() path(stoppedPath));
+        % Replay's RunStateMatrix restores Bpod's Pause icon and running state.
+        RunProtocol('Stop');
+    end
 
     function shutdownChipmunk()
         % ponytail: one shutdown for the stop button and for errors.
-        try
-            if ~isempty(udplabcams)
-                fwrite(udplabcams,sprintf('log=end')); fgetl(udplabcams);
-                fwrite(udplabcams,sprintf('softtrigger=0')); fgetl(udplabcams);
-                fwrite(udplabcams,sprintf('manualsave=0')); fgetl(udplabcams);
-                pause(1)
-                fwrite(udplabcams,sprintf('quit=1'));
-                fclose(udplabcams);
-                delete(udplabcams);
-                udplabcams = [];
-            end
-        catch
-            warning('Could not close labcams cleanly; saving behavioral data.');
-        end
+        % Keep ephys acquiring through behavioral saving and camera/sound cleanup.
+        streamCleanup=onCleanup(@() finishStreams(ephysOn,udplabcams));
+        mergeSettingsNotes();
         SessionData = BpodSystem.Data;
-        if ~strcmpi(BpodSystem.ProtocolSettings.demonID,'Virtual')
+        passiveFolder = '';
+        if ~isempty(BpodSystem.Path.CurrentDataFile)
             save(BpodSystem.Path.CurrentDataFile{1},'SessionData')
+            % The task file keeps PassiveReplay because it owns the Bpod clock and every sync pulse.
+            % The copy in chipmunk_passive/ is the separate passive-stimulation dataset.
+            if isfield(BpodSystem.Data,'PassiveReplay') && BpodSystem.Data.PassiveReplay.nRequested > 0
+                PassiveReplay = BpodSystem.Data.PassiveReplay;
+                [taskFolder,taskName] = fileparts(BpodSystem.Path.CurrentDataFile{1});
+                passiveFolder = fullfile(fileparts(taskFolder),'chipmunk_passive');
+                [~,~] = mkdir(passiveFolder);
+                save(fullfile(passiveFolder,[taskName '.mat']),'PassiveReplay');
+            end
             trializedNoteIdx = [];
             for noteIdx = 1:length(BpodSystem.Data.Notes)
                 if ~isempty(BpodSystem.Data.Notes{noteIdx})
@@ -547,21 +529,67 @@ end
             if ~isempty(trializedNoteIdx)
                 notesFile = fopen(fullfile(fileparts(BpodSystem.Path.CurrentDataFile{1}), 'notes.txt'), 'w');
                 for noteIdx = 1:length(trializedNoteIdx)
-                    fprintf(notesFile, [sprintf('Trial %d: ', round(trializedNoteIdx(noteIdx))) BpodSystem.Data.Notes{trializedNoteIdx(noteIdx)} '\n']);
+                    fprintf(notesFile, 'Trial %d: %s\n', trializedNoteIdx(noteIdx), ...
+                        BpodSystem.Data.Notes{trializedNoteIdx(noteIdx)});
                 end
                 fclose(notesFile);
             end
         end
-        PsychToolboxSoundServer('Close');
-        if pacedFlag
-            LEDswitch()
-        end
-        if ~(strcmp(BpodSystem.ProtocolSettings.demonID,'FakeSubject') || strcmp(BpodSystem.ProtocolSettings.demonID,'Virtual'))
+        clear streamCleanup % Stop all streams before offering upload.
+        if ~strcmpi(BpodSystem.ProtocolSettings.demonID,'FakeSubject')
             fPath = fileparts(BpodSystem.Path.CurrentDataFile{1});
-            system(['export LD_LIBRARY_PATH=""; gnome-terminal -- labdata put ', fPath, ' --ask']);
+            upload = ['labdata put ' fPath ' --ask'];
+            if ~isempty(passiveFolder)
+                upload = [upload '; labdata put ' passiveFolder ' --ask']; % put takes one folder.
+            end
+            system(['export LD_LIBRARY_PATH=""; gnome-terminal -- bash -c "' upload '"']);
         end
-        clear BpodSystem.GUIHandles.ParamEdit
+        if isfield(BpodSystem.GUIHandles,'DemonStartButton') && isgraphics(BpodSystem.GUIHandles.DemonStartButton)
+            set(BpodSystem.GUIHandles.DemonStartButton,'String','Finished','Enable','off');
+        end
     end
+    function finishStreams(ephysEnabled,camera)
+        ephysCleanup=onCleanup(@() finishEphys(ephysEnabled));
+        if ephysEnabled
+            [cameraOK,cameraError]=labcams_ephys('stop');
+            if ~cameraOK,warning('chipmunk_solo:CameraStop','%s',cameraError);end
+        end
+        try
+            if ~isempty(camera)
+                fwrite(camera,sprintf('log=end')); fgetl(camera);
+                fwrite(camera,sprintf('softtrigger=0')); fgetl(camera);
+                fwrite(camera,sprintf('manualsave=0')); fgetl(camera);
+                pause(1)
+                fwrite(camera,sprintf('quit=1'));
+                fclose(camera);
+                delete(camera);
+                camera = [];
+            end
+        catch
+            warning('Could not close labcams cleanly; saving behavioral data.');
+        end
+        PsychToolboxSoundServer('Close');
+    end
+    function finishEphys(ephysEnabled)
+        if ~ephysEnabled,return;end
+        SpikeGLXControl('shutdown');
+        recordingState=spikeglx_client('shutdown');
+        BpodSystem.Data.EphysActionLog=recordingState.actionLog;
+        BpodSystem.Data.EphysShutdownError=recordingState.lastError;
+        if ~isempty(recordingState.lastError)
+            warning('chipmunk_solo:EphysShutdown','%s',recordingState.lastError);
+        end
+        % Persist shutdown diagnostics after the behavioral checkpoint is already safe.
+        if ~isempty(BpodSystem.Path.CurrentDataFile)
+            try
+                SessionData=BpodSystem.Data;
+                save(BpodSystem.Path.CurrentDataFile{1},'SessionData');
+            catch ME
+                warning('chipmunk_solo:ShutdownSave','Could not save ephys shutdown diagnostics: %s',ME.message);
+            end
+        end
+    end
+
 end
 
 function [visualIsiList, auditoryIsiList] = assignModalityIsi(modality, isiList, syncMode, offsetFirst, freshList)

@@ -1,0 +1,363 @@
+{
+  "date": "2026-11-01",
+  "runtime_main_sha256": "a1a572bbf26341dbc589854e740db577a7bc2aedc0238857dd5eb2799c63f585",
+  "local_matlab": "R2024b",
+  "mercury_matlab": "R2022b Update 1",
+  "reports_match_across_matlab_versions": true,
+  "sources": [
+    {
+      "label": "current",
+      "main_sha256": "a1a572bbf26341dbc589854e740db577a7bc2aedc0238857dd5eb2799c63f585",
+      "repository": "current working tree",
+      "commit": "c0158b32fd94dedff931a55df6da76f76430d768",
+      "functions_source": "current"
+    },
+    {
+      "label": "solo_base",
+      "main_sha256": "d40e5a2a50aa82ff1a890871a393584112439e8025b44c932b6f873af9c71363",
+      "repository": "churchlandlab/chipmunk_solo",
+      "commit": "bc8095c02ccd38b875ad493289d414d452b514fe",
+      "functions_source": "solo_base"
+    },
+    {
+      "label": "half_latest",
+      "main_sha256": "5f49142713d3bf4a286ddb7ba7c76bc657b19a36033948ae4352ae9a69c31432",
+      "repository": "churchlandlab/half_second_chipmunk_solo",
+      "commit": "0577522f18234ab68f284b7c977d0d5014713c25",
+      "functions_source": "half_latest"
+    },
+    {
+      "label": "half_2024",
+      "main_sha256": "fa23807e1abe80920437611e96a24e9549fdf34c5b3c4083dbd4d92eba1aae5a",
+      "repository": "churchlandlab/half_second_chipmunk_solo",
+      "commit": "d14d96a15685f645f53968d0b001fa4cfc7f479c",
+      "functions_source": "half_2024"
+    },
+    {
+      "label": "original",
+      "main_sha256": "104196effe8201d0d57f7d4c91cbc86274648a6557989b19ecf1ef0580635bb1",
+      "repository": "churchlandlab/chipmunk",
+      "commit": "a112fde94d24b4ca89590081a2aef2d7b4e2e96c",
+      "functions_source": "original"
+    },
+    {
+      "label": "ephys",
+      "main_sha256": "37ed3ea46bf764911bd24f93a36768f798c3d1e0c27e7aa5f5541b563db0a752",
+      "repository": "churchlandlab/half_second_chipmunk_ephys",
+      "commit": "a451cf9cbe50bf40c2b05333d7333887cda77988",
+      "functions_source": "half_latest"
+    }
+  ],
+  "cases": {
+    "seeds": [
+      1,
+      7,
+      31
+    ],
+    "rates_hz": [
+      4,
+      12,
+      20
+    ],
+    "modality_sync_pairs": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        3,
+        2
+      ]
+    ],
+    "extra_duration_seconds": [
+      0,
+      0.25,
+      1.25
+    ],
+    "preset": "standard",
+    "generator": "Poisson",
+    "sampling_frequency_hz": 192000
+  },
+  "recordings": [
+    {
+      "file": "GRB006_20240723_142451_chipmunk_DemonstratorAudiTask.mat",
+      "sha256": "dd83acb839709851c843a256610d14b4ee2a72c5b590a42568aa8b99148846e9",
+      "nTrials": 831,
+      "modalities": [
+        3
+      ],
+      "savedBaseHoldSeconds": [
+        0.5
+      ],
+      "maxCompletedHoldTimerErrorSeconds": 1.7763568394002505e-15,
+      "completedHoldTrials": 397,
+      "pulseSeconds": [
+        0.015
+      ],
+      "trainDurationSeconds": 1,
+      "minGapSeconds": 0.025,
+      "allLegacyInitiationDelaysZero": true,
+      "protocolCommitStored": false
+    },
+    {
+      "file": "GRB063_20261030_134253_chipmunk_VisualTask.mat",
+      "sha256": "1f181e8d77f52645a97c0a6a68a12c820dde93ec92cf6f77d68991f52f6b04f3",
+      "nTrials": 268,
+      "modalities": [
+        1
+      ],
+      "savedBaseHoldSeconds": [
+        0.5
+      ],
+      "maxCompletedHoldTimerErrorSeconds": 4.998709621517605e-05,
+      "completedHoldTrials": 141,
+      "pulseSeconds": [
+        0.015
+      ],
+      "trainDurationSeconds": 1,
+      "minGapSeconds": 0.025,
+      "allLegacyInitiationDelaysZero": true,
+      "protocolCommitStored": false
+    },
+    {
+      "file": "GRB064_20261030_151009_chipmunk_VisualTask.mat",
+      "sha256": "6034b1fc3a2fc89549133331cbba31993eb1e78c3f3619fde491c66e9a7e1b79",
+      "nTrials": 244,
+      "modalities": [
+        1
+      ],
+      "savedBaseHoldSeconds": [
+        0.0,
+        0.5
+      ],
+      "maxCompletedHoldTimerErrorSeconds": 0.00010000000000331966,
+      "completedHoldTrials": 161,
+      "pulseSeconds": [
+        0.015
+      ],
+      "trainDurationSeconds": 1,
+      "minGapSeconds": 0.025,
+      "allLegacyInitiationDelaysZero": true,
+      "protocolCommitStored": false
+    }
+  ],
+  "results": {
+    "summary": {
+      "current": {
+        "stimulusCases": 135,
+        "identicalStimuli": 135,
+        "stateCases": 18,
+        "identicalCoreMatrices": 18,
+        "identicalFullMatrices": 18,
+        "identicalCueSets": 18,
+        "identicalBiasOutputs": true
+      },
+      "solo_base": {
+        "stimulusCases": 135,
+        "identicalStimuli": 135,
+        "stateCases": 18,
+        "identicalCoreMatrices": 18,
+        "identicalFullMatrices": 18,
+        "identicalCueSets": 18,
+        "identicalBiasOutputs": true
+      },
+      "half_latest": {
+        "stimulusCases": 135,
+        "identicalStimuli": 135,
+        "stateCases": 18,
+        "identicalCoreMatrices": 18,
+        "identicalFullMatrices": 18,
+        "identicalCueSets": 18,
+        "identicalBiasOutputs": true
+      },
+      "half_2024": {
+        "stimulusCases": 135,
+        "identicalStimuli": 135,
+        "stateCases": 18,
+        "identicalCoreMatrices": 18,
+        "identicalFullMatrices": 6,
+        "identicalCueSets": 18,
+        "identicalBiasOutputs": true
+      },
+      "original": {
+        "stimulusCases": 135,
+        "identicalStimuli": 135,
+        "stateCases": 18,
+        "identicalCoreMatrices": 6,
+        "identicalFullMatrices": 6,
+        "identicalCueSets": 18,
+        "identicalBiasOutputs": true
+      },
+      "ephys": {
+        "stimulusCases": 135,
+        "identicalStimuli": 135,
+        "stateCases": 18,
+        "identicalCoreMatrices": 18,
+        "identicalFullMatrices": 18,
+        "identicalCueSets": 18,
+        "identicalBiasOutputs": true
+      }
+    },
+    "classification": [
+      {
+        "label": "current",
+        "recording": "GRB006_20240723_142451_chipmunk_DemonstratorAudiTask.mat",
+        "nTrials": 831,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "current",
+        "recording": "GRB063_20261030_134253_chipmunk_VisualTask.mat",
+        "nTrials": 268,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "current",
+        "recording": "GRB064_20261030_151009_chipmunk_VisualTask.mat",
+        "nTrials": 244,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "solo_base",
+        "recording": "GRB006_20240723_142451_chipmunk_DemonstratorAudiTask.mat",
+        "nTrials": 831,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "solo_base",
+        "recording": "GRB063_20261030_134253_chipmunk_VisualTask.mat",
+        "nTrials": 268,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "solo_base",
+        "recording": "GRB064_20261030_151009_chipmunk_VisualTask.mat",
+        "nTrials": 244,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "half_latest",
+        "recording": "GRB006_20240723_142451_chipmunk_DemonstratorAudiTask.mat",
+        "nTrials": 831,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "half_latest",
+        "recording": "GRB063_20261030_134253_chipmunk_VisualTask.mat",
+        "nTrials": 268,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "half_latest",
+        "recording": "GRB064_20261030_151009_chipmunk_VisualTask.mat",
+        "nTrials": 244,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "original",
+        "recording": "GRB006_20240723_142451_chipmunk_DemonstratorAudiTask.mat",
+        "nTrials": 831,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "original",
+        "recording": "GRB063_20261030_134253_chipmunk_VisualTask.mat",
+        "nTrials": 268,
+        "differencesFromSaved": []
+      },
+      {
+        "label": "original",
+        "recording": "GRB064_20261030_151009_chipmunk_VisualTask.mat",
+        "nTrials": 244,
+        "differencesFromSaved": []
+      }
+    ],
+    "oneSecondFullMatrixMatches": 6,
+    "staircaseDifferences": {
+      "solo_base": {
+        "caseCount": 0,
+        "examples": []
+      },
+      "half_latest": {
+        "caseCount": 0,
+        "examples": []
+      },
+      "half_2024": {
+        "caseCount": 56,
+        "examples": [
+          [
+            0.5,
+            0.01,
+            -1,
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.01,
+            0,
+            0.5,
+            0.51
+          ],
+          [
+            0.5,
+            0.01,
+            1,
+            0.5,
+            0.51
+          ]
+        ]
+      },
+      "original": {
+        "caseCount": 32,
+        "examples": [
+          [
+            0.6,
+            0.01,
+            -1,
+            0.6,
+            0.6
+          ],
+          [
+            0.6,
+            0.01,
+            0,
+            0.61,
+            0.6
+          ],
+          [
+            0.6,
+            0.01,
+            1,
+            0.61,
+            0.6
+          ]
+        ]
+      },
+      "ephys": {
+        "caseCount": 0,
+        "examples": []
+      }
+    }
+  },
+  "limits": [
+    "Source-level waveform/timer/command comparison; no physical measurements.",
+    "Common deterministic valve calibration substitute; historical water calibration not established.",
+    "Ephys stimulus block and imported half_latest state assemblers only; no SpikeGLX acquisition validation.",
+    "No source commit was stored in the three recorded MAT sessions; snapshots are explicit comparison references.",
+    "Original auditory noise samples and RNG seeds were not saved; noise comparison uses controlled seeds.",
+    "Old assembler names are mapped explicitly for component comparisons, not silently migrated."
+  ]
+}

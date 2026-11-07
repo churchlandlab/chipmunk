@@ -1,0 +1,89 @@
+{
+  "date": "2026-11-02",
+  "deployedCommit": "cd65176e664d8f29214bec6af94cb2fbdc49858d",
+  "rigs": [
+    {
+      "host": "venus",
+      "validated": true,
+      "runtimeCommit": "cd65176e664d8f29214bec6af94cb2fbdc49858d",
+      "root": "/home/anne/chipmunk-candidates/20261102-unified/chipmunk_solo",
+      "rollback": "/home/anne/chipmunk-rollbacks/20261102-unified/rollback.py",
+      "settingsPreserved": 21,
+      "calibrationFilesPreserved": 4,
+      "configuredSettingsGuiRoundTrips": 10,
+      "emptyPlaceholdersSkipped": 11,
+      "savedTaskPathEntriesRemoved": 15,
+      "jupiterRoutingConfigured": true,
+      "deployedCheckEphysEnabled": false,
+      "stageEphysMode": "live XIO + Bpod emulation",
+      "sessions": [
+        {
+          "phase": "stage-results",
+          "session": "20261102_134213",
+          "activeTrials": 3,
+          "completedReplays": 0,
+          "matSHA256": "75babb864575ce6e040163e2f6f006e564769e8edba1f340cfa7b9270368e43e"
+        },
+        {
+          "phase": "stage-results",
+          "session": "20261102_134248",
+          "activeTrials": 3,
+          "completedReplays": 3,
+          "matSHA256": "a76cfa0e67e56183e4e4e37208d490c845f0e3d32f94068092f276ab170dc4b4"
+        },
+        {
+          "phase": "deployed-results",
+          "session": "20261102_134931",
+          "activeTrials": 3,
+          "completedReplays": 0,
+          "matSHA256": "0f522b692ceac5a66a7a52685233c907d1c512c17ae09355f55f3f89843c85fd"
+        }
+      ]
+    },
+    {
+      "host": "earth",
+      "validated": true,
+      "runtimeCommit": "cd65176e664d8f29214bec6af94cb2fbdc49858d",
+      "root": "/home/anne/chipmunk-candidates/20261102-unified/chipmunk_solo",
+      "rollback": "/home/anne/chipmunk-rollbacks/20261102-unified/rollback.py",
+      "settingsPreserved": 21,
+      "calibrationFilesPreserved": 4,
+      "configuredSettingsGuiRoundTrips": 10,
+      "emptyPlaceholdersSkipped": 11,
+      "savedTaskPathEntriesRemoved": 15,
+      "jupiterRoutingConfigured": false,
+      "deployedCheckEphysEnabled": false,
+      "stageEphysMode": "off",
+      "sessions": [
+        {
+          "phase": "stage-results",
+          "session": "20261102_134927",
+          "activeTrials": 3,
+          "completedReplays": 0,
+          "matSHA256": "c104fde259ebe7158fb711d02958bc902990fc4a1e5007ff658739ba05e41378"
+        },
+        {
+          "phase": "stage-results",
+          "session": "20261102_134934",
+          "activeTrials": 3,
+          "completedReplays": 3,
+          "matSHA256": "d906aad0d0cb99a142971c7aed8c8971459152879dfe4e022517ab4a3b5c32c0"
+        },
+        {
+          "phase": "deployed-results",
+          "session": "20261102_135419",
+          "activeTrials": 3,
+          "completedReplays": 0,
+          "matSHA256": "76c68133e0ff64a05eefe6f741926a7531bcab7cfed8acd0917f4834a7e40db6"
+        }
+      ]
+    }
+  ],
+  "jupiterTestingStoppedAtUserRequest": true,
+  "noFurtherJupiterContactAfterStopConfirmation": true,
+  "limits": [
+    "Emulation with synthetic calibration; physical stimulus/camera timing unverified",
+    "Venus ephys test used XIO only; no neural probe acquisition/anatomy validation",
+    "Earth Jupiter routing/ephys integration intentionally not configured or tested"
+  ]
+}

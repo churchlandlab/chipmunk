@@ -5,28 +5,8 @@ function [updatedTrialModalityBiases, updatedTrialHistoryBiases] = updateAntiBia
 %   trialModalityBiases, trialHistoryBiases, currentTrialModality, currentTrialChoice,...
 %   currentTrialOutcome, prevCorrectSide, prevChosenSide, prevOutcome, antiBiasTau);
 %
-% Old description:
-% Based on what happened on the last completed trial, update our beliefs
-% about the animal's biases. modeRightArray tracks how likely he is to go
-% right for each modality. successArray tracks how likely he is to succeed
-% for left or right given what he did on the previous trial.
-%
-% Note: we'll actually use antiBiasTau * 3 for updating the
-% modality-related side bias. If we don't, and there's only one modality,
-% the updates will cause oscillation against a perfectly consistent
-% strategy.
-%
-% For an exponential function, the pdf = (1/tau)*e^(-t/tau)
-% The integral from 0 to 1 is [1 - e^(-1/tau)]
-% This lets us do exponential decay using only the current
-% outcome and previous biases
-%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-% Newly added description:
-% Function to estimate modality-related and trial history biases.
-% These biases are modeled as exponential decay functions with a
-% half life of antiBiasTau. To update the accumulted biases
-% from the previous trials are re-weighted and the choice and outcome in
-% the just completed trial (currentTrial) are added.
+% Update modality and two-trial choice-history estimates with exponential weights.
+% The modality time constant is three times the history time constant.
 %
 %-INPUTS: trialModalityBiases: The accumulated biases for the three
 %                              different modality types: First column is

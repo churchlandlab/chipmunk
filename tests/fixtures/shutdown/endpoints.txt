@@ -1,0 +1,24 @@
+    function mergeSettingsNotes()
+    end
+    function [ok,message]=labcams_ephys(command)
+        assert(strcmp(command,'stop') && ChipmunkShutdownTest.recording);
+        if ~strcmp(ChipmunkShutdownTest.failure,'save')
+            checkpoint=load(BpodSystem.Path.CurrentDataFile{1});
+            assert(checkpoint.SessionData.nTrials==3);
+            assert(contains(fileread(fullfile(fileparts(BpodSystem.Path.CurrentDataFile{1}),'notes.txt')),'test note'));
+        end
+        ChipmunkShutdownTest.events{end+1}='camera';ok=true;message='';
+    end
+    function PsychToolboxSoundServer(command)
+        assert(strcmp(command,'Close') && ChipmunkShutdownTest.recording);
+        ChipmunkShutdownTest.events{end+1}='sound';
+        if strcmp(ChipmunkShutdownTest.failure,'sound'),error('Test:Sound','Sound close failed');end
+    end
+    function SpikeGLXControl(command)
+        assert(strcmp(command,'shutdown'));
+    end
+    function state=spikeglx_client(command)
+        assert(strcmp(command,'shutdown'));
+        ChipmunkShutdownTest.events{end+1}='ephys';ChipmunkShutdownTest.recording=false;
+        state=struct('actionLog',{{'Stopped'}},'lastError','');
+    end

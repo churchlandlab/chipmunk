@@ -1,25 +1,5 @@
 function varargout = DemonstratorFigure(varargin)
-% DemonstratorFigure('init') %Creates a figure including all the display
-% %items, UIcontrols and axes.
-% paramStruct = DemonstratorFigure('update', paramStruct) %Retrieves the
-% %the user inputs (also observer!) after the the start/update button has
-% %been clicked and inserts them into the paramStruct.
-% DemonstratorFigure('refresh', paramStruct) %Refreshes the display of automatically
-% %changing but also changable values (for instance minWaitTime).
-% DemonstratorFigure('close') %Simply close the figure
-%
-% INPUTS: -figMethod: The method for creation/updating of the figure
-%         -paramStruct: Struct containing the experiment parameters
-%
-% OUTPUTS: -paramStruct: Updated experiment parameters
-%
-% Make sure to run the update and refresh after the plotting so it can
-% scale the font on plots and display equally!
-%
-% Based on BpodParameterGUI_Visual, LO 1/12/21
-%--------------------------------------------------------------------------
-
-
+% Build the solo task window; update reads edits, refresh shows automatic values.
 global BpodSystem
 figMethod = varargin{1}; %the figure method
 if nargin > 1
@@ -37,8 +17,7 @@ switch figMethod
             'Name',[BpodSystem.ProtocolSettings.experimentName ' - ' BpodSystem.ProtocolSettings.demonID ' - Demonstrator'],...
             'NumberTitle','off','MenuBar','none');
         
-        %Erase prior parameter edits to be able to switch from observer to
-        %demonstrator tasks.
+        % Clear handles from the preceding session.
         BpodSystem.GUIHandles.ParamEdit = [];
         
         %Create the tab structure on the figure
@@ -46,8 +25,6 @@ switch figMethod
         BpodSystem.GUIHandles.DemonTabGroup.StimPerform = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'Stimuli & performance');
         BpodSystem.GUIHandles.DemonTabGroup.TaskControl = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'Task control');
         BpodSystem.GUIHandles.DemonTabGroup.Reward = uitab('Parent', BpodSystem.GUIHandles.DemonFigTabs, 'Title', 'Reward');
-        
-        %-------------------------------------------------------------------------
         %Start with the the stimulus and performance tab
         
         %Panels and axes for display and manipulation on Stim tab
@@ -83,8 +60,6 @@ switch figMethod
         BpodSystem.GUIHandles.StimulusPlotV = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.StimPerform,...
             'Units', 'Normal', 'Position', [0.1, 0.9, 0.42, 0.05],'xtick',[],'ytick',[],'NextPlot','add');
         title('Visual stimuli')
-        
-        %------------
         %Fill in the UIcontrols for display and manipulation
         
         %Choice panel
@@ -139,30 +114,87 @@ switch figMethod
         BpodSystem.GUIHandles.DemonStartButton = uicontrol('Parent', BpodSystem.GUIHandles.DemonUpdatePanel,...
             'Units', 'normal', 'Position', [0.5,0.1,0.5,0.8],'Style','pushbutton','String','Start',...
             'Callback',{@startButton});
+        if ephysRecordingEnabled(BpodSystem.ProtocolSettings)
+            set(BpodSystem.GUIHandles.DemonStartButton,'String','Start session','Enable','off', ...
+                'TooltipString','Prepare recording in the SpikeGLX window first.');
+        end
         %----
         %Summary display panel
-        summaryLabels = {'Trials done:','Completed trials:','Correct trials:','Early withdrawals:','No choice trials:','Elapsed:'};
-        summaryFields = {'trialsDone','completedTrials','correctTrials','earlyWithdrawals','noChoiceTrials','elapsed'};
+        summaryLabels = {'Trials done:','Completed trials:','Correct trials:','Early withdrawals:','No choice trials:'};
+        summaryFields = {'trialsDone','completedTrials','correctTrials','earlyWithdrawals','noChoiceTrials'};
         for k = 1:numel(summaryFields)
             y = 0.8 - 0.17*(k-1);
             uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[0.05,y,2/3,0.17],'style', 'text', 'String',summaryLabels{k},'HorizontalAlignment','right');
             BpodSystem.GUIHandles.LabelsVal.(summaryFields{k}) = uicontrol('Parent', BpodSystem.GUIHandles.PerformanceSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,y,1/3-0.1,0.17],'style', 'text', 'String','0','HorizontalAlignment','left');
         end
-        
-        %--------------------------------------------------------------------------
         %Now assemble the task control tab
         
         %Here first the state logic plot
         BpodSystem.GUIHandles.StateLogic = axes('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl,...
-            'Units', 'Normal', 'Position', [0.05, 0.45, 0.9, 0.5],'NextPlot','add');
+            'Units', 'Normal', 'Position', [0.05, 0.58, 0.9, 0.37],'NextPlot','add');
         BpodSystem.GUIHandles.StateLogic.XAxis.Visible = 'off';BpodSystem.GUIHandles.StateLogic.YAxis.Visible = 'off';
         title(BpodSystem.ProtocolSettings.smaAssembler)
+        BpodSystem.GUIHandles.StimulusManipPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
+            'Position', [0.05, 0.45, 0.9, 0.12],'Title','Stimulus manipulation','FontWeight','bold');
+        BpodSystem.GUIHandles.ManipPresetValues = {'standard','dim','long','equalized'};
+        BpodSystem.GUIHandles.ManipLabels = struct();
+        manipNames = {'manipPreset','manipEligibleRates','manipFractionPercent','manipDimBrightness', ...
+            'manipNormalPulseMs','manipNormalGapMs'};
+        manipLabels = {'preset','rates Hz','trials %','dim level', ...
+            'pulseMs','gapMs'};
+        for k = 1:numel(manipNames)
+            name = manipNames{k};
+            x = mod(k-1,4)/4;
+            y = 0.5*(1 - floor((k-1)/4));
+            if strcmp(name,'manipPreset')
+                preset = BpodSystem.ProtocolSettings.manipPreset;
+                idx = find(strcmp(BpodSystem.GUIHandles.ManipPresetValues, preset), 1);
+                if isempty(idx)
+                    idx = 1;
+                end
+                BpodSystem.GUIHandles.ParamEdit.(name) = uicontrol('Parent', BpodSystem.GUIHandles.StimulusManipPanel,...
+                    'Units', 'normal', 'Position',[x+0.01,y,0.23,0.5],'style', 'popupmenu', 'Tag','manipPreset', ...
+                    'String',{'Standard','Dim flashes','Long pulses','Equalized'}, 'Value', idx, ...
+                    'Callback', @syncStimulusManipControls);
+            else
+                BpodSystem.GUIHandles.ManipLabels.(name) = uicontrol('Parent', BpodSystem.GUIHandles.StimulusManipPanel,'Units', 'normal', ...
+                    'Position',[x,y,0.12,0.5],'style', 'text', 'String',manipLabels{k}, 'HorizontalAlignment','right');
+                BpodSystem.GUIHandles.ParamEdit.(name) = uicontrol('Parent', BpodSystem.GUIHandles.StimulusManipPanel,...
+                    'Units', 'normal', 'Position',[x+0.125,y,0.12,0.5],'style', 'edit', ...
+                    'String',num2str(BpodSystem.ProtocolSettings.(name)));
+            end
+        end
+        [combos, comboLabels] = longPulseCombinations();
+        comboIdx = find(combos(:,1) == BpodSystem.ProtocolSettings.manipLongPulseMs & ...
+            combos(:,2) == BpodSystem.ProtocolSettings.manipLongGapMs, 1);
+        if isempty(comboIdx)
+            comboIdx = 1;
+        end
+        BpodSystem.GUIHandles.ManipLabels.manipLongCombo = uicontrol('Parent', BpodSystem.GUIHandles.StimulusManipPanel,'Units', 'normal', ...
+            'Position',[0.5,0,0.12,0.5],'style', 'text', 'String','pulse/gap', 'HorizontalAlignment','right');
+        BpodSystem.GUIHandles.ParamEdit.manipLongCombo = uicontrol('Parent', BpodSystem.GUIHandles.StimulusManipPanel,...
+            'Units', 'normal', 'Position',[0.625,0,0.36,0.5],'style', 'popupmenu', 'Tag','manipLongCombo', ...
+            'String', comboLabels, 'Value', comboIdx);
+        syncStimulusManipControls();
         
         %Set the different Task control panels
         BpodSystem.GUIHandles.DemonExperimentPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.05, 0.32, 0.3, 0.12],'Title','Experiment','FontWeight','bold');
         BpodSystem.GUIHandles.DemonFixationPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.35, 0.2, 0.3, 0.12],'Title','Fixation','FontWeight','bold');
+        BpodSystem.GUIHandles.PassiveReplayPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
+            'Position', [0.65, 0.32, 0.3, 0.12], 'Title', 'Passive replay', 'FontWeight', 'bold');
+        replayNames = {'passiveReplayEnable', 'passiveReplayFraction', 'passiveReplayOrder'};
+        replayLabels = {'Enable','Fraction','Order'};
+        for k = 1:numel(replayNames)
+            name = replayNames{k};
+            y = 1-k/3;
+            uicontrol('Parent', BpodSystem.GUIHandles.PassiveReplayPanel, 'Units', 'normal', ...
+                'Position', [0,y,0.4,1/3], 'Style', 'text', 'String', replayLabels{k}, 'HorizontalAlignment', 'right');
+            BpodSystem.GUIHandles.ParamEdit.(name) = uicontrol('Parent', BpodSystem.GUIHandles.PassiveReplayPanel, ...
+                'Units', 'normal', 'Position', [0.425,y,0.55,1/3], ...
+                'Style', 'edit', 'String', BpodSystem.ProtocolSettings.(name));
+        end
         BpodSystem.GUIHandles.DemonPreStimPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.05, 0.2, 0.3, 0.12],'Title','Pre stimulus','FontWeight','bold');
         BpodSystem.GUIHandles.DemonInterTrialPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
@@ -177,7 +209,6 @@ switch figMethod
         uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,'Units', 'normal', 'Position',[0,1/3-0.05,2/3,1/3],'style', 'text', 'String','baseWait','HorizontalAlignment','right');
         BpodSystem.GUIHandles.ParamEdit.baseWait = uicontrol('Parent', BpodSystem.GUIHandles.DemonExperimentPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.baseWait);
-        %------
         %Fixation panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonFixationPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','minWaitTime','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.DemonFixationPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','minWaitTimeStep','HorizontalAlignment','right');
@@ -189,7 +220,6 @@ switch figMethod
             'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.minWaitTimeStep);
         BpodSystem.GUIHandles.ParamEdit.goCueLoudness = uicontrol('Parent', BpodSystem.GUIHandles.DemonFixationPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,0,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.goCueLoudness);
-        %------------
         %Pre stim panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPreStimPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','preStimDelayMin','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPreStimPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','preStimDelayMax','HorizontalAlignment','right');
@@ -201,7 +231,6 @@ switch figMethod
             'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.preStimDelayMax);
         BpodSystem.GUIHandles.ParamEdit.preStimDelayLambda = uicontrol('Parent', BpodSystem.GUIHandles.DemonPreStimPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,0,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.preStimDelayLambda);
-        %---------
         %Inter trial panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonInterTrialPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','interTrialDurMin','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.DemonInterTrialPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','interTrialDurMax','HorizontalAlignment','right');
@@ -213,7 +242,6 @@ switch figMethod
             'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.interTrialDurMax);
         BpodSystem.GUIHandles.ParamEdit.interTrialDurLambda = uicontrol('Parent', BpodSystem.GUIHandles.DemonInterTrialPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,0,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.interTrialDurLambda);
-        %---------
         %Post stimulation panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,2/3,2/3,1/3],'style', 'text', 'String','extraStimDur','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,'Units', 'normal', 'Position',[0,1/3,2/3,1/3],'style', 'text', 'String','timeToChoose','HorizontalAlignment','right');
@@ -222,7 +250,6 @@ switch figMethod
             'Units', 'normal', 'Position',[2/3+0.025,2/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.extraStimDur);
         BpodSystem.GUIHandles.ParamEdit.timeToChoose = uicontrol('Parent', BpodSystem.GUIHandles.DemonPostStimPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,1/3,1/3-0.025,1/3],'style', 'edit', 'String',BpodSystem.ProtocolSettings.timeToChoose);
-        %--------
         %Punishment panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[0,0.5,2/6,0.25],'style', 'text', 'String','wrongPunishLoudness','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,'Units', 'normal', 'Position',[0,0.25,2/6,0.25],'style', 'text', 'String','wrongPunishTimeout','HorizontalAlignment','right');
@@ -237,8 +264,6 @@ switch figMethod
             'Units', 'normal', 'Position',[5/6+0.025,0.5,1/6-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.earlyPunishLoudness);
         BpodSystem.GUIHandles.ParamEdit.earlyPunishTimeout = uicontrol('Parent', BpodSystem.GUIHandles.DemonPunishPanel,...
             'Units', 'normal', 'Position',[5/6+0.025,0.25,1/6-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.earlyPunishTimeout);
-        
-        %--------------------------------------------------------------------------
         %Set up the reward tab
         
         %Initialize the reward and body weight panels
@@ -248,7 +273,6 @@ switch figMethod
             'Position', [0.05, 0.5, 0.3, 0.16],'Title','Reward parameters','FontWeight','bold');
         BpodSystem.GUIHandles.DemonWeightPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.Reward, 'Units', 'Normal',...
             'Position', [0.35, 0.5, 0.3, 0.16],'Title','Demonstrator weight','FontWeight','bold');
-        %--------
         %Reward parameter panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonRewardParamPanel,'Units', 'normal', 'Position',[0,0.75,2/3,0.2],'style', 'text', 'String','leftRewardVolume','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.DemonRewardParamPanel,'Units', 'normal', 'Position',[0,0.5,2/3,0.2],'style', 'text', 'String','rightRewardVolume','HorizontalAlignment','right');
@@ -257,7 +281,6 @@ switch figMethod
             'Units', 'normal', 'Position',[2/3+0.025,0.75,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.leftRewardVolume);
         BpodSystem.GUIHandles.ParamEdit.rightRewardVolume = uicontrol('Parent', BpodSystem.GUIHandles.DemonRewardParamPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,0.5,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.rightRewardVolume);
-        %------
         %Reward summary panel
         uicontrol('Parent', BpodSystem.GUIHandles.DemonRewardSummaryPanel,'Units', 'normal', 'Position',[0,0.75,2/3,0.2],'style', 'text', 'String','Left side reward:','HorizontalAlignment','right');
         uicontrol('Parent', BpodSystem.GUIHandles.DemonRewardSummaryPanel,'Units', 'normal', 'Position',[0,0.5,2/3,0.2],'style', 'text', 'String','Right side reward:','HorizontalAlignment','right');
@@ -266,34 +289,25 @@ switch figMethod
         BpodSystem.GUIHandles.LabelsVal.leftSideReward = uicontrol('Parent', BpodSystem.GUIHandles.DemonRewardSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,0.75,1/3-0.1,0.2],'style', 'text', 'String','0','HorizontalAlignment','left');
         BpodSystem.GUIHandles.LabelsVal.rightSideReward = uicontrol('Parent', BpodSystem.GUIHandles.DemonRewardSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,0.5,1/3-0.1,0.2],'style', 'text', 'String','0','HorizontalAlignment','left');
         BpodSystem.GUIHandles.LabelsVal.totalReward = uicontrol('Parent', BpodSystem.GUIHandles.DemonRewardSummaryPanel,'Units', 'normal', 'Position',[2/3+0.1,0.25,1/3-0.1,0.2],'style', 'text', 'String','0','HorizontalAlignment','left');
-        %------
         %Demonstrator body weight
         uicontrol('Parent', BpodSystem.GUIHandles.DemonWeightPanel,'Units', 'normal', 'Position',[0,0.75,2/3,0.2],'style', 'text', 'String','demonWeight','HorizontalAlignment','right');
         
         BpodSystem.GUIHandles.ParamEdit.demonWeight = uicontrol('Parent', BpodSystem.GUIHandles.DemonWeightPanel,...
             'Units', 'normal', 'Position',[2/3+0.025,0.75,1/3-0.025,0.25],'style', 'edit', 'String',BpodSystem.ProtocolSettings.demonWeight);
-
-        %------------------------------------------------------------------
         
         %%
     case 'update'
-        %Update the settingsStruct for observer and demonstrator according
+        % Update the settings struct according
         %to the user inputs
         
         %Get field names of the fields linked to a UIcontrol
         paramNames = fieldnames(BpodSystem.GUIHandles.ParamEdit);
         for k=1:length(paramNames)
-            temp = []; %initialize a temporary variable to hold the UIstring
-            eval(['temp = get(BpodSystem.GUIHandles.ParamEdit.' paramNames{k} ', ''String'');']); %Retrieve the string inside the UIcontrol edit box
-            if ~isempty(str2num(num2str(temp))) %This is a nice test of whether there are only numbers or whether there are letters too
-                eval(['paramStruct.' paramNames{k} ' = str2num(temp);']);
-            else
-                eval(['paramStruct.' paramNames{k} ' = temp;']);
-            end
+            paramStruct.(paramNames{k}) = readParamEdit(BpodSystem.GUIHandles.ParamEdit.(paramNames{k}));
         end
+        paramStruct = applyLongPulseCombo(paramStruct);
         BpodSystem.ProtocolSettings = paramStruct; %Sync Bpod with the external settings
         varargout{1} = paramStruct; %Output the changed parameter struct
-        %--------------------------------------------------------------------------
         
         %%
     case 'refresh'
@@ -304,8 +318,11 @@ switch figMethod
             %Get field names of the fields linked to a UIcontrol
             paramNames = fieldnames(BpodSystem.GUIHandles.ParamEdit);
             for k=1:length(paramNames) %directly set the display to the input values from
-               if eval(['paramStruct.' paramNames{k} ' ~= BpodSystem.ProtocolSettings.' paramNames{k}]) %only change the display of items that need it
-                    eval(['set(BpodSystem.GUIHandles.ParamEdit.' paramNames{k} ', ''String'', num2str(paramStruct.' paramNames{k} '));'])
+               if ~isfield(paramStruct, paramNames{k})
+                   continue
+               end
+               if ~isequaln(paramStruct.(paramNames{k}), BpodSystem.ProtocolSettings.(paramNames{k}))
+                    writeParamEdit(BpodSystem.GUIHandles.ParamEdit.(paramNames{k}), paramStruct.(paramNames{k}));
                 end
             end
             BpodSystem.ProtocolSettings = paramStruct; %conclude by syncing the two
@@ -318,34 +335,37 @@ switch figMethod
         BpodSystem.GUIHandles.LabelsVal.correctTrials.String = num2str(sum(BpodSystem.Data.CorrectResponse));
         BpodSystem.GUIHandles.LabelsVal.earlyWithdrawals.String = num2str(sum(BpodSystem.Data.EarlyWithdrawal));
         BpodSystem.GUIHandles.LabelsVal.noChoiceTrials.String = num2str(sum(BpodSystem.Data.DidNotChoose));
-        BpodSystem.GUIHandles.LabelsVal.elapsed.String = char(duration(0,0,toc(BpodSystem.GUIData.SessionStart),'Format','hh:mm')); %Updates once per trial
         
         BpodSystem.GUIHandles.LabelsVal.leftSideReward.String = num2str(BpodSystem.Data.LeftSideRewardAmount);
         BpodSystem.GUIHandles.LabelsVal.rightSideReward.String = num2str(BpodSystem.Data.RightSideRewardAmount);
         BpodSystem.GUIHandles.LabelsVal.totalReward.String = num2str(BpodSystem.Data.LeftSideRewardAmount + BpodSystem.Data.RightSideRewardAmount);
-        %------------------------------------------------------------------
         
         %%
     case 'close'
         %Close the figure at the end of the experiment
         close(BpodSystem.GUIHandles.Figures.DemonFigure)
 end
-
-%---------------------------------------------------------------------
 %Finally adjust the font size on the entire figure
 
 %Set the font size on the figure
-% screenParam = get(0,'screensize'); %retrieve info about the pixels
-% fontScaling = screenParam(4)*(8.8/720); %determine Font size based on the height of the screen and a ratio tested before
 % set(findall(BpodSystem.GUIHandles.Figures.DemonFigure,'-property','FontSize'),'FontSize',fontScaling) %do the scaling
 
 end
 
 function startButton (h, ev) %this callback delays the evaluation of the inputs until the next trial is started and sets update to true
 global update
-update = 1; %Make sure to enter into update mode when the function is called the next time
 global BpodSystem
-uiresume(BpodSystem.GUIHandles.Figures.DemonFigure); %wait for spout control and clear handle afterwards %???
+if startsWith(get(h,'String'),'Start')
+    [ready,message] = beginChipmunkRecording();
+    if ~ready
+        set(h,'TooltipString',message);
+        SpikeGLXControl('refresh');
+        warning('chipmunk_solo:RecordingNotReady','%s',message);
+        return
+    end
+end
+update = 1; %Make sure to enter into update mode when the function is called the next time
+uiresume(BpodSystem.GUIHandles.Figures.DemonFigure); % Resume after Start; during a trial this only marks the next Update.
 set(h,'String','Update settings'); %Change the button
 end
 
@@ -357,17 +377,96 @@ ProtocolSettings = BpodSystem.ProtocolSettings; %Take the params from the BpodSy
 %Get field names of the fields linked to a UIcontrol
 paramNames = fieldnames(BpodSystem.GUIHandles.ParamEdit);
 for k=1:length(paramNames)
-    temp = []; %initialize a temporary variable to hold the UIstring
-    eval(['temp = get(BpodSystem.GUIHandles.ParamEdit.' paramNames{k} ', ''String'');']); %Retrieve the string inside the UIcontrol edit box
-    if ~isempty(str2num(num2str(temp))) %This is a nice test of whether there are only numbers or whether there are letters too
-        eval(['ProtocolSettings.' paramNames{k} ' = str2num(temp);']);
-    else
-        eval(['ProtocolSettings.' paramNames{k} ' = temp;']);
-    end
+    ProtocolSettings.(paramNames{k}) = readParamEdit(BpodSystem.GUIHandles.ParamEdit.(paramNames{k}));
 end
+ProtocolSettings = applyLongPulseCombo(ProtocolSettings);
 save(BpodSystem.Path.Settings,'ProtocolSettings');
 
 update = 1;
 
 display('Saved settings and will update in the next round.')
+end
+
+function value = readParamEdit(h)
+if strcmp(get(h, 'Style'), 'popupmenu')
+    if strcmp(get(h, 'Tag'), 'manipLongCombo')
+        value = get(h, 'Value');
+        return
+    end
+    values = {'standard', 'dim', 'long', 'equalized'};
+    value = values{get(h, 'Value')};
+    return
+end
+temp = get(h, 'String');
+num = str2num(num2str(temp)); %#ok<ST2NM>
+if ~isempty(num)
+    value = num;
+else
+    value = temp;
+end
+end
+
+function writeParamEdit(h, value)
+if strcmp(get(h, 'Style'), 'popupmenu')
+    if strcmp(get(h, 'Tag'), 'manipLongCombo')
+        set(h, 'Value', value);
+        return
+    end
+    values = {'standard', 'dim', 'long', 'equalized'};
+    idx = find(strcmpi(values, value), 1);
+    if isempty(idx)
+        idx = 1;
+    end
+    set(h, 'Value', idx);
+    syncStimulusManipControls();
+else
+    set(h, 'String', num2str(value));
+end
+end
+
+function s = applyLongPulseCombo(s)
+if ~isfield(s, 'manipLongCombo')
+    return
+end
+combos = longPulseCombinations();
+idx = s.manipLongCombo;
+if isempty(idx) || idx < 1 || idx > size(combos, 1)
+    idx = 1;
+end
+s.manipLongPulseMs = combos(idx, 1);
+s.manipLongGapMs = combos(idx, 2);
+s = rmfield(s, 'manipLongCombo');
+end
+
+function syncStimulusManipControls(~, ~)
+global BpodSystem
+if ~isfield(BpodSystem.GUIHandles, 'ParamEdit') || ~isfield(BpodSystem.GUIHandles.ParamEdit, 'manipPreset')
+    return
+end
+preset = readParamEdit(BpodSystem.GUIHandles.ParamEdit.manipPreset);
+switch preset
+    case 'dim'
+        on = {'manipEligibleRates', 'manipFractionPercent', 'manipDimBrightness'};
+    case 'long'
+        on = {'manipEligibleRates', 'manipFractionPercent', 'manipLongCombo'};
+    otherwise
+        on = {};
+end
+names = {'manipEligibleRates', 'manipFractionPercent', 'manipDimBrightness', ...
+    'manipNormalPulseMs', 'manipNormalGapMs', 'manipLongCombo'};
+for k = 1:numel(names)
+    name = names{k};
+    if ~isfield(BpodSystem.GUIHandles.ParamEdit, name) || ~isgraphics(BpodSystem.GUIHandles.ParamEdit.(name))
+        continue
+    end
+    enable = 'off';
+    if any(strcmp(name, on))
+        enable = 'on';
+    end
+    set(BpodSystem.GUIHandles.ParamEdit.(name), 'Enable', enable);
+    if isfield(BpodSystem.GUIHandles, 'ManipLabels') && isfield(BpodSystem.GUIHandles.ManipLabels, name) ...
+            && isgraphics(BpodSystem.GUIHandles.ManipLabels.(name))
+        set(BpodSystem.GUIHandles.ManipLabels.(name), 'Enable', enable);
+    end
+end
 end

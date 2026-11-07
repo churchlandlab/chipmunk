@@ -29,23 +29,27 @@ switch plotMethod
         stimTrainDuration = varargin{2}; %The duration of the signal
         
         %Intialize the visual stimulus panel first
-        axes(AxesHandleVisual)
-        set(AxesHandleVisual, 'XLim',[0 1]) %What is the ylimit?
-        BpodSystem.GUIHandles.StimulusPlotVisualLine = line(NaN, NaN, 'LineStyle','-','color',plottingColors(1,:));
+        set(AxesHandleVisual, 'XLim',[0 stimTrainDuration])
+        BpodSystem.GUIHandles.StimulusPlotVisualLine = line(AxesHandleVisual, NaN, NaN, 'LineStyle','-','color',plottingColors(1,:));
         %hold(AxesHandleVisual,'on')
         
          %Now the auditory stimulus plot
-        axes(AxesHandleAuditory)
-        set(AxesHandleAuditory, 'XLim',[0 1]) %What is the ylimit?
-        BpodSystem.GUIHandles.StimulusPlotAuditoryLine = line(NaN, NaN, 'LineStyle','-','color',plottingColors(2,:));
+        set(AxesHandleAuditory, 'XLim',[0 stimTrainDuration])
+        BpodSystem.GUIHandles.StimulusPlotAuditoryLine = line(AxesHandleAuditory, NaN, NaN, 'LineStyle','-','color',plottingColors(2,:));
         %hold(AxesHandleAuditory,'on')
         
         %Store the Xdata
+        BpodSystem.GUIData.StimulusPlotDemonstrator.SamplingFreq = samples;
         BpodSystem.GUIData.StimulusPlotDemonstrator.Xdata = 1/samples:1/samples:stimTrainDuration;
         
          %%
     case 'refresh'
         stimulusSignals = varargin{1}; %get the signals
+        if numel(BpodSystem.GUIData.StimulusPlotDemonstrator.Xdata) ~= size(stimulusSignals,2)
+            fs = BpodSystem.GUIData.StimulusPlotDemonstrator.SamplingFreq;
+            BpodSystem.GUIData.StimulusPlotDemonstrator.Xdata = (1:size(stimulusSignals,2))/fs;
+            set([AxesHandleVisual AxesHandleAuditory],'XLim',[0 size(stimulusSignals,2)/fs]);
+        end
         
         %First visual
         set(BpodSystem.GUIHandles.StimulusPlotVisualLine,'xdata', BpodSystem.GUIData.StimulusPlotDemonstrator.Xdata,...

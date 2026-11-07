@@ -48,7 +48,7 @@ switch plotMethod
   
         axes(AxesHandle);%plot in specified axes
 
-        Xdata = 1:nTrialsToShow; Ydata = TrialSidesList(Xdata);
+        Xdata = 1:min(nTrialsToShow,numel(TrialSidesList)); Ydata = TrialSidesList(Xdata);
         BpodSystem.GUIHandles.FutureTrialCircle = line([Xdata,Xdata],[Ydata,Ydata],'LineStyle','none','Marker','o','MarkerEdge',plottingColors(1,:),'MarkerFace',plottingColors(1,:), 'MarkerSize',6);
         Ydata = TrialSidesList(1); %Plot the first trial in blue already
         BpodSystem.GUIHandles.CurrentTrialCircle = line([1,1],[Ydata Ydata], 'LineStyle','none','Marker','o','MarkerEdge',plottingColors(2,:),'MarkerFace',plottingColors(2,:), 'MarkerSize',6);
@@ -80,15 +80,20 @@ switch plotMethod
         [mn, mx] = rescaleX(AxesHandle,currentTrial,nTrialsToShow);
 
         %plot future trials
-        FutureTrialsIndx = currentTrial:mx;
+        FutureTrialsIndx = currentTrial:min(mx,numel(TrialSidesList));
         Xdata = FutureTrialsIndx; Ydata = TrialSidesList(Xdata);
         set(BpodSystem.GUIHandles.FutureTrialCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
         %Plot current trial
-        set(BpodSystem.GUIHandles.CurrentTrialCircle, 'xdata', [currentTrial,currentTrial], 'ydata', [TrialSidesList(currentTrial),TrialSidesList(currentTrial)]);
+        if currentTrial <= numel(TrialSidesList)
+            set(BpodSystem.GUIHandles.CurrentTrialCircle, 'xdata', [currentTrial,currentTrial], ...
+                'ydata', [TrialSidesList(currentTrial),TrialSidesList(currentTrial)]);
+        else
+            set(BpodSystem.GUIHandles.CurrentTrialCircle,'xdata',NaN,'ydata',NaN);
+        end
         
         %Plot past trials
         if currentTrial > 1 %Only needed when the current trial is at least the second one
-            indxToPlot = mn:currentTrial-1;
+            indxToPlot = mn:min([currentTrial-1,numel(OutcomeRecord),numel(TrialSidesList)]);
 
             %Plot Error, unpunished
             EarlyWithdrawalTrialsIndx = (OutcomeRecord(indxToPlot) == -1);
@@ -103,8 +108,6 @@ switch plotMethod
             Xdata = indxToPlot(CorrectTrialsIndx); Ydata = TrialSidesList(Xdata);
             set(BpodSystem.GUIHandles.RewardedCorrectCircle, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
             %Plot Correct, unrewarded
-%             UnrewardedTrialsIndx = (OutcomeRecord(indxToPlot) == 2);
-%             Xdata = indxToPlot(UnrewardedTrialsIndx); Ydata = SideList(Xdata);
 %             set(BpodSystem.GUIHandles.UnrewardedCorrectLine, 'xdata', [Xdata,Xdata], 'ydata', [Ydata,Ydata]);
             %Plot DidNotChoose
             DidNotChooseTrialsIndx = (OutcomeRecord(indxToPlot) == 2);
