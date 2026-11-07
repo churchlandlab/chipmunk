@@ -25,8 +25,7 @@ class Chipmunk(dj.Imported):
     setting_high_rate_side       : enum('left','right')
     setting_strict_choice        : tinyint  # 1: no do overs 0: allow changing choice # ReviseChoiceFlag
     setting_free_initiation      : tinyint  # 1: animal can initiate 0: initiation time limit # PacedFlag
-    setting_task_mode            : enum('detection','discrimination','passive')
-    passive_replay = 0           : tinyint     # 1 if recorded passive replay observations are present, otherwise 0
+    setting_task_mode            : enum('detection','discrimination')
 
     """
 
@@ -39,7 +38,7 @@ class Chipmunk(dj.Imported):
         stim_rate_audio = NULL              : float      # audio stimulus rate [Hz]
         stim_rate_vision = NULL             : float      # visual stimulus rate [Hz]
         category_boundary                   : float
-        rewarded_position = NULL            : enum('left','right')
+        rewarded_position                   : enum('left','right')
         stim_events = NULL                  : longblob   # Intended onsets relative to trial start: visual for multisensory, otherwise the active channel
         stim_event_duration = NULL          : double     # Duration of individual flashes or clicks
         min_isi = NULL                      : double     # The shortest allowed interval between flashes or clicks
@@ -89,22 +88,13 @@ class Chipmunk(dj.Imported):
         response = 0                 : tinyint    # -1:left, 0:no response, 1:right
         """
     
-    class Passive(dj.Part):
-        definition = """
-        -> master
-        passive_trial_num                   : int        # Replay order, starting at zero
-        ---
-        -> master.Trial.proj(source_trial_num='trial_num')
-        t_sync = NULL                       : double     # Replay sync time on the active session's Bpod clock [seconds]
-        t_stim = NULL                       : double     # Recorded replay stimulus onset on the same clock [seconds]
-        t_stim_end = NULL                   : double     # Recorded StopStimulus onset on the same clock [seconds]
-        """
-
     from typing import no_type_check
     @no_type_check
     def make(self, key, **_kwargs):
         localpath = prefs['local_paths'][0]
         if key['dataset_name'] == 'chipmunk':
+            if (Dataset & key).fetch1('dataset_type') is None:
+                Dataset.update1(dict(key, dataset_type='task-behavior'))
             filekey = (Dataset.DataFiles() & key & 'file_path LIKE "%.mat"').fetch(as_dict= True)
             if not len(filekey):
                 RuntimeWarning(f'[chipmunk]: Dataset does not contain the log file {key}')  # noqa: PLW0133
@@ -112,13 +102,24 @@ class Chipmunk(dj.Imported):
             filename = None  # noqa: F841
             local = None  # noqa: F841
             file_keys = File() & (Dataset.DataFiles() & key)
-            filenames = file_keys.get() # downloads if not there.
+            if _kwargs.get('download_videos', True):
+                filenames = file_keys.get() # downloads if not there.
+            else:
+                # Download the small files only. Use the camera videos only when all are
+                # already local; otherwise skip the camera step and keep existing rows.
+                filenames = (file_keys & 'file_path NOT LIKE "%.avi"').get()
+                videos = [pathlib.Path(localpath) / f for f in
+                          (file_keys & 'file_path LIKE "%.avi"').fetch('file_path')]
+                if videos and all(v.exists() for v in videos):
+                    filenames = list(filenames) + [str(v) for v in videos]
+                else:
+                    filenames = [f for f in filenames if not str(f).endswith('.camlog')]
             assert not len(filenames) is None, ValueError(f'Dataset {key} is not in {prefs["local_paths"]}')
             from .utils import process_chipmunk_file, _upsert_generated_row
             (trialdicts,
              trial_parametersdicts,
              settingsdict), metadata = process_chipmunk_file((File() & filekey).get()[0])
-            passive_trials = metadata.pop('passive_trials', [])
+            passive_trials = metadata.pop('passive_trials', [])  # rows go to ChipmunkPassive; pulses stay in this sync stream
             computer_name = None
             if not metadata['setup_name'] is None:
                 # add if not there
@@ -198,11 +199,10 @@ class Chipmunk(dj.Imported):
             self.insert1(dict(key,**settingsdict))
             self.TrialParameters.insert([dict(key,**d) for d in trial_parametersdicts])
             self.Trial.insert([dict(key,**d) for d in trialdicts])
-            self.Passive.insert([dict(key,**d) for d in passive_trials])
             # get example frames for each camera
             # align the video to the behavior data
             from .utils import extract_chipmunk_camera_data, _session_sync_times
-            cameras, frames, camera_events = extract_chipmunk_camera_data(file_keys.get(),trialdicts,passive_trials)
+            cameras, frames, camera_events = extract_chipmunk_camera_data(filenames,trialdicts,passive_trials)
             riglogevents = []
             if len(camera_events):
                 riglogevents.extend(camera_events)
@@ -669,3 +669,43 @@ class Chipmunk(dj.Imported):
             'n_trials_fit': int(complete_residual.shape[0]),
             'n_bins_fit': int(n_bins_fit),
         }
+
+
+@chipmunkschema
+class ChipmunkPassive(dj.Imported):
+    definition = """
+    -> Dataset                                # the chipmunk_passive dataset
+    ---
+    replay_order                 : enum('sequential','random')
+    replay_status                : varchar(16)  # completed, aborted or failed
+    """
+
+    class Trial(dj.Part):
+        definition = """
+        -> master
+        passive_trial_num            : int        # replay order, starting at zero
+        ---
+        -> Chipmunk.Trial.proj(source_dataset_name='dataset_name', source_trial_num='trial_num')
+        t_sync = NULL                : double     # Sync onset on the task dataset's Bpod clock [seconds]
+        t_stim = NULL                : double     # PlayStimulus onset on the same clock [seconds]
+        t_stim_end = NULL            : double     # StopStimulus onset on the same clock [seconds]
+        """
+
+    @property
+    def key_source(self):
+        # Replays come from the task dataset of the same session, so it must be populated first.
+        return (Dataset & 'dataset_name = "chipmunk_passive"') & Chipmunk.proj(task_dataset='dataset_name')
+
+    def make(self, key):
+        from scipy.io import loadmat
+        from .utils import _passive_replay
+        if (Dataset & key).fetch1('dataset_type') is None:
+            Dataset.update1(dict(key, dataset_type='passive-stimulation'))
+        filekey = (Dataset.DataFiles() & key & 'file_path LIKE "%.mat"').fetch(as_dict=True)
+        if not len(filekey):
+            warnings.warn(f'[chipmunk]: Passive dataset has no MAT file {key}')
+            return
+        replay = loadmat((File() & filekey).get()[0], simplify_cells=True)['PassiveReplay']
+        rows = _passive_replay(replay)
+        self.insert1(dict(key, replay_order=replay['order'], replay_status=replay['status']))
+        self.Trial.insert([dict(key, source_dataset_name='chipmunk', **row) for row in rows])

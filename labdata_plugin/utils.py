@@ -35,21 +35,24 @@ def _stimulus_trains(intervals, pulse_duration, extra_duration):
     return trains, total / fs
 
 
-def _passive_replay(file_name, trialdata):
-    """Replay observations on the active session clock, with zero-based source keys."""
-    from scipy.io import loadmat
-    replay = loadmat(file_name, simplify_cells=True)['SessionData']['PassiveReplay']
+def _passive_replay(replay, trialdata=None):
+    """Replay observations on the active session clock, with zero-based source keys.
+
+    replay is the saved PassiveReplay struct (task file or chipmunk_passive copy).
+    Checks against the active trials run only when trialdata is given.
+    """
     sources = np.atleast_1d(replay['sourceTrialNumbers'])
     statuses = np.atleast_1d(replay['trialStatus'])
     count = int(replay['nRequested'])
     if (len(sources) != count or len(statuses) != count
             or not np.all(np.isfinite(sources))
             or not np.all(sources == sources.astype(int))
-            or np.any(sources < 1) or np.any(sources > len(trialdata))
+            or np.any(sources < 1)
+            or (trialdata is not None and np.any(sources > len(trialdata)))
             or len(np.unique(sources)) != count
             or int(replay['nCompleted']) != np.count_nonzero(statuses == 'completed')):
         raise ValueError('Invalid saved passive replay source references or status counts')
-    for source in sources.astype(int):
+    for source in (sources.astype(int) if trialdata is not None else []):
         if not np.isfinite(trialdata.iloc[source-1]['PlayStimulus'][0]):
             raise ValueError('Replay source trial never reached PlayStimulus')
     raw = replay['rawEvents']
@@ -89,7 +92,7 @@ def _passive_replay(file_name, trialdata):
                 or (rows and row['t_stim'] < rows[-1]['t_stim'])):
             raise ValueError('Passive replay times are not ordered on the session clock')
         rows.append(row)
-    if rows and 'trial_start_time' in trialdata:
+    if rows and trialdata is not None and 'trial_start_time' in trialdata:
         active_end = _get_state_time(trialdata.iloc[-1], ['FinishTrial', 'PrepareNextTrial'], index=-1)
         if active_end is not None and rows[0]['t_stim'] < active_end:
             raise ValueError('Passive replay clock precedes the end of the active session')
@@ -426,7 +429,9 @@ def load_chipmunk_trialdata(file_name):
             tmp = sesdata['TrialSettings'].tolist()
             trialdata.insert(trialdata.shape[1], 'dobserver_ID' , tmp['obsID'].tolist())
         if 'PassiveReplay' in sesdata.dtype.names:
-            metadata['passive_trials'] = _passive_replay(file_name, trialdata)
+            from scipy.io import loadmat
+            replay = loadmat(file_name, simplify_cells=True)['SessionData']['PassiveReplay']
+            metadata['passive_trials'] = _passive_replay(replay, trialdata)
 
     except Exception as err:
         raise ValueError(f'[chipmunk]: Could not load {file_name}: {err}') from err
@@ -508,11 +513,7 @@ def process_chipmunk_file(filepath):
                          setting_prob_audio = setting_prob_audio,
                          setting_high_rate_side = setting_high_rate_side,
                          setting_strict_choice = setting_strict_choice,
-                         setting_free_initiation = setting_free_choice,
-                         passive_replay = int(bool(metadata.get('passive_trials', []))))
-    saved_settings = session_data['TrialSettings'].tolist()
-    passive = ('smaAssembler' in saved_settings.dtype.names and
-               np.all(saved_settings['smaAssembler'] == 'PassiveVisualStimSMA'))
+                         setting_free_initiation = setting_free_choice)
     # process settings from each trial and the outcomes
     trials_dict = []
     trial_settings_dict = []
@@ -570,7 +571,7 @@ def process_chipmunk_file(filepath):
                                         stim_rate_audio = trial.stimulus_rate_auditory if np.isfinite(trial.stimulus_rate_auditory) else None,
                                         stim_rate_vision = trial.stimulus_rate_visual if np.isfinite(trial.stimulus_rate_visual) else None,
                                         category_boundary = trial.category_boundary,
-                                        rewarded_position = None if passive else ('right' if trial.correct_side == 1 else 'left'),
+                                        rewarded_position = 'right' if trial.correct_side == 1 else 'left',
                                         stim_events = [f for f in trial.stimulus_event_timestamps],
                                         stim_event_duration = trial.stimulus_event_duration,
                                         min_isi = trial.min_isi,
@@ -594,7 +595,7 @@ def process_chipmunk_file(filepath):
                     len(np.unique([t['stim_rate_vision'] 
                                    for t in trial_settings_dict 
                                    if not t['stim_rate_vision'] is None]))])
-    settings_dict['setting_task_mode'] = 'passive' if passive else ('detection' if max_stims <= 2 else 'discrimination')
+    settings_dict['setting_task_mode'] = 'detection' if max_stims <= 2 else 'discrimination'
     settings_dict['duration'] = trials_dict[-1]['t_end'] - trials_dict[0]['t_start']
     return (trials_dict, trial_settings_dict,settings_dict),metadata
 
@@ -808,9 +809,6 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
     from .pluginschema import Chipmunk
     from labdata.schema import Watering, Session, DecisionTask, Dataset
     d = (Dataset & d).fetch1()
-    if (Chipmunk & d).fetch1('setting_task_mode') == 'passive':
-        return
-
     trials = pd.DataFrame((Chipmunk*Chipmunk.Trial*Chipmunk.TrialParameters & d).fetch(order_by='trial_num'))
     if len(trials)<mintrials:
         return

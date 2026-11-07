@@ -7,7 +7,8 @@ import numpy as np
 from scipy.io import savemat
 
 from test_loader_compatibility import session_data, records
-from test_parser_fields import parser_namespace, definition
+from test_parser_fields import parser_namespace, definition, ROOT
+import ast
 
 
 class StimulusReplayTest(unittest.TestCase):
@@ -46,25 +47,6 @@ class StimulusReplayTest(unittest.TestCase):
         self.assertTrue(all('stim_events_audio' not in p for p in params))
         np.testing.assert_allclose(params[0]['stim_events'],[.2,.415,.63,.845])
 
-    def test_passive_trials_have_no_choice_or_reward_and_keep_duration(self):
-        data=session_data()
-        values={name:data['TrialSettings'][name][0,0] for name in data['TrialSettings'].dtype.names}
-        data['TrialSettings']=records(dict(values,smaAssembler='PassiveVisualStimSMA'),3)
-        data['ResponseSide']=np.full(3,np.nan)
-        data['CorrectSide']=np.full(3,np.nan)
-        for trial in data['RawEvents']['Trial'][0]:
-            trial['States']={name:np.array(times) for name,times in [
-                ('Sync',[0,.1]),('TrialStart',[.1,.2]),
-                ('PlayStimulus',[.2,1.2]),('FinishTrial',[1.2,1.2])]}
-            trial['Events']={'Tup':np.array([.1,.2,1.2])}
-        (trials,params,settings),_=self.parse(data)
-        self.assertEqual(settings['setting_task_mode'],'passive')
-        for t,p in zip(trials,params):
-            self.assertEqual((t['rewarded'],t['punished'],t['with_choice'],t['initiated']),(0,0,0,0))
-            self.assertIsNone(t['t_response'])
-            self.assertGreater(t['stim_duration'],0)
-            self.assertIsNone(p['rewarded_position'])
-
     def test_replay_rows_use_session_clock_and_zero_based_source_keys(self):
         data=session_data()
         raw=np.empty((1,2),dtype=object)
@@ -76,10 +58,18 @@ class StimulusReplayTest(unittest.TestCase):
             rawEvents=raw,stateNames=np.array(['Sync','InterTrialInterval','PlayStimulus','StopStimulus','FinishTrial'],dtype=object))
         (trials,_,settings),metadata=self.parse(data)
         self.assertEqual(len(trials),3)
-        self.assertEqual(settings['passive_replay'],1)
-        self.assertEqual(metadata['passive_trials'],[
+        self.assertNotIn('passive_replay',settings)
+        expected=[
             dict(passive_trial_num=0,source_trial_num=0,t_sync=100.,t_stim=100.2,t_stim_end=101.2),
-            dict(passive_trial_num=1,source_trial_num=2,t_sync=102.,t_stim=102.2,t_stim_end=103.2)])
+            dict(passive_trial_num=1,source_trial_num=2,t_sync=102.,t_stim=102.2,t_stim_end=103.2)]
+        self.assertEqual(metadata['passive_trials'],expected)
+        # The chipmunk_passive copy gives the same rows without the task trials.
+        from scipy.io import loadmat
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'FakeSubject_contract.mat'
+            savemat(path,{'PassiveReplay':data['PassiveReplay']},long_field_names=True)
+            replay=loadmat(path,simplify_cells=True)['PassiveReplay']
+        self.assertEqual(parser_namespace()['_passive_replay'](replay),expected)
         data['PassiveReplay']['sourceTrialNumbers']=[0,4]
         with self.assertRaisesRegex(ValueError,'source references'):
             self.parse(data)
@@ -98,16 +88,21 @@ class StimulusReplayTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'no recorded event timestamps'):
             self.parse(data)
 
-    def test_enabled_setting_without_replay_is_zero(self):
+    def test_session_without_replay_has_no_passive_rows(self):
         (_,_,settings),metadata=self.parse(session_data())
-        self.assertEqual(settings['passive_replay'],0)
+        self.assertNotIn('passive_replay',settings)
         self.assertEqual(metadata.get('passive_trials',[]),[])
 
-    def test_passive_definition_links_source_trial_without_status(self):
-        ddl=definition('Passive')
-        self.assertIn("master.Trial.proj(source_trial_num='trial_num')",ddl)
-        self.assertNotIn('status',ddl)
+    def test_passive_dataset_links_source_trial(self):
+        tree=ast.parse((ROOT/'pluginschema.py').read_text())
+        cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='ChipmunkPassive')
+        self.assertIn('-> Dataset',cls.body[0].value.value)
+        part=next(n for n in cls.body if isinstance(n,ast.ClassDef) and n.name=='Trial')
+        ddl=part.body[0].value.value
+        self.assertIn("-> Chipmunk.Trial.proj(source_dataset_name='dataset_name', source_trial_num='trial_num')",ddl)
         self.assertIn('passive_trial_num',ddl)
+        self.assertNotIn('passive_replay',definition('Chipmunk'))
+        self.assertNotIn('Passive',[n.name for n in ast.walk(tree) if isinstance(n,ast.ClassDef)])
 
     def test_time_columns_preserve_double_precision(self):
         for line in definition('Trial').splitlines():

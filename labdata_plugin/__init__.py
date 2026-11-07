@@ -1,6 +1,6 @@
 from importlib.util import find_spec
 
-from .pluginschema import Chipmunk, chipmunkschema
+from .pluginschema import Chipmunk, ChipmunkPassive, chipmunkschema
 from .utils import (
     chipmunk_insert_decision_task,
     load_chipmunk_trialdata,
