@@ -10,8 +10,11 @@ for k = 1:numel(names)
     name = names{k};
     if isfield(BpodSystem.GUIHandles.ParamEdit, name) && ...
             isgraphics(BpodSystem.GUIHandles.ParamEdit.(name))
-        value = get(BpodSystem.GUIHandles.ParamEdit.(name), 'String');
-        if ~strcmp(name, 'passiveReplayOrder')
+        h = BpodSystem.GUIHandles.ParamEdit.(name);
+        value = get(h, 'String');
+        if strcmp(get(h, 'Style'), 'popupmenu')
+            value = value{get(h, 'Value')}; % Order is a dropdown
+        else
             value = str2double(value);
         end
         BpodSystem.ProtocolSettings.(name) = value;

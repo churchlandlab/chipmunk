@@ -191,9 +191,17 @@ switch figMethod
             y = 1-k/3;
             uicontrol('Parent', BpodSystem.GUIHandles.PassiveReplayPanel, 'Units', 'normal', ...
                 'Position', [0,y,0.4,1/3], 'Style', 'text', 'String', replayLabels{k}, 'HorizontalAlignment', 'right');
-            BpodSystem.GUIHandles.ParamEdit.(name) = uicontrol('Parent', BpodSystem.GUIHandles.PassiveReplayPanel, ...
-                'Units', 'normal', 'Position', [0.425,y,0.55,1/3], ...
-                'Style', 'edit', 'String', BpodSystem.ProtocolSettings.(name));
+            if strcmp(name, 'passiveReplayOrder')
+                orders = {'sequential', 'random'};
+                orderIdx = max([1, find(strcmpi(orders, BpodSystem.ProtocolSettings.(name)), 1)]);
+                BpodSystem.GUIHandles.ParamEdit.(name) = uicontrol('Parent', BpodSystem.GUIHandles.PassiveReplayPanel, ...
+                    'Units', 'normal', 'Position', [0.425,y,0.55,1/3], ...
+                    'Style', 'popupmenu', 'Tag', name, 'String', orders, 'Value', orderIdx);
+            else
+                BpodSystem.GUIHandles.ParamEdit.(name) = uicontrol('Parent', BpodSystem.GUIHandles.PassiveReplayPanel, ...
+                    'Units', 'normal', 'Position', [0.425,y,0.55,1/3], ...
+                    'Style', 'edit', 'String', BpodSystem.ProtocolSettings.(name));
+            end
         end
         BpodSystem.GUIHandles.DemonPreStimPanel = uipanel('Parent', BpodSystem.GUIHandles.DemonTabGroup.TaskControl, 'Units', 'Normal',...
             'Position', [0.05, 0.2, 0.3, 0.12],'Title','Pre stimulus','FontWeight','bold');
@@ -389,6 +397,11 @@ end
 
 function value = readParamEdit(h)
 if strcmp(get(h, 'Style'), 'popupmenu')
+    if strcmp(get(h, 'Tag'), 'passiveReplayOrder')
+        options = get(h, 'String');
+        value = options{get(h, 'Value')};
+        return
+    end
     if strcmp(get(h, 'Tag'), 'manipLongCombo')
         value = get(h, 'Value');
         return
@@ -408,6 +421,10 @@ end
 
 function writeParamEdit(h, value)
 if strcmp(get(h, 'Style'), 'popupmenu')
+    if strcmp(get(h, 'Tag'), 'passiveReplayOrder')
+        set(h, 'Value', max([1, find(strcmpi(get(h, 'String'), value), 1)]));
+        return
+    end
     if strcmp(get(h, 'Tag'), 'manipLongCombo')
         set(h, 'Value', value);
         return

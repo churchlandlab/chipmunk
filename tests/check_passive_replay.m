@@ -60,7 +60,7 @@ fig = figure('Visible','off');
 figCleanup = onCleanup(@() delete(fig));
 BpodSystem.GUIHandles.ParamEdit.passiveReplayEnable = uicontrol(fig,'Style','edit','String','1');
 BpodSystem.GUIHandles.ParamEdit.passiveReplayFraction = uicontrol(fig,'Style','edit','String','0.5');
-BpodSystem.GUIHandles.ParamEdit.passiveReplayOrder = uicontrol(fig,'Style','edit','String','random');
+BpodSystem.GUIHandles.ParamEdit.passiveReplayOrder = uicontrol(fig,'Style','popupmenu','Tag','passiveReplayOrder','String',{'sequential','random'},'Value',2);
 syncPassiveReplaySettingsFromGui();
 assert(BpodSystem.ProtocolSettings.passiveReplayEnable == 1);
 assert(BpodSystem.ProtocolSettings.passiveReplayFraction == .5);
