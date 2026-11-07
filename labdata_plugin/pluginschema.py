@@ -26,6 +26,7 @@ class Chipmunk(dj.Imported):
     setting_strict_choice        : tinyint  # 1: no do overs 0: allow changing choice # ReviseChoiceFlag
     setting_free_initiation      : tinyint  # 1: animal can initiate 0: initiation time limit # PacedFlag
     setting_task_mode            : enum('detection','discrimination')
+    stopped_trial_pulse = NULL   : int      # saved active trials before the Sync pulse of a trial cut short by Stop (not saved); NULL if none
 
     """
 
@@ -211,7 +212,11 @@ class Chipmunk(dj.Imported):
             digital = dict(stream,
                            event_name = 'sync',
                            event_timestamps = _session_sync_times(trialdicts, passive_trials),
-                           event_values = np.arange(len(trialdicts) + len(passive_trials)))
+                           # Clock pulse numbers: a trial cut short by Stop sent one unsaved
+                           # pulse after the active trials, so replay numbers skip it.
+                           event_values = np.r_[np.arange(len(trialdicts)),
+                                                np.arange(len(passive_trials)) + len(trialdicts)
+                                                + (settingsdict.get('stopped_trial_pulse') is not None)])
             
             DatasetEvents.insert1(stream,
                                   skip_duplicates = True,
@@ -678,6 +683,7 @@ class ChipmunkPassive(dj.Imported):
     ---
     replay_order                 : enum('sequential','random')
     replay_status                : varchar(16)  # completed, aborted or failed
+    stopped_pulse_after = NULL   : int          # completed replays before a replay Sync pulse cut short by Stop; NULL if none
     """
 
     class Trial(dj.Part):
@@ -707,5 +713,7 @@ class ChipmunkPassive(dj.Imported):
             return
         replay = loadmat((File() & filekey).get()[0], simplify_cells=True)['PassiveReplay']
         rows = _passive_replay(replay)
-        self.insert1(dict(key, replay_order=replay['order'], replay_status=replay['status']))
+        stopped = np.atleast_1d(replay.get('stoppedPulseAfter', []))
+        self.insert1(dict(key, replay_order=replay['order'], replay_status=replay['status'],
+                          stopped_pulse_after=int(stopped[0]) if stopped.size else None))
         self.Trial.insert([dict(key, source_dataset_name='chipmunk', **row) for row in rows])

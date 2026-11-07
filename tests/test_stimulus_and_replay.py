@@ -88,6 +88,15 @@ class StimulusReplayTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'no recorded event timestamps'):
             self.parse(data)
 
+    def test_stopped_trial_pulse_marker(self):
+        (_,_,settings),_=self.parse(session_data())
+        self.assertIsNone(settings['stopped_trial_pulse'])
+        data=session_data(); data['StoppedTrialPulse']=3
+        (_,_,settings),_=self.parse(data)
+        self.assertEqual(settings['stopped_trial_pulse'],3)
+        self.assertIn('stopped_pulse_after',[l.split(':')[0].split('=')[0].strip() for l in
+            Path(ROOT/'pluginschema.py').read_text().split('class ChipmunkPassive(')[1].split('class Trial(')[0].splitlines()])
+
     def test_session_without_replay_has_no_passive_rows(self):
         (_,_,settings),metadata=self.parse(session_data())
         self.assertNotIn('passive_replay',settings)

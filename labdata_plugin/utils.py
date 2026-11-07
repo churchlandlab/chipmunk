@@ -506,7 +506,14 @@ def process_chipmunk_file(filepath):
     setting_left_reward_volume = session_data['TrialSettings'].tolist()['leftRewardVolume'][0]
     setting_right_reward_volume = session_data['TrialSettings'].tolist()['rightRewardVolume'][0]
     
-    settings_dict = dict(setting_modalities = setting_modalities,
+    # Chipmunk Solo 986bd21+: saved active trials before the unsaved pulse of a trial cut short by Stop.
+    stopped_trial_pulse = None
+    if 'StoppedTrialPulse' in session_data.dtype.names:
+        stopped = np.asarray(session_data['StoppedTrialPulse'].tolist(), dtype=float).ravel()
+        stopped_trial_pulse = int(stopped[0]) if stopped.size else None
+
+    settings_dict = dict(stopped_trial_pulse = stopped_trial_pulse,
+                         setting_modalities = setting_modalities,
                          setting_left_reward_volume = setting_left_reward_volume,
                          setting_right_reward_volume = setting_right_reward_volume,
                          setting_prob_vision = setting_prob_vision,
