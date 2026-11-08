@@ -69,9 +69,16 @@ class AbortedReplayTest(unittest.TestCase):
 
 
 class DidNotChooseTest(unittest.TestCase):
-    def process(self, frame):
+    def process(self, frame, assembler="DemonstratorTaskSMA"):
         ns = parser_namespace()
-        ns['load_chipmunk_trialdata'] = lambda _: (frame, example_session()[1], {'weight': np.nan})
+        session = example_session()[1]
+        settings = session['SettingsFile'].tolist()
+        identified = np.empty((), dtype=settings.dtype.descr + [('smaAssembler', object)])
+        for name in settings.dtype.names:
+            identified[name] = settings[name]
+        identified['smaAssembler'] = assembler
+        session['SettingsFile'][()] = identified
+        ns['load_chipmunk_trialdata'] = lambda _: (frame, session, {'weight': np.nan})
         return ns['process_chipmunk_file']('unused')[0][0][0]
 
     def test_no_choice_clips_the_stimulus_but_not_the_response(self):
@@ -91,7 +98,7 @@ class DidNotChooseTest(unittest.TestCase):
         paced = np.empty((), dtype=session.dtype.descr + [('PacedFlag', float)])
         for name in session.dtype.names:
             paced[name][()] = session[name][()]
-        for flag, expected in [(1., 1.5), (0., .3)]:
+        for flag, expected in [(1., 1.5), (0., 1.5)]:
             paced['PacedFlag'] = flag
             ns = parser_namespace()
             ns['load_chipmunk_trialdata'] = lambda _: (frame, paced, meta)
@@ -157,7 +164,7 @@ class LegacyModalityTest(unittest.TestCase):
 
     def test_unknown_values_fail_explicitly(self):
         codes = parser_namespace()['_modality_codes']
-        for bad in (['Visual', 'Olfactory'], ['Audio'], [0], [4], [1.5], [np.nan], [None], ['1'], ['Visual  ']):
+        for bad in (['Visual', 'Olfactory'], [0], [4], [1.5], [np.nan], [None], ['1']):
             with self.subTest(bad=bad):
                 with self.assertRaisesRegex(ValueError, 'Unknown stimulus modality'):
                     codes(np.array(bad, dtype=object))
@@ -171,6 +178,12 @@ class LegacyModalityTest(unittest.TestCase):
         data['Modality'] = np.array([1, 2, 3])
         frame, _, _ = self.load(data)
         self.assertEqual(frame['stimulus_modality'].tolist(), ['visual', 'auditory', 'audio+visual'])
+
+    def test_padded_matlab_labels_preserve_rates(self):
+        frame, _, _ = self.load(legacy_session(['Visual  ', 'Auditory', 'Visual  '], as_cell=False))
+        self.assertEqual(frame['stimulus_modality'].tolist(), ['visual', 'auditory', 'visual'])
+        np.testing.assert_array_equal(frame['stimulus_rate_visual'], [4., np.nan, 6.])
+        np.testing.assert_array_equal(frame['stimulus_rate_auditory'], [np.nan, 8., np.nan])
 
     def test_numeric_legacy_file_without_rate_keeps_its_nan_rates(self):
         # Unchanged behavior: the fallback has only ever matched the labels 'Visual' and 'Auditory'.
@@ -270,7 +283,7 @@ class CameraPulseTest(unittest.TestCase):
             return np.interp(all_frames, frames, times)
         self.ns['extrapolate_time_from_clock'] = interpolate
 
-    def align(self, pulses, replay, stopped=None, extra_channels=(), fps=100, active=None):
+    def align(self, pulses, replay, stopped=None, extra_channels=(), fps=100, active=None, replay_metadata=None):
         n_frames = int(max(pulses) * fps) + 3 * fps
         frames = np.arange(n_frames)
 
@@ -285,7 +298,7 @@ class CameraPulseTest(unittest.TestCase):
         log = pd.DataFrame({0: frames, 1: frames / fps, 2: x})
         active = [dict(trial_num=i, t_sync=t) for i, t in enumerate(active or self.ACTIVE)]
         passive = [dict(passive_trial_num=i, t_sync=t) for i, t in enumerate(replay)]
-        return self.ns['_handle_chipmunk_camera_sync'](0, log, [], frames, active, passive, stopped)
+        return self.ns['_handle_chipmunk_camera_sync'](0, log, [], frames, active, passive, stopped, replay_metadata)
 
     def test_stopped_trial_pulse_between_active_and_replay_is_skipped(self):
         times, _ = self.align([1, 3, 6, 8.5, 11, 13], [11., 13.], stopped=3)
@@ -293,15 +306,17 @@ class CameraPulseTest(unittest.TestCase):
         self.assertAlmostEqual(times[1100], 11.)
 
     def test_stopped_pulse_and_one_trailing_aborted_replay_pulse(self):
-        self.align([1, 3, 6, 8.5, 11, 13, 16], [11., 13.], stopped=3)
+        self.align([1, 3, 6, 8.5, 11, 13, 16], [11., 13.], stopped=3,
+                   replay_metadata=dict(status='aborted', stoppedPulseAfter=2))
         self.assertEqual(self.calls[0][1], [100, 300, 600, 1100, 1300])
 
     def test_one_trailing_pulse_without_a_stopped_trial(self):
-        self.align([1, 3, 6, 11, 13, 16], [11., 13.])
+        self.align([1, 3, 6, 11, 13, 16], [11., 13.],
+                   replay_metadata=dict(status='aborted', stoppedPulseAfter=2))
         self.assertEqual(self.calls[0][1], [100, 300, 600, 1100, 1300])
 
     def test_unmarked_extra_pulse_in_the_middle_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, r'matching GPIO.*disagree with Bpod'):
+        with self.assertRaisesRegex(ValueError, r'matching GPIO'):
             self.align([1, 3, 6, 8.5, 11, 13], [11., 13.], stopped=None)
         self.assertEqual(self.calls, [])
 
@@ -311,12 +326,13 @@ class CameraPulseTest(unittest.TestCase):
         self.assertEqual(self.calls[0][1], [100, 300, 600, 1100, 1300])
 
     def test_marker_without_a_pulse_and_one_trailing_pulse(self):
-        self.align([1, 3, 6, 11, 13, 16], [11., 13.], stopped=3)
+        self.align([1, 3, 6, 11, 13, 16], [11., 13.], stopped=3,
+                   replay_metadata=dict(status='aborted', stoppedPulseAfter=2))
         self.assertEqual(self.calls[0][1], [100, 300, 600, 1100, 1300])
 
     def test_marker_with_a_real_pulse_missing_is_rejected(self):
         # The 11 s replay pulse is absent: neither reading of the five pulses fits Bpod.
-        with self.assertRaisesRegex(ValueError, 'matching GPIO.*disagree with Bpod'):
+        with self.assertRaisesRegex(ValueError, 'matching GPIO'):
             self.align([1, 3, 6, 8.5, 13], [11., 13.], stopped=3)
         self.assertEqual(self.calls, [])
 
@@ -366,6 +382,34 @@ class CameraPulseTest(unittest.TestCase):
         self.align(late, [11., 13.], stopped=3, fps=50)
         self.assertEqual(self.calls[-1][0], [1., 3., 6., 11., 13.])
 
+    def test_periodic_trailing_stop_is_ambiguous_even_with_marker(self):
+        for metadata in (None, dict(status='aborted', stoppedPulseAfter=2)):
+            with self.subTest(metadata=metadata), self.assertRaises(ValueError):
+                self.align([1, 3, 5, 7, 9, 11], [7., 9.], active=[1., 3., 5.], replay_metadata=metadata)
+
+    def test_irregular_trailing_pulse_requires_marker(self):
+        with self.assertRaisesRegex(ValueError, 'matching GPIO'):
+            self.align([1, 3, 6, 11, 13, 16], [11., 13.])
+
+    def test_ambiguous_channel_cannot_be_hidden_by_another_channel(self):
+        with self.assertRaisesRegex(ValueError, 'ambiguous'):
+            self.align([2, 4, 6, 8, 10, 12], [10., 12.], stopped=3, fps=1,
+                       active=[2., 4., 6.], extra_channels=([2, 4, 6, 10, 12],))
+
+    def test_eventless_replay_does_not_use_legacy_fallback(self):
+        with self.assertRaisesRegex(ValueError, 'matching GPIO'):
+            self.align([1, 3, 6, 8], [], replay_metadata=dict(status='aborted', stoppedPulseAfter=[]))
+        self.align([1, 3, 6, 8], [], replay_metadata=dict(status='aborted', stoppedPulseAfter=0))
+
+    def test_initially_high_gpio_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'initially high'):
+            self.align([0, 1, 3, 6, 11, 13], [11., 13.])
+
+    def test_observed_aborted_replay_pulse_does_not_allow_another_trailing_pulse(self):
+        with self.assertRaisesRegex(ValueError, 'matching GPIO'):
+            self.align([1, 3, 6, 11, 13, 16], [11., 13.],
+                       replay_metadata=dict(status='aborted', stoppedPulseAfter=1))
+
 
 class MarkerPlumbingTest(unittest.TestCase):
     def calls(self, path, name):
@@ -381,8 +425,8 @@ class MarkerPlumbingTest(unittest.TestCase):
     def test_extraction_passes_the_marker_to_the_alignment(self):
         calls = self.calls('utils.py', '_handle_chipmunk_camera_sync')
         self.assertEqual(len(calls), 1)
-        self.assertEqual(ast.unparse(calls[0].args[-1]), 'stopped_trial_pulse')
-        self.assertEqual(len(calls[0].args), 7)
+        self.assertEqual(ast.unparse(calls[0].args[-2]), 'stopped_trial_pulse')
+        self.assertEqual(len(calls[0].args), 8)
 
     def test_parser_returns_the_marker_make_reads(self):
         data = replay_data(['completed', 'completed', 'completed'], 'completed')
@@ -393,3 +437,99 @@ class MarkerPlumbingTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CameraInputValidationTest(unittest.TestCase):
+    def test_invalid_frame_times_do_not_silently_align(self):
+        match = parser_namespace()['_replay_gpio_onsets']
+        for times in ([0., float('nan'), 2.], [0., 0., 2.], [2., 1., 0.]):
+            with self.subTest(times=times), self.assertRaises(ValueError):
+                match([(0, [0, 1, 0])], times, [1., 2.], 1)
+
+    def test_invalid_gpio_states_fail_explicitly(self):
+        match = parser_namespace()['_replay_gpio_onsets']
+        for states in ([0, 2, 0], [0, 1]):
+            with self.subTest(states=states), self.assertRaises(ValueError):
+                match([(0, states)], [0., 1., 2.], [1., 2.], 1)
+
+
+class ReviewerBlockersTest(unittest.TestCase):
+    def test_zero_observed_rows_keep_replay_status(self):
+        (_, _, _), metadata = parse(replay_data(['aborted', 'not_started'], 'aborted', stopped_after=0))
+        self.assertEqual(metadata['passive_trials'], [])
+        self.assertEqual(metadata['passive_replay']['status'], 'aborted')
+        self.assertEqual(metadata['passive_replay']['stoppedPulseAfter'], 0)
+
+    def test_all_verified_nochoice_stopping_producers(self):
+        helper = DidNotChooseTest()
+        frame = example_session()[0]
+        frame['Reward'] = [np.array([np.nan, np.nan])]
+        frame['DemonDidNotChoose'] = [np.array([.5, .51])]
+        root = ROOT.parent
+        paths = list((root / 'Functions/StateMatrices').glob('*.m')) + list((root / 'chipmunk_solo/Functions/StateMatrices').glob('*.m'))
+        import re
+        stopping = []
+        for path in paths:
+            block = re.search(r"'Name', 'DemonDidNotChoose'.*?'OutputActions', (.*?);", path.read_text(), re.S)
+            if block and re.search(r"'SoftCode',\s*255", block[1]):
+                stopping.append(path.stem)
+                with self.subTest(producer=path.stem):
+                    self.assertAlmostEqual(helper.process(frame, path.stem)['stim_duration'], .3)
+        self.assertEqual(len(stopping), 9)
+        for producer in ('DemonstratorSelfInitiatedTaskSMA', 'DemonstratorPacedTaskSMA',
+                         'DemonstratorPacedFixationTrainingSMA', 'ObserverTaskSMA_outdated', None, 'UnknownLegacy'):
+            with self.subTest(producer=producer):
+                self.assertAlmostEqual(helper.process(frame, producer)['stim_duration'], 1.5)
+
+
+class ReviewerValidationTest(unittest.TestCase):
+    def test_invalid_bpod_times_and_replay_markers(self):
+        match = parser_namespace()['_replay_gpio_onsets']
+        for times in ([1, np.nan], [1, 1], [2, 1], [[1, 2]]):
+            with self.subTest(times=times), self.assertRaises(ValueError):
+                match([(0, [0, 1, 0, 1, 0])], np.arange(5), times, 1)
+        for marker in (-1, .5, np.nan, [0, 1], 2):
+            with self.subTest(marker=marker), self.assertRaises(ValueError):
+                match([(0, [0, 1, 0, 1, 0])], np.arange(5), [1, 3], 1,
+                      passive_replay=dict(status='aborted', stoppedPulseAfter=marker))
+
+    def test_invalid_saved_active_stop_markers_fail_before_integer_conversion(self):
+        for marker in (-1, 2.5, np.nan, [3, 3]):
+            data = replay_data(['completed'], 'completed')
+            data['StoppedTrialPulse'] = marker
+            with self.subTest(marker=marker), self.assertRaisesRegex(ValueError, 'Invalid StoppedTrialPulse'):
+                parse(data)
+
+    def test_ephys_ordinal_guard_runs_before_plugin_inserts(self):
+        tree = ast.parse((ROOT / 'pluginschema.py').read_text())
+        make = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == 'make')
+        guard = next(n for n in ast.walk(make) if isinstance(n, ast.If)
+                     and ast.unparse(n.test).startswith('passive_trials and'))
+        for rows, marker, fails in [([{}], 3, True), ([{}], None, False), ([], 3, False)]:
+            with self.subTest(rows=rows, marker=marker):
+                code = compile(ast.Module(body=[guard], type_ignores=[]), 'guard', 'exec')
+                env = dict(passive_trials=rows, settingsdict=dict(stopped_trial_pulse=marker))
+                if fails:
+                    with self.assertRaisesRegex(ValueError, 'physical evidence'):
+                        exec(code, env)
+                else:
+                    exec(code, env)
+        inserts = [n.lineno for n in ast.walk(make) if isinstance(n, ast.Call)
+                   and getattr(n.func, 'attr', '') in ('insert1', 'insert')]
+        self.assertLess(guard.lineno, min(inserts))
+
+    def test_replay_metadata_reaches_extraction_and_matcher(self):
+        helper = MarkerPlumbingTest()
+        for path, name in [('pluginschema.py', 'extract_chipmunk_camera_data'),
+                           ('utils.py', '_handle_chipmunk_camera_sync'),
+                           ('utils.py', '_replay_gpio_onsets')]:
+            self.assertEqual(ast.unparse(helper.calls(path, name)[0].args[-1]), 'passive_replay')
+        tree = ast.parse((ROOT / 'utils.py').read_text())
+        extract = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                       and n.name == 'extract_chipmunk_camera_data')
+        strict = next(n for n in ast.walk(extract) if isinstance(n, ast.If)
+                      and ast.unparse(n.test) == 'passive_trials or passive_replay is not None')
+        code = compile(ast.Module(body=[strict], type_ignores=[]), 'strict', 'exec')
+        with self.assertRaisesRegex(ValueError, 'Replay camera alignment failed'):
+            exec(code, dict(passive_trials=[], passive_replay={'status': 'aborted'},
+                            vidfile='fake.avi', err=ValueError('unmatched GPIO')))

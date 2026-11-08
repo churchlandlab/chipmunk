@@ -79,37 +79,53 @@ and affected metadata before a separate, explicitly scoped live rebuild.
 
 ## Stop during a trial
 
-Each trial and replay starts with a Sync state that sends the BNC2 sync pulse at
-once. When Stop interrupts a running trial, Bpod returns no events, so the trial
-is not saved, but its pulse is in the ephys file. Chipmunk Solo (986bd21+)
-records this: `Chipmunk.stopped_trial_pulse` is the number of saved active trials
-before that unsaved pulse, and `ChipmunkPassive.stopped_pulse_after` is the
-number of completed replays before a replay pulse cut short by Stop. Both are
-NULL when nothing was cut short. Clock pulse order is: saved active trials,
-[the stopped-trial pulse], completed replays, [a trailing stopped-replay pulse].
-The Bpod sync stream holds only saved pulses; its event values are clock pulse
-numbers, so replay values skip the stopped-trial pulse. Remove that clock pulse
-before matching counts, and only when the counts differ by exactly one: Stop
-just before a trial starts can set the marker with no pulse sent. Sessions
-recorded before 986bd21 have no marker.
+Each trial and replay starts with a Sync state that sends a BNC2 sync pulse.
+Chipmunk Solo (986bd21+) saves `StoppedTrialPulse` when Stop returns no events.
+This marks a possible pulse after the saved active trials; Stop before Sync can
+set the marker without sending that pulse. `PassiveReplay.stoppedPulseAfter`
+likewise marks an aborted replay after the given number of completed replays.
+Neither marker alone proves that a physical pulse occurred.
+
+The existing `stopped_trial_pulse` field is retained without a schema change.
+`Chipmunk.make()` now fails before plugin inserts if observed replay rows follow
+a stopped active task: the physical pulse ordinal gap is unresolved. It does not
+silently skip an ephys ordinal or renumber existing records. Before enabling
+these sessions, obtain a recorded GPIO/ephys train and independent channel
+identity, establish whether the stopped-task pulse exists, and review how that
+physical evidence will determine ephys ordinals. No live migration is included.
 
 ## Replay synchronization
 
-The Bpod sync event includes active and replay Sync timestamps in acquisition
-order. Its event values are pulse ordinals, not source-trial foreign keys;
-source trial identity is in ChipmunkPassive.Trial. The sync stream needs every
-pulse, so the task file keeps the replay record and `Chipmunk` reads it only for
-sync. `ChipmunkPassive` reads the copy in `chipmunk_passive/`. Camera GPIO
-alignment uses the same complete pulse list. Replay sessions with unmatched camera GPIO
-pulses fail population rather than silently omitting camera alignment or using
-active-only network comments. Active-only camera fallback remains unchanged.
+The task file's replay status and stop marker travel separately from observed
+replay rows, including eventless aborted replays. These sessions always use the
+strict GPIO matcher and propagate alignment errors; only genuine nonreplay
+sessions retain the network-comment fallback. Source trial identity remains in
+ChipmunkPassive.Trial; Bpod event values represent physical pulse ordinals.
 
-For a replay session, each camera GPIO channel is read as the saved pulses plus,
-at most, the stopped-trial pulse (removed at `stopped_trial_pulse`, which must equal
-the number of saved active trials) and one trailing pulse for a replay cut short.
-The pulse intervals must also agree with the Bpod intervals within two camera
-frame periods (plus 0.1%). When a marked session fits with and without the
-stopped-trial pulse the channel is ambiguous, and a count or interval mismatch
-(for example an unmarked extra pulse) is rejected with the reason per channel.
-The two-frame tolerance follows from frame quantization; it has not been measured
-against a recorded Bpod sync train.
+A candidate may omit a marked stopped-task pulse after the active trials and/or
+a trailing aborted-replay pulse supported by `stoppedPulseAfter`. A marker whose
+aborted pulse already has an observed sync row does not permit another trailing
+pulse. Counts alone never establish sync. The matcher checks all other omissions
+of the same number of pulses and all changing channels for distinct fitting
+mappings, and rejects any ambiguity, even if another channel has one good fit.
+There is no independently established channel identity in these inputs.
+Initially high GPIO traces fail because their first rising edge is unknown.
+
+Pulse intervals must agree within two camera frame periods plus 0.1% of the Bpod
+interval. This tolerance is unvalidated on hardware. Tests use emulated traces;
+the available real camlogs do not contain recorded GPIO sync trains.
+
+## No-choice stimulus duration
+
+No-choice truncation requires saved `SettingsFile.smaAssembler` naming a producer
+whose no-choice action sends SoftCode 255: DemonstratorTaskSMA,
+DemonstratorTaskStopStimSMA, DemonstratorFixationTrainingSMA,
+FreelyMovingObsDemonstratorTaskSMA, ObserverTaskSMA, NonSocialObserverTaskSMA,
+FreelyMovingNonSocialObserverTaskSMA, ObserverFixationTrainingSMA, or
+MultipleModalitiesTaskSMA. The tests check these actions against the MATLAB source.
+DemonstratorSelfInitiatedTaskSMA has empty no-choice and finish actions; the two
+DemonstratorPaced assemblers also do not stop on no choice. Unknown legacy
+producers retain intended duration. `PacedFlag == false` is insufficient evidence.
+`TaskPhase` is saved from `ProtocolSettings.experimentName` (chipmunk.m and
+chipmunk_solo/chipmunk_solo.m), not from the assembler; no verified phase-to-
+assembler mapping is bundled, so phase labels are not guessed.
