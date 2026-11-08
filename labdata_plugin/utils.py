@@ -485,6 +485,21 @@ def _read_setting(session_data, setting_name):
             return None
 
 
+def _configured_reward_volume(value):
+    """A saved calibration target in uL; empty/NaN means unknown, never measured."""
+    value = np.asarray(value)
+    if value.size == 0:
+        return None
+    if value.size != 1 or value.dtype.kind not in 'iuf':
+        raise ValueError('Invalid configured reward volume: expected one numeric value')
+    volume = float(value.reshape(-1)[0])
+    if np.isnan(volume):
+        return None
+    if not np.isfinite(volume) or volume < 0:
+        raise ValueError('Invalid configured reward volume: must be finite and nonnegative')
+    return volume
+
+
 def process_chipmunk_file(filepath):
     trialdata,session_data,metadata = load_chipmunk_trialdata(filepath)
     if trialdata is None:
@@ -519,8 +534,20 @@ def process_chipmunk_file(filepath):
         'FreelyMovingNonSocialObserverTaskSMA', 'ObserverFixationTrainingSMA',
         'MultipleModalitiesTaskSMA')
 
-    setting_left_reward_volume = session_data['TrialSettings'].tolist()['leftRewardVolume'][0]
-    setting_right_reward_volume = session_data['TrialSettings'].tolist()['rightRewardVolume'][0]
+    passive = assembler == 'PassiveVisualStimSMA'
+    # Legacy files without an assembler retain task inference; passive identity is unverified.
+    tset = np.atleast_1d(session_data['TrialSettings'].tolist()).reshape(-1)
+    if len(tset) != len(trialdata):
+        raise ValueError('TrialSettings count does not match saved trials')
+    if 'smaAssembler' in tset.dtype.names:
+        for saved in tset['smaAssembler']:
+            saved = np.asarray(saved)
+            if saved.size != 1 or saved.item() != assembler:
+                raise ValueError('Inconsistent per-trial smaAssembler')
+    left_volumes = [_configured_reward_volume(v) for v in tset['leftRewardVolume']]
+    right_volumes = [_configured_reward_volume(v) for v in tset['rightRewardVolume']]
+    setting_left_reward_volume = left_volumes[0]
+    setting_right_reward_volume = right_volumes[0]
     
     # Chipmunk Solo 986bd21+: saved active trials before the unsaved pulse of a trial cut short by Stop.
     stopped_trial_pulse = None
@@ -596,7 +623,11 @@ def process_chipmunk_file(filepath):
         else:
             raise(ValueError(f'[chipmunk]: Unknown modality {trial.stimulus_modality}'))
         
+        if trial.correct_side not in (0, 1):
+            raise ValueError('Invalid correct side: expected 0 (left) or 1 (right)')
+        configured_volume = (right_volumes if trial.correct_side == 1 else left_volumes)[itrial]
         trial_settings_dict.append(dict(trial_num = itrial,
+                                        configured_reward_volume = None if passive else configured_volume,
                                         rewarded_modality = modality,
                                         stim_rate_audio = trial.stimulus_rate_auditory if np.isfinite(trial.stimulus_rate_auditory) else None,
                                         stim_rate_vision = trial.stimulus_rate_visual if np.isfinite(trial.stimulus_rate_visual) else None,
@@ -625,7 +656,7 @@ def process_chipmunk_file(filepath):
                     len(np.unique([t['stim_rate_vision'] 
                                    for t in trial_settings_dict 
                                    if not t['stim_rate_vision'] is None]))])
-    settings_dict['setting_task_mode'] = 'detection' if max_stims <= 2 else 'discrimination'
+    settings_dict['setting_task_mode'] = 'passive' if passive else ('detection' if max_stims <= 2 else 'discrimination')
     settings_dict['duration'] = trials_dict[-1]['t_end'] - trials_dict[0]['t_start']
     return (trials_dict, trial_settings_dict,settings_dict),metadata
 
@@ -914,11 +945,22 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
     from labdata.schema import Watering, Session, DecisionTask, Dataset
     d = (Dataset & d).fetch1()
     trials = pd.DataFrame((Chipmunk*Chipmunk.Trial*Chipmunk.TrialParameters & d).fetch(order_by='trial_num'))
-    if len(trials)<mintrials:
+    if trials.empty or trials['setting_task_mode'].iloc[0] == 'passive':
         return
-    trials['reward_volume'] = 0.0
-    trials.loc[(trials['rewarded'] == 1)&(trials['response'] == 1),'reward_volume'] = np.float32(trials['setting_right_reward_volume'].iloc[0])
-    trials.loc[(trials['rewarded'] == 1)&(trials['response'] == -1),'reward_volume'] = np.float32(trials['setting_left_reward_volume'].iloc[0])
+    volumes = trials['configured_reward_volume'].copy()
+    missing = volumes.isna()
+    if missing.any():
+        warnings.warn('[chipmunk]: Missing configured reward volume; estimating from '
+                      'trial-zero correct-side settings (not measured water).')
+        for index in trials.index[missing]:
+            side = trials.at[index, 'rewarded_position']
+            if side not in ('left', 'right'):
+                raise ValueError(f'Invalid rewarded position: {side!r}')
+            volumes.at[index] = trials.at[index, f'setting_{side}_reward_volume']
+    volumes = [_configured_reward_volume(v) for v in volumes]
+    if any(v is None for v in volumes):
+        raise ValueError('Cannot estimate water with unknown trial-zero reward volume')
+    trials['reward_volume'] = trials['rewarded'] * np.asarray(volumes)
 
     watering = dict(subject_name = d['subject_name'],
                 watering_datetime = (Dataset*Session & d).fetch('session_datetime')[0],
@@ -941,6 +983,8 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
     trialsets = []
     for mod in np.unique(trials.rewarded_modality.values):
         tset = trials[(trials.rewarded_modality == mod)]
+        if len(trials) < mintrials or len(tset) <= 10:
+            continue
         if mod == 'visual':
             stim_int = tset.stim_rate_vision.values - tset.category_boundary.values
         elif mod == 'audio':

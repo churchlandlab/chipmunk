@@ -227,7 +227,8 @@ def easy_performance(stim_rates, rewarded, boundary=12.):
         stim_rate_audio=np.nan, category_boundary=boundary, with_choice=1,
         rewarded=np.asarray(rewarded, int), punished=1 - np.asarray(rewarded, int), response=1,
         initiated=1, early_withdrawal=0, t_response=1., t_gocue=.5, t_initiate=.2, t_start=0.,
-        setting_left_reward_volume=3., setting_right_reward_volume=3.))
+        setting_left_reward_volume=3., setting_right_reward_volume=3.,
+        setting_task_mode='detection', configured_reward_volume=3., rewarded_position='right'))
     for column, value in key.items():
         trial[column] = value
     chip = Relation(trial.to_dict('records'))
@@ -242,7 +243,8 @@ def easy_performance(stim_rates, rewarded, boundary=12.):
     fn.body = [n for n in fn.body if not isinstance(n, (ast.ImportFrom, ast.Import))]
     env = dict(np=np, pd=pd, warnings=warnings, Chipmunk=chip, Dataset=dataset, Session=dataset,
                Watering=Relation(primary_key=('subject_name', 'watering_datetime')), DecisionTask=decision,
-               _upsert_generated_row=lambda table, row: writes.append((table, row)))
+               _upsert_generated_row=lambda table, row: writes.append((table, row)),
+               _configured_reward_volume=parser_namespace()['_configured_reward_volume'])
     exec(compile(ast.Module(body=[fn], type_ignores=[]), 'decision_task', 'exec'), env)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')

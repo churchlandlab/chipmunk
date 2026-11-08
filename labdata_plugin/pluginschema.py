@@ -25,7 +25,7 @@ class Chipmunk(dj.Imported):
     setting_high_rate_side       : enum('left','right')
     setting_strict_choice        : tinyint  # 1: no do overs 0: allow changing choice # ReviseChoiceFlag
     setting_free_initiation      : tinyint  # 1: animal can initiate 0: initiation time limit # PacedFlag
-    setting_task_mode            : enum('detection','discrimination')
+    setting_task_mode            : enum('detection','discrimination','passive')
     stopped_trial_pulse = NULL   : int      # saved active trials before the Sync pulse of a trial cut short by Stop (not saved); NULL if none
 
     """
@@ -40,6 +40,7 @@ class Chipmunk(dj.Imported):
         stim_rate_vision = NULL             : float      # visual stimulus rate [Hz]
         category_boundary                   : float
         rewarded_position                   : enum('left','right')
+        configured_reward_volume = NULL     : float  # correct-side TrialSettings calibration target [uL], not measured water
         stim_events = NULL                  : longblob   # Intended onsets relative to trial start: visual for multisensory, otherwise the active channel
         stim_event_duration = NULL          : double     # Duration of individual flashes or clicks
         min_isi = NULL                      : double     # The shortest allowed interval between flashes or clicks
