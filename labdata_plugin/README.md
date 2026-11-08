@@ -13,7 +13,9 @@ synchronous visual/audio stimulation. There is no supplemental audio column.
 
 Both MATLAB protocols generate at 192 kHz. Reconstruction rounds gaps to samples,
 pads channels to their shared length, and repeats the resulting waveform.
-`stim_duration` is limited by recorded withdrawal/response when available.
+`stim_duration` is limited by the recorded withdrawal, response or no-choice
+state when available (not in the paced state matrices, which do not stop the
+stimulus on no choice). No choice leaves `t_response` empty.
 Intended pulse lists do not establish actual exposure on an interrupted trial;
 use recorded states and hardware events for that question. Audio noise samples
 cannot be recovered from interval lists.
@@ -101,3 +103,13 @@ sync. `ChipmunkPassive` reads the copy in `chipmunk_passive/`. Camera GPIO
 alignment uses the same complete pulse list. Replay sessions with unmatched camera GPIO
 pulses fail population rather than silently omitting camera alignment or using
 active-only network comments. Active-only camera fallback remains unchanged.
+
+For a replay session, each camera GPIO channel is read as the saved pulses plus,
+at most, the stopped-trial pulse (removed at `stopped_trial_pulse`, which must equal
+the number of saved active trials) and one trailing pulse for a replay cut short.
+The pulse intervals must also agree with the Bpod intervals within two camera
+frame periods (plus 0.1%). When a marked session fits with and without the
+stopped-trial pulse the channel is ambiguous, and a count or interval mismatch
+(for example an unmarked extra pulse) is rejected with the reason per channel.
+The two-frame tolerance follows from frame quantization; it has not been measured
+against a recorded Bpod sync train.

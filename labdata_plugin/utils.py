@@ -65,7 +65,10 @@ def _passive_replay(replay, trialdata=None):
     rows = []
     for index, events in enumerate(raw):
         if not isinstance(events, dict) or 'States' not in events:
-            if statuses[index] == 'not_started':
+            # Stop leaves no events for an attempt it cut short, or for ones it never
+            # started. A failed attempt without events is still an error.
+            if (statuses[index] == 'not_started'
+                    or (statuses[index] == 'aborted' and str(replay['status']) == 'aborted')):
                 continue
             raise ValueError('Passive replay has no recorded event timestamps')
         states = np.atleast_1d(events['States']).astype(float)
@@ -108,6 +111,24 @@ def _upsert_generated_row(table, row):
             table.update1(row)
     else:
         table.insert1(row, allow_direct_insert=True)
+
+
+def _modality_codes(values):
+    """Integer modality codes (1 visual, 2 auditory, 3 audio+visual), as a new array.
+
+    Early recordings saved string labels, loaded as str elements (a MATLAB cell
+    array). Unknown labels or codes raise instead of becoming NaN. A padded char
+    matrix ('Visual  ') is not recognized, as before.
+    """
+    labels = {'visual': 1, 'Visual': 1, 'audio': 2, 'auditory': 2, 'Auditory': 2,
+              'audio+visual': 3, 'multi-sensory': 3, 'Multi-sensory': 3}
+    codes = []
+    for value in np.atleast_1d(values):
+        code = labels.get(value) if isinstance(value, str) else value
+        if isinstance(code, (str, type(None))) or code not in (1, 2, 3):
+            raise ValueError(f'Unknown stimulus modality {value!r}')
+        codes.append(int(code))
+    return np.array(codes, dtype=int)
 
 
 def load_chipmunk_trialdata(file_name):
@@ -210,26 +231,9 @@ def load_chipmunk_trialdata(file_name):
         trialdata.insert(trialdata.shape[1], 'response_side', sesdata['ResponseSide'].tolist())
         trialdata.insert(trialdata.shape[1], 'correct_side', sesdata['CorrectSide'].tolist())
         #Get stim modality
-        tmp_modality_numeric = sesdata['Modality'].tolist()
-        if isinstance(tmp_modality_numeric[0], str): #In some early recordings a string value was assigned to the modality
-            for k in range(tmp_modality_numeric.shape[0]):
-                if tmp_modality_numeric[k] in ['visual', 'Visual']:
-                    tmp_modality_numeric[k] = 1
-                if tmp_modality_numeric[k] in ['audio', 'auditory', 'Auditory']:
-                    tmp_modality_numeric[k] = 2
-                if tmp_modality_numeric[k] in ['audio+visual', 'multi-sensory', 'Multi-sensory']:
-                    tmp_modality_numeric[k] = 3
-        temp_modality = []
-        for t in tmp_modality_numeric:
-            if t in [1,'visual', 'Visual']:
-                temp_modality.append('visual')
-            elif t in  [2,'audio','auditory', 'Auditory']:
-                temp_modality.append('auditory')
-            elif t in [3, 'audio+visual', 'multi-sensory', 'Multi-sensory']:
-                temp_modality.append('audio+visual')
-            else:
-                temp_modality.append(np.nan)
-                print('[chipmunk]: Could not determine modality and set value to nan')
+        # Build new arrays: sesdata['Modality'] keeps the saved labels, which the rate fallback below reads.
+        tmp_modality_numeric = _modality_codes(sesdata['Modality'].tolist())
+        temp_modality = [{1: 'visual', 2: 'auditory', 3: 'audio+visual'}[m] for m in tmp_modality_numeric]
         trialdata.insert(trialdata.shape[1], 'stimulus_modality', temp_modality)
         trialdata.insert(trialdata.shape[1], 'category_boundary', sesdata['CategoryBoundary'])
         if 'StimulusRate' in sesdata.dtype.fields:
@@ -504,6 +508,8 @@ def process_chipmunk_file(filepath):
         setting_free_choice = session_data['PacedFlag'].tolist() == 0
         
     
+    paced = 'PacedFlag' in session_data.dtype.names and bool(session_data['PacedFlag'].tolist())
+
     setting_left_reward_volume = session_data['TrialSettings'].tolist()['leftRewardVolume'][0]
     setting_right_reward_volume = session_data['TrialSettings'].tolist()['rightRewardVolume'][0]
     
@@ -547,6 +553,12 @@ def process_chipmunk_file(filepath):
         if not trialtimes['t_response'] is None:
             # trim the stim duration to the withdrawal time
             stim_duration = np.min([stim_duration,trialtimes['t_response']-trialtimes['t_stim']])
+        # No choice also stops the stimulus (SoftCode 255 in DemonDidNotChoose), except in the
+        # paced state matrices, which only stop it on reward and wrong choice. Clip here without
+        # touching t_response, which would turn the trial into one with a choice.
+        t_nochoice = None if paced else _get_state_time(trial, ['DemonDidNotChoose','DidNotChoose'])
+        if t_nochoice is not None and trialtimes['t_stim'] is not None:
+            stim_duration = np.min([stim_duration, t_nochoice - trialtimes['t_stim']])
         if trialtimes['t_initiate'] is None and trialtimes['t_stim'] is None:
             stim_duration = 0.
 
@@ -635,7 +647,69 @@ def _session_sync_times(trials, passive_trials=()):
     return times
 
 
-def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_trials=()):
+def _replay_gpio_onsets(channels, t, trialmarkers, n_active, stopped_trial_pulse=None):
+    """Frame index of each saved Bpod sync pulse in a session with passive replay.
+
+    channels: (gpio bit, 0/1 trace) pairs, sampled once per frame in time order.
+    trialmarkers: saved Bpod sync times (active trials, then replay) in seconds.
+    A trial cut short by Stop usually sent one pulse that was not saved, right after
+    the n_active saved trials (stopped_trial_pulse marks it, but Stop just before a
+    trial starts sets the marker with no pulse sent). A replay cut short by Stop may
+    leave one more unsaved pulse at the very end. Nothing else is tolerated.
+
+    Pulse counts alone do not prove the pairing (an unmarked extra pulse in the
+    middle would shift every later one), so a reading is accepted only when the
+    camera intervals also match the Bpod intervals within the quantization of the
+    camera log: a rising edge is seen at the first frame with the bit high, which
+    is up to one frame late. A marked session is read both with and without the
+    stopped-trial pulse; if both fit, the channel is ambiguous and is not used.
+    Raises ValueError, naming each channel's reason, when no channel qualifies
+    or when channels qualify with different pulses.
+    """
+    n = len(trialmarkers)
+    if stopped_trial_pulse is not None and stopped_trial_pulse != n_active:
+        raise ValueError(f'Stopped-trial pulse after {stopped_trial_pulse} saved trials, '
+                         f'but {n_active} active trials were saved')
+    bpod = np.diff(trialmarkers)
+    frame_period = np.median(np.diff(t))
+    found, reasons = [], []
+    for iin, g in channels:
+        onsets = np.where(np.hstack([0, np.diff(np.asarray(g).astype(np.int8))]) > 0)[0]
+        readings = [onsets]
+        if stopped_trial_pulse is not None and len(onsets) > stopped_trial_pulse:
+            readings.append(np.delete(onsets, stopped_trial_pulse))  # unsaved pulse of the trial cut short by Stop
+        fits, worst = [], None
+        for reading in readings:
+            if len(reading) not in (n, n + 1):
+                continue
+            reading = reading[:n]  # a single extra pulse can only be the last one
+            error = np.abs(np.diff(t[reading]) - bpod)
+            if np.any(error > 2 * frame_period + 0.001 * bpod):
+                worst = error.max() if worst is None else min(worst, error.max())
+            else:
+                fits.append(reading)
+        if len(fits) > 1:
+            reasons.append(f'gpio{iin} fits with and without the stopped-trial pulse (camera frame period '
+                           f'{frame_period:.4f} s is too coarse to tell)')
+        elif fits:
+            found.append((iin, fits[0]))
+        elif worst is not None:
+            reasons.append(f'gpio{iin} pulse intervals disagree with Bpod by at least {worst:.3f} s '
+                           f'(frame period {frame_period:.4f} s)')
+        else:
+            reasons.append(f'gpio{iin} has {len(onsets)} pulses, expected {n} (or {n + 1} if a replay was cut short), '
+                           f'plus one for a stopped trial' if stopped_trial_pulse is not None else
+                           f'gpio{iin} has {len(onsets)} pulses, expected {n} (or {n + 1} if a replay was cut short)')
+    if len(found) > 1 and any(not np.array_equal(found[0][1], o) for _, o in found[1:]):
+        raise ValueError('Replay camera alignment is ambiguous: GPIO channels '
+                         f'{[i for i, _ in found]} match with different pulses')
+    if not found:
+        raise ValueError('Replay camera alignment requires matching GPIO sync pulses: '
+                         + ('; '.join(reasons) if reasons else 'no GPIO channel changes'))
+    return found[0][1]
+
+
+def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_trials=(), stopped_trial_pulse=None):
     '''
     Handles the camera sync for the chipmunk task. 
     These frametimes may have to be interpolated when .
@@ -672,7 +746,12 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
         gpio = gpio[:,channel_selection].T
     # sync to the task
     frametimes = None
-    for iin,g in zip(channel_selection,gpio):
+    if passive_trials:
+        # Replay sessions must match exactly; the loop below keeps its tolerance for other sessions.
+        onsets = _replay_gpio_onsets(zip(channel_selection, gpio), t, trialmarkers,
+                                     len(trialdicts), stopped_trial_pulse)
+        frametimes = extrapolate_time_from_clock(trialmarkers, frame_num[onsets], np.arange(len(vid)))
+    for iin,g in ([] if passive_trials else zip(channel_selection,gpio)):
         # do this only if there is a sync connected.
         onsets = np.where(np.hstack([0,np.diff(g.astype(np.int8))])>0)[0]
         offsets = np.where(np.hstack([0,np.diff(g.astype(np.int8))])<0)[0]-1
@@ -720,7 +799,7 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
                           event_values = g))
     return frametimes, events
 
-def extract_chipmunk_camera_data(folder, trial_dict, passive_trials=()):
+def extract_chipmunk_camera_data(folder, trial_dict, passive_trials=(), stopped_trial_pulse=None):
     '''
     Extract key frames and frametimes from droplets camera recordings.
 
@@ -775,7 +854,7 @@ def extract_chipmunk_camera_data(folder, trial_dict, passive_trials=()):
                 os.system(cmd) # re-encode the video using ffmpeg. Note that this may drop frames if some are missing in the original data
                 vid = VideoReader(str(output))
         try:
-            frametimes, camera_events = _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trial_dict, passive_trials)
+            frametimes, camera_events = _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trial_dict, passive_trials, stopped_trial_pulse)
         except Exception as err:
             print(vidfile)
             print(err)
@@ -860,10 +939,10 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
         performance = np.nansum((tset.with_choice.values == 1) 
                                 & (tset.rewarded == 1))/np.nansum((tset.with_choice.values == 1))
         performance_easy = np.nansum((tset.with_choice.values == 1) & 
-                                  (np.abs(stim_int) == np.nanmax(stim_int)) &
+                                  (np.abs(stim_int) == np.nanmax(np.abs(stim_int))) &
                                   (tset.rewarded.values == 1))/np.nansum(
                                       (tset.with_choice.values == 1) &
-                                      (np.abs(stim_int) == np.nanmax(stim_int)) &
+                                      (np.abs(stim_int) == np.nanmax(np.abs(stim_int))) &
                                       (tset.response.values != 0))
         if not np.isfinite(performance_easy):
             performance_easy = 0

@@ -203,7 +203,7 @@ class Chipmunk(dj.Imported):
             # get example frames for each camera
             # align the video to the behavior data
             from .utils import extract_chipmunk_camera_data, _session_sync_times
-            cameras, frames, camera_events = extract_chipmunk_camera_data(filenames,trialdicts,passive_trials)
+            cameras, frames, camera_events = extract_chipmunk_camera_data(filenames,trialdicts,passive_trials,settingsdict.get('stopped_trial_pulse'))
             riglogevents = []
             if len(camera_events):
                 riglogevents.extend(camera_events)
