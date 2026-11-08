@@ -2,13 +2,15 @@ function check_labcams_udp
 root=fileparts(fileparts(mfilename('fullpath')));
 addpath(genpath(fullfile(root,'Functions')));
 server=udpport('datagram','IPV4','LocalHost','127.0.0.1');
-client=udpport('datagram','IPV4','LocalHost','127.0.0.1','Timeout',.2);
+client=udpport('datagram','IPV4','LocalHost','127.0.0.1','Timeout',2);
 cleanup=onCleanup(@() closeSockets(server,client));
 client.UserData=struct('host','127.0.0.1','port',server.LocalPort);
 mode='normal';commands={};
 configureCallback(server,'datagram',1,@respond);
 lastwarn('');
+% Cold MATLAB callback initialization can exceed the short timeout below.
 assert(strcmp(labcamsCommand(client,'ping'),'ok=pong'));
+client.Timeout=.2;
 assert(strcmp(labcamsCommand(client,'softtrigger=1'),'ok=trigger'));
 assert(strcmp(labcamsCommand(client,'manualsave=1'),'ok=save'));
 % A delayed log acknowledgement must not confirm a later recording command.

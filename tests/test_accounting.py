@@ -37,6 +37,56 @@ class ParserAccountingTest(unittest.TestCase):
                              [None if mode == 'passive' else 3.] * 3)
             self.assertEqual([t['with_choice'] for t in trials], [0] * 3)
 
+    def test_observer_reward_is_not_a_task_reward_or_response(self):
+        data = self.data()
+        for raw in data['RawEvents']['Trial'][0]:
+            states = raw['States']
+            states['DemonReward'] = [np.nan, np.nan]
+            states['DemonWrongChoice'] = [np.nan, np.nan]
+            raw['States'] = dict(ObsReward=[.4, .5], **states)
+        (trials, _, _), _ = parse(data)
+        self.assertEqual([t['rewarded'] for t in trials], [0] * 3)
+        self.assertTrue(all(t['t_response'] is None for t in trials))
+
+    def test_task_reward_is_found_after_unvisited_observer_reward(self):
+        data = self.data()
+        for raw in data['RawEvents']['Trial'][0]:
+            raw['States'] = dict(ObsReward=[np.nan, np.nan], **raw['States'])
+        (trials, _, _), _ = parse(data)
+        self.assertEqual([t['rewarded'] for t in trials], [1] * 3)
+        self.assertTrue(all(t['t_response'] is not None for t in trials))
+
+    def test_bare_reward_after_observer_state_is_counted(self):
+        data = self.data()
+        for raw in data['RawEvents']['Trial'][0]:
+            states = dict(raw['States'])
+            states['Reward'] = states.pop('DemonReward')
+            states['WrongChoice'] = states.pop('DemonWrongChoice')
+            states['ObsReward'] = [np.nan, np.nan]
+            raw['States'] = states
+        (trials, _, _), _ = parse(data)
+        self.assertEqual([t['rewarded'] for t in trials], [1] * 3)
+
+    def test_unknown_reward_state_and_unknown_passive_fail(self):
+        data = self.data()
+        for raw in data['RawEvents']['Trial'][0]:
+            raw['States']['DemonRewardDelivery'] = raw['States'].pop('DemonReward')
+        with self.assertRaisesRegex(ValueError, 'Unrecognized reward states'):
+            parse(data)
+        data = self.data(assembler='ForkPassiveStimSMA')
+        for raw in data['RawEvents']['Trial'][0]:
+            for name in ('DemonReward', 'DemonWrongChoice', 'Reward', 'WrongChoice'):
+                raw['States'].pop(name, None)
+        with self.assertRaisesRegex(ValueError, 'No defined task outcome states'):
+            parse(data)
+
+    def test_missing_trial_zero_volume_fails_before_database(self):
+        for volume in (np.nan, np.array([])):
+            data = self.data()
+            data['TrialSettings']['leftRewardVolume'][0, 0] = volume
+            with self.assertRaisesRegex(ValueError, 'Unknown trial-zero reward volume'):
+                parse(data)
+
     def test_P3_legacy_task_inference(self):
         (_, params, settings), _ = parse(self.data(None))
         self.assertEqual(settings['setting_task_mode'], 'detection')
@@ -226,6 +276,16 @@ class DecisionAccountingTest(unittest.TestCase):
             self.assertEqual(f.water.rows, [manual])
             self.assertIsNone(f.decision.rows[0]['watering_datetime'])
             self.assertFalse(any(table is f.water for table, _ in f.writes))
+
+    def test_historically_linked_manual_water_is_not_overwritten(self):
+        f = AccountingFixture()
+        manual = dict(subject_name='DEMO', watering_datetime=f.when, water_volume=.8)
+        f.water.rows.append(manual.copy())
+        f.decision.rows.append(dict(f.key, watering_datetime=f.when))
+        messages = f.run()
+        self.assertEqual(f.water.rows, [manual])
+        self.assertFalse(any(table is f.water for table, _ in f.writes))
+        self.assertTrue(any('estimate differs' in str(m.message) for m in messages))
 
     def test_D9_generated_retry_is_idempotent(self):
         f = AccountingFixture(n=20)

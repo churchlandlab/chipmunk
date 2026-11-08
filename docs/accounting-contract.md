@@ -115,8 +115,14 @@ explicit trial projections rather than these summaries; local cross-repository
 sync tests guard compatibility, with no thesis edits.
 
 Observer-subject watering remains unchanged and is not newly accounted here.
-The parser's substring `Reward` state matching can potentially include observer
-reward states; this is a separate audit issue, not fixed by this contract.
+Reward and response detection now use exact task state names. Unrecognized
+reward-like states and an unknown assembler without defined task outcome states
+raise before ingestion, rather than being interpreted as zero earned water.
+Missing trial-zero volumes also raise explicitly because the existing master
+volume columns are NOT NULL; no zero or first-known substitute is invented.
+An existing linked Watering row whose amount differs from the new estimate is
+preserved with a warning. This protects historical links that do not prove
+ownership; changing those amounts requires the separately reviewed backfill.
 Saved reward totals are an internal consistency check, never proof of actual
 water. Camera/replay guards remain unchanged; physical sync ordinal ambiguity
 remains pending hardware evidence.

@@ -197,6 +197,17 @@ def load_chipmunk_trialdata(file_name):
         uevents = np.unique(np.hstack([t['Events'].tolist().dtype.names for t in tmp])) #Make sure not to duplicate state definitions
         uevents = np.union1d(uevents, ['Port1In', 'Port1Out', 'Port2In', 'Port2Out', 'Port3In', 'Port3Out'])
         ustates = np.unique(np.hstack([t['States'].tolist().dtype.names for t in tmp]))
+        known_rewards = {'DemonReward', 'Reward', 'DemonRewardHarvest',
+                         'ObsReward', 'ObsWaitForRewardRetrieval'}
+        unknown_rewards = [name for name in ustates if 'Reward' in name and name not in known_rewards]
+        if unknown_rewards:
+            raise ValueError(f'Unrecognized reward states: {unknown_rewards}')
+        saved_settings = sesdata['SettingsFile'].tolist()
+        saved_assembler = (saved_settings['smaAssembler'].tolist()
+                           if 'smaAssembler' in saved_settings.dtype.names else None)
+        if (not set(ustates).intersection({'DemonReward', 'Reward', 'DemonWrongChoice', 'WrongChoice'})
+                and saved_assembler != 'PassiveVisualStimSMA'):
+            raise ValueError('No defined task outcome states and no recognized passive assembler')
         trialevents = []
         trialstates = [] #Extract all trial states and events
         for t in tmp:
@@ -442,14 +453,14 @@ def load_chipmunk_trialdata(file_name):
         raise ValueError(f'[chipmunk]: Could not load {file_name}: {err}') from err
     return trialdata,sesdata,metadata
 
-def _get_state_time(trial, states = [],index = 0):
+def _get_state_time(trial, states = [],index = 0, *, exact=False):
     if not len(states):
         return None
     if type(states) is str:
         states = [states]
     time =  np.nan # in case the state does not exist..
     for state in states:
-        statekeys = [k for k in trial.keys() if state in k]
+        statekeys = [k for k in trial.keys() if (state == k if exact else state in k)]
         if len(statekeys):
             if trial[statekeys[0]] is not None:                
                 time = trial[statekeys[0]][index]
@@ -548,6 +559,8 @@ def process_chipmunk_file(filepath):
     right_volumes = [_configured_reward_volume(v) for v in tset['rightRewardVolume']]
     setting_left_reward_volume = left_volumes[0]
     setting_right_reward_volume = right_volumes[0]
+    if setting_left_reward_volume is None or setting_right_reward_volume is None:
+        raise ValueError('Unknown trial-zero reward volume; session setting columns are NOT NULL')
     
     # Chipmunk Solo 986bd21+: saved active trials before the unsaved pulse of a trial cut short by Stop.
     stopped_trial_pulse = None
@@ -579,7 +592,7 @@ def process_chipmunk_file(filepath):
                           t_stim = _get_state_time(trial,'PlayStimulus'),
                           t_gocue = _get_state_time(trial,['WaitForWithdrawalFromCenter','DemonWaitForWithdrawalFromCenter']),
                           t_react = _get_state_time(trial,['WaitForResponse','DemonWaitForResponse']),
-                          t_response = _get_state_time(trial,['Reward','WrongChoice','DemonReward','DemonWrongChoice']),
+                          t_response = _get_state_time(trial,['DemonReward','Reward','DemonWrongChoice','WrongChoice'], exact=True),
                           t_response_port_out = _get_state_time(trial, 'response_port_out'),
                           t_end = _get_state_time(trial,['FinishTrial','PrepareNextTrial']))
         stim_duration = trial.get('stimulus_train_duration', 1. + trial['ExtraStimulusDuration'])
@@ -608,7 +621,7 @@ def process_chipmunk_file(filepath):
                                 center_poke = _get_port(trial,'Port2'),
                                 right_poke = _get_port(trial,'Port3'),
                                 initiated = 1 if not _get_state_time(trial, states = 'InitFixation') is None else 0,
-                                rewarded = 1 if not _get_state_time(trial, states = 'Reward') is None else 0,
+                                rewarded = 1 if not _get_state_time(trial, states = ['DemonReward', 'Reward'], exact=True) is None else 0,
                                 punished = 1 if not _get_state_time(trial, states = 'WrongChoice') is None else 0,
                                 early_withdrawal = 1 if not _get_state_time(trial, states = 'EarlyWithdrawal') is None else 0,
                                 with_choice = 0 if trialtimes['t_response'] is None else 1,
@@ -1032,6 +1045,10 @@ def chipmunk_insert_decision_task(d, mintrials = 50):
         warnings.warn(f'[chipmunk]: Kept existing unlinked watering for {water_key}.')
         # Keep it unlinked so a later retry cannot mistake a manual record for ours.
         dtask['watering_datetime'] = None
+    elif (Watering & water_key) and not np.isclose(
+            (Watering & water_key).fetch('water_volume')[0], watering['water_volume'],
+            rtol=1e-6, atol=1e-9):
+        warnings.warn(f'[chipmunk]: Kept existing linked watering for {water_key}; estimate differs.')
     else:
         _upsert_generated_row(Watering, watering)
     _upsert_generated_row(DecisionTask, dtask)
