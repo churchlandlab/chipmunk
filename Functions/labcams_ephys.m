@@ -20,8 +20,7 @@ function [ok,message] = labcams_ephys(cmd)
             otherwise,error('labcams_ephys: unknown command %s',cmd);
         end
         for k=1:numel(commands)
-            fwrite(u,commands{k});
-            reply=fgetl(u);
+            reply=labcamsCommand(u,commands{k});
             assert(ischar(reply) && ~isempty(strtrim(reply)) && ...
                 ~startsWith(strtrim(lower(reply)),'error'), ...
                 'No successful labcams acknowledgement for %s.',commands{k});

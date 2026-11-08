@@ -4,7 +4,7 @@ root=fileparts(fileparts(mfilename('fullpath')));
 oldPath=path;cleanup=onCleanup(@() path(oldPath));
 addpath(fullfile(root,'tests','fixtures','spikeglx'));
 source=fileread(fullfile(root,'chipmunk_solo.m'));
-block=regexp(source,'(?s)        if ephysOn\n(.*?)        else\n            fwrite\(udplabcams,''softtrigger=1''','tokens','once');
+block=regexp(source,'(?s)        if ephysOn\n(.*?)        else\n            labcamsCommand\(udplabcams,''softtrigger=1''','tokens','once');
 assert(~isempty(block),'Camera registration block not found');
 BpodSystem=TestBpod();
 BpodSystem.PluginObjects=struct('SoundServer',struct('MasterOutput',7),'OtherPlugin',42);

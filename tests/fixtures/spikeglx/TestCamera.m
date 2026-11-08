@@ -6,10 +6,10 @@ classdef TestCamera < handle
         commands={};
     end
     methods
-        function fwrite(s,command)
+        function reply=labcamsCommand(s,command,varargin)
             if s.fail || strcmp(command,s.failCommand),error('Test:Camera','Camera connection failed');end
             s.commands{end+1}=command;
+            reply=s.reply;
         end
-        function reply=fgetl(s),reply=s.reply;end
     end
 end

@@ -136,7 +136,7 @@ end
     function logReplay(message)
         if ~isempty(udplabcams)
             try
-                fwrite(udplabcams, ['log=' message]);
+                labcamsCommand(udplabcams, ['log=' message],false);
             catch ME
                 warning('PassiveReplay:LogFailed', 'Could not log replay: %s', ME.message);
             end

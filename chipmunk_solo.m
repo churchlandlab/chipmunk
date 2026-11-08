@@ -41,22 +41,18 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.
         tmp = strsplit(BpodSystem.ProtocolSettings.labcamsAddress,':');
         udpAddress = tmp{1};
         udpPort = str2double(tmp{2});
-        udplabcams = udp(udpAddress,udpPort);
-        udplabcams.Timeout = 2;
-        fopen(udplabcams);
+        udplabcams = udpport('datagram','IPV4','Timeout',2);
+        udplabcams.UserData = struct('host',udpAddress,'port',udpPort);
         launchCommand = labcamsLaunchCommand(BpodSystem.ProtocolSettings.labcamsConfig);
         % Check whether an existing app must reload the explicitly selected config.
-        fwrite(udplabcams,'ping');
-        reply = fgetl(udplabcams);
+        reply = labcamsCommand(udplabcams,'ping');
         if ~isempty(reply) && ~isempty(BpodSystem.ProtocolSettings.labcamsConfig)
-            fwrite(udplabcams,'quit=1');
+            labcamsCommand(udplabcams,'quit=1',false);
             udplabcams.Timeout = .5;
             closed = false;
             for attempt = 1:10
                 pause(.25);
-                flushinput(udplabcams);
-                fwrite(udplabcams,'ping');
-                if isempty(fgetl(udplabcams))
+                if isempty(labcamsCommand(udplabcams,'ping'))
                     closed = true;
                     break
                 end
@@ -74,8 +70,7 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.
             assert(status == 0, 'chipmunk_solo:CameraLaunch', 'Could not launch labcams.');
             udplabcams.Timeout = 5;
             for i = 1:5
-                fwrite(udplabcams,'ping');
-                reply = fgetl(udplabcams);
+                reply = labcamsCommand(udplabcams,'ping');
                 if ~isempty(reply)
                     break
                 end
@@ -86,14 +81,14 @@ if isfield(BpodSystem.ProtocolSettings,'labcamsAddress') && ~isempty(BpodSystem.
         end
         udplabcams.Timeout = 2;
         % Always configure this session, including when labcams was already open.
-        fwrite(udplabcams,'softtrigger=0'); fgetl(udplabcams);
-        fwrite(udplabcams,'manualsave=0'); fgetl(udplabcams);
-        fwrite(udplabcams,['expname=' fullfile(subjectFolder,bhvFile)]); fgetl(udplabcams);
-        fwrite(udplabcams,'load_reference=/home/anne/reference_image'); fgetl(udplabcams);
+        labcamsCommand(udplabcams,'softtrigger=0');
+        labcamsCommand(udplabcams,'manualsave=0');
+        labcamsCommand(udplabcams,['expname=' fullfile(subjectFolder,bhvFile)]);
+        labcamsCommand(udplabcams,'load_reference=/home/anne/reference_image');
         if ephysOn
             BpodSystem.PluginObjects.labcams = udplabcams;
         else
-            fwrite(udplabcams,'softtrigger=1'); fgetl(udplabcams);
+            labcamsCommand(udplabcams,'softtrigger=1');
         end
     catch
         if ~isempty(udplabcams)
@@ -213,13 +208,10 @@ end
 %% Start saving labcams if connected
 % Ephys sessions wait for SpikeGLX Enable recording before cameras write.
 if ~isempty(udplabcams) && ~ephysOn
-    fwrite(udplabcams,'softtrigger=0')
+    labcamsCommand(udplabcams,'softtrigger=0');
     pause(1)
-    fgetl(udplabcams);
-    fwrite(udplabcams,'manualsave=1')
-    fgetl(udplabcams);
-    fwrite(udplabcams,'softtrigger=1')
-    fgetl(udplabcams);
+    labcamsCommand(udplabcams,'manualsave=1');
+    labcamsCommand(udplabcams,'softtrigger=1');
 end
 
 pause(0.5) %Introduce a small break before starting the trials. This gives
@@ -386,7 +378,7 @@ for currentTrial = 1:maxTrialNum
         end
         %% Add to the camera log and run the state machine
         if ~isempty(udplabcams)
-            fwrite(udplabcams,sprintf('log=trial_start[%4.0f]: %d',toc(tstart)/60,currentTrial))
+            labcamsCommand(udplabcams,sprintf('log=trial_start[%4.0f]: %d',toc(tstart)/60,currentTrial),false);
         end
 
         assertChipmunkRecording();
@@ -416,7 +408,7 @@ for currentTrial = 1:maxTrialNum
         %% Write the trial end to the labcams camlog
 
         if ~isempty(udplabcams)
-            fwrite(udplabcams,sprintf('log=trial_end:%d',currentTrial))
+            labcamsCommand(udplabcams,sprintf('log=trial_end:%d',currentTrial),false);
         end
         %% Check on Bpod status and save and close if not used anymore
 
@@ -556,12 +548,11 @@ finishSession();
         end
         try
             if ~isempty(camera)
-                fwrite(camera,sprintf('log=end')); fgetl(camera);
-                fwrite(camera,sprintf('softtrigger=0')); fgetl(camera);
-                fwrite(camera,sprintf('manualsave=0')); fgetl(camera);
+                labcamsCommand(camera,'log=end');
+                labcamsCommand(camera,'softtrigger=0');
+                labcamsCommand(camera,'manualsave=0');
                 pause(1)
-                fwrite(camera,sprintf('quit=1'));
-                fclose(camera);
+                labcamsCommand(camera,'quit=1',false);
                 delete(camera);
                 camera = [];
             end
