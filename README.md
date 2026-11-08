@@ -41,6 +41,28 @@ Install Bpod from the repository [here](https://github.com/sanworks/Bpod_Gen2). 
 ### chipmunk task
 Clone the repository to `Bpod Local/Protocols`. If you make changes; create a branch and remember to commit changes regularly.
 
+### Solo protocol in this repository
+
+The original `chipmunk` protocol and its `Functions` remain at the repository
+root. `chipmunk_solo/` is the separate Solo protocol tree. Install or link that
+directory as `Bpod Local/Protocols/chipmunk_solo`, alongside the root checkout
+installed as `Bpod Local/Protocols/chipmunk`. Keep those names: Bpod settings,
+the Solo runner, and the legacy launchers use them. Install the optional legacy
+launchers as described in [the Solo README](chipmunk_solo/README.md).
+
+Both protocols have functions with the same names but different implementations.
+Each runner adds its own `Functions` tree to the MATLAB path. Do not recursively
+add the whole repository to the path; restart MATLAB between protocols to avoid
+stale path entries or cached functions. Validate both task paths on a rig before
+deployment. The Python plugin stays at `labdata_plugin`.
+
+Integration provenance: Solo `1124a0a` plus dropdown commit `39dac75`;
+original Chipmunk and unpublished Hodgkin migration `73a2059` (including
+dashboard history and main through `a112fde`); omission-state fix `5a01280`;
+and CLI fix `12a7c8c`. The integration merge records the Hodgkin history as a
+parent, followed by a restoration of its tree at the root. The separate
+`chipmunk_unique_stim` project is not included.
+
 
 
 ### Calibration 
