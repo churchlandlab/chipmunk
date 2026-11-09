@@ -502,23 +502,11 @@ class ReviewerValidationTest(unittest.TestCase):
             with self.subTest(marker=marker), self.assertRaisesRegex(ValueError, 'Invalid StoppedTrialPulse'):
                 parse(data)
 
-    def test_ephys_ordinal_guard_runs_before_plugin_inserts(self):
-        tree = ast.parse((ROOT / 'pluginschema.py').read_text())
-        make = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == 'make')
-        guard = next(n for n in ast.walk(make) if isinstance(n, ast.If)
-                     and ast.unparse(n.test).startswith('passive_trials and'))
-        for rows, marker, fails in [([{}], 3, True), ([{}], None, False), ([], 3, False)]:
-            with self.subTest(rows=rows, marker=marker):
-                code = compile(ast.Module(body=[guard], type_ignores=[]), 'guard', 'exec')
-                env = dict(passive_trials=rows, settingsdict=dict(stopped_trial_pulse=marker))
-                if fails:
-                    with self.assertRaisesRegex(ValueError, 'physical evidence'):
-                        exec(code, env)
-                else:
-                    exec(code, env)
-        inserts = [n.lineno for n in ast.walk(make) if isinstance(n, ast.Call)
-                   and getattr(n.func, 'attr', '') in ('insert1', 'insert')]
-        self.assertLess(guard.lineno, min(inserts))
+    def test_bpod_sync_numbers_come_from_the_stopped_trial_marker(self):
+        calls = MarkerPlumbingTest().calls('pluginschema.py', '_bpod_sync_pulse_numbers')
+        self.assertEqual(len(calls), 1)
+        self.assertEqual([ast.unparse(a).replace('"', "'") for a in calls[0].args],
+                         ['len(trialdicts)', 'len(passive_trials)', "settingsdict.get('stopped_trial_pulse')"])
 
     def test_replay_metadata_reaches_extraction_and_matcher(self):
         helper = MarkerPlumbingTest()

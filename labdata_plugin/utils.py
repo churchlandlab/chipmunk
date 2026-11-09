@@ -701,12 +701,30 @@ def _session_sync_times(trials, passive_trials=()):
     return times
 
 
+def _bpod_sync_pulse_numbers(n_active, n_passive, stopped_trial_pulse=None):
+    """Hardware pulse number of each saved Bpod sync pulse (active, then replay).
+
+    A trial cut short by Stop is not saved, but its Sync state already sent a
+    pulse: Bpod's RunStateMachine (1.80, all rigs) sends 'R' and reads the
+    trial-start timestamp before its loop, and returns empty events only when
+    Stop arrives inside that loop. chipmunk_solo writes StoppedTrialPulse only
+    on that path, so replay pulses sit one number later. Downstream pairing
+    checks pulse intervals, so a wrong marker fails instead of shifting replays.
+    """
+    if stopped_trial_pulse is not None and stopped_trial_pulse != n_active:
+        raise ValueError(f'Stopped-trial pulse after {stopped_trial_pulse} saved trials, '
+                         f'but {n_active} active trials were saved')
+    gap = int(stopped_trial_pulse is not None and n_passive > 0)
+    return np.r_[np.arange(n_active), np.arange(n_passive) + n_active + gap]
+
+
 def _replay_gpio_onsets(channels, t, trialmarkers, n_active, stopped_trial_pulse=None, passive_replay=None):
     """Require a unique interval-supported mapping across all GPIO channels.
 
-    Markers permit, but do not prove, an unsaved pulse after active trials or at
-    the end of an aborted replay. All other omissions are checked for ambiguity,
-    never accepted as evidence of sync. Tolerance remains unvalidated on hardware.
+    Markers allow an unsaved pulse after active trials or at the end of an
+    aborted replay. A camera can miss a pulse that Stop cut short, so the marked
+    pulse may be absent. Other omissions are checked for ambiguity, never
+    accepted as evidence of sync. Tolerance remains unvalidated on hardware.
     """
     from itertools import combinations
     t = np.asarray(t, dtype=float)

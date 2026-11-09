@@ -20,6 +20,35 @@ class ReplaySyncTest(unittest.TestCase):
             _strictly_matched_count(source[:3],np.arange(3),clock,values)
         np.testing.assert_equal(self.ns['_session_sync_times'](self.active),[1,3,6])
 
+    def test_stopped_trial_pulse_numbering(self):
+        number = self.ns['_bpod_sync_pulse_numbers']
+        np.testing.assert_equal(number(3, 2), [0, 1, 2, 3, 4])
+        np.testing.assert_equal(number(3, 2, 3), [0, 1, 2, 4, 5])
+        np.testing.assert_equal(number(3, 0, 3), [0, 1, 2])  # trailing pulse needs no gap
+        with self.assertRaisesRegex(ValueError, 'Stopped-trial pulse after 2'):
+            number(3, 2, 2)
+
+    def test_stopped_trial_pulse_pairs_with_ephys_clock(self):
+        from thesis.ephys.preprocessing.insert_streamsync import _strictly_matched_count
+        source = self.ns['_session_sync_times'](self.active, self.passive)  # 1,3,6 | 8,11
+        def clock(onsets):
+            onsets = 20 + 1.0001 * np.asarray(onsets)  # offset and drift
+            return np.column_stack((onsets, onsets + .1)).ravel(), np.tile([1, 0], len(onsets))
+        def match(numbers, onsets):
+            return _strictly_matched_count(source, numbers, *clock(onsets),
+                                           clock_pulse_numbers=numbers, source_is_bpod=True)
+        stopped = self.ns['_bpod_sync_pulse_numbers'](3, 2, 3)
+        # Stop cut trial 4 short at 7 s (pulse sent, not saved); replay then ran.
+        self.assertEqual(match(stopped, [1, 3, 6, 7, 8, 11]), 5)
+        # Plus the trailing pulse of a replay that Stop also cut short.
+        self.assertEqual(match(stopped, [1, 3, 6, 7, 8, 11, 13]), 5)
+        # Without the gap, replays would pair one pulse early: rejected, not shifted.
+        with self.assertRaises(ValueError):
+            match(np.arange(5), [1, 3, 6, 7, 8, 11])
+        # A marker without its physical pulse is rejected too.
+        with self.assertRaises(ValueError):
+            match(stopped, [1, 3, 6, 8, 11])
+
     def test_invalid_sync_cannot_silently_drop_a_pulse(self):
         for stamp in (None,float('nan'),2.):
             with self.assertRaises(ValueError):

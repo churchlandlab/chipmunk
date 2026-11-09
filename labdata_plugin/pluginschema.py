@@ -123,9 +123,6 @@ class Chipmunk(dj.Imported):
              settingsdict), metadata = process_chipmunk_file((File() & filekey).get()[0])
             passive_trials = metadata.pop('passive_trials', [])  # rows go to ChipmunkPassive; pulses stay in this sync stream
             passive_replay = metadata.pop('passive_replay', None)
-            if passive_trials and settingsdict.get('stopped_trial_pulse') is not None:
-                raise ValueError('StoppedTrialPulse does not prove a physical pulse; replay ephys ordinals '
-                                 'require physical evidence before ingestion')
             computer_name = None
             if not metadata['setup_name'] is None:
                 # add if not there
@@ -207,7 +204,7 @@ class Chipmunk(dj.Imported):
             self.Trial.insert([dict(key,**d) for d in trialdicts])
             # get example frames for each camera
             # align the video to the behavior data
-            from .utils import extract_chipmunk_camera_data, _session_sync_times
+            from .utils import extract_chipmunk_camera_data, _session_sync_times, _bpod_sync_pulse_numbers
             cameras, frames, camera_events = extract_chipmunk_camera_data(filenames,trialdicts,passive_trials,settingsdict.get('stopped_trial_pulse'),passive_replay)
             riglogevents = []
             if len(camera_events):
@@ -217,9 +214,9 @@ class Chipmunk(dj.Imported):
             digital = dict(stream,
                            event_name = 'sync',
                            event_timestamps = _session_sync_times(trialdicts, passive_trials),
-                           # Marked stopped-task + replay sessions fail above: no guessed ordinal gap.
-                           event_values = np.r_[np.arange(len(trialdicts)),
-                                                np.arange(len(passive_trials)) + len(trialdicts)])
+                           # Hardware pulse numbers: replays skip a stopped trial's unsaved pulse.
+                           event_values = _bpod_sync_pulse_numbers(len(trialdicts), len(passive_trials),
+                                                                   settingsdict.get('stopped_trial_pulse')))
             
             DatasetEvents.insert1(stream,
                                   skip_duplicates = True,
