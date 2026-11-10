@@ -5,14 +5,21 @@ import numpy as np
 import pandas as pd
 from test_parser_fields import parser_namespace
 
+try:  # the ephys-side matcher lives in Gabriel's thesis package, not in this repository
+    from thesis.ephys.preprocessing.insert_streamsync import _strictly_matched_count
+except ImportError:
+    _strictly_matched_count = None
+needs_thesis = unittest.skipIf(_strictly_matched_count is None, 'thesis package (ephys sync matcher) not installed')
+
+
 class ReplaySyncTest(unittest.TestCase):
     def setUp(self):
         self.ns = parser_namespace()
         self.active = [dict(trial_num=i, t_sync=t) for i,t in enumerate([1.,3.,6.])]
         self.passive = [dict(passive_trial_num=i,t_sync=t) for i,t in enumerate([8.,11.])]
 
+    @needs_thesis
     def test_complete_sync_sequence_matches_ephys_edges(self):
-        from thesis.ephys.preprocessing.insert_streamsync import _strictly_matched_count
         source = self.ns['_session_sync_times'](self.active,self.passive)
         clock = np.column_stack((source+20,source+20.1)).ravel()
         values = np.tile([1,0],len(source))
@@ -29,8 +36,8 @@ class ReplaySyncTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Stopped-trial pulse after 2'):
             number(3, 2, 2)
 
+    @needs_thesis
     def test_stopped_trial_pulse_pairs_with_ephys_clock(self):
-        from thesis.ephys.preprocessing.insert_streamsync import _strictly_matched_count
         source = self.ns['_session_sync_times'](self.active, self.passive)  # 1,3,6 | 8,11
         def clock(onsets):
             onsets = 20 + 1.0001 * np.asarray(onsets)  # offset and drift
