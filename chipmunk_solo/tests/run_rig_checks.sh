@@ -40,7 +40,7 @@ if [ "$MODE" = offline ] || [ "$MODE" = all ]; then
     esac
     check "$n" "cd('$S'); $n; disp('CHECK_DONE')" CHECK_DONE
   done
-  check original_isolation "addpath('$S'); check_original_isolation('$T')" ORIGINAL_ISOLATION_PASS
+  check original_isolation "cd('$S'); check_original_isolation('$T')" ORIGINAL_ISOLATION_PASS  # cd, not addpath: the check rejects Solo folders on the path
 fi
 
 if [ "$MODE" = emulator ] || [ "$MODE" = all ]; then

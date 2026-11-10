@@ -2,6 +2,19 @@
 
 Run every MATLAB check from the `chipmunk_solo/` folder in a fresh MATLAB session (`addpath('tests')`). Emulator checks need an idle `Bpod('EMU')` session. None of these establish physical LED, audio or TTL timing.
 
+## On a rig, all at once
+
+Before deploying a new version to a rig, run every automated check with one command (close MATLAB and stop any session first):
+
+```sh
+chipmunk_solo/tests/run_rig_checks.sh          # offline, emulator and real-Bpod checks (about an hour)
+chipmunk_solo/tests/run_rig_checks.sh offline  # or one group: offline | emulator | real
+```
+
+Each check runs in its own fresh MATLAB on a temporary clone of the committed code, so the checkout is not touched. It prints PASS or FAIL per check and `ALL_PASS` at the end; logs and outputs go to `~/chipmunk-rig-checks/<time>/`. The `real` group takes over the Bpod port and, afterwards, leaves Bpod ready for auto-detection. The script's header lists the settings (Bpod folder, port, camera config) for rigs that differ from the defaults.
+
+The checks below are what it runs, plus the ones that must be driven by hand (native file picker, historical equivalence).
+
 ## Task window
 
 Check the psychometric plot:

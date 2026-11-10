@@ -58,4 +58,9 @@ Register the plugin in `~/labdata/user_preferences.json`, pointing at this repos
 
 To add a **Chipmunk** page to the labdata dashboard, also install
 [chipmunk-dashboard](https://github.com/rojasgabriel/chipmunk-dashboard) in the same Python
-environment. Run the plugin tests from `tests/` with `python -m unittest`.
+environment.
+
+## Tests
+
+- **Parser:** `python -m unittest` from `tests/` (needs numpy, pandas and scipy). GitHub Actions runs these on every push and pull request.
+- **Solo task:** `chipmunk_solo/tests/run_rig_checks.sh` on a rig, before deploying a new version. See the [testing guide](chipmunk_solo/docs/testing.md).

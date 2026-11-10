@@ -159,4 +159,4 @@ By Lukas Oesch and Gabriel Rojas Bowe, circa 2024.
 
 ## Testing and validation
 
-MATLAB checks live in [`tests/`](tests) and run from this folder (`addpath('tests')`). The [testing guide](docs/testing.md) lists each check, how to run it and what it does not establish; [`tests/evidence/`](tests/evidence) holds the recorded validation runs.
+MATLAB checks live in [`tests/`](tests) and run from this folder (`addpath('tests')`). `tests/run_rig_checks.sh` runs them all on a rig in one command. The [testing guide](docs/testing.md) lists each check, how to run it and what it does not establish; [`tests/evidence/`](tests/evidence) holds the recorded validation runs.
