@@ -1,18 +1,7 @@
 #!/bin/bash
-# Run the chipmunk_solo MATLAB checks on a rig, each in its own fresh MATLAB, against a
-# temporary clone of this repository's committed state (the checkout itself is not touched).
-#
-#   chipmunk_solo/tests/run_rig_checks.sh [offline|emulator|real|all]    (default: all)
-#
-#   offline   20 checks that need no Bpod, plus the original-protocol isolation check
-#   emulator  6 sessions in Bpod('EMU'), including a 1,000-trial endurance run (up to ~1 h)
-#   real      FakeSubject sessions on the real Bpod with cameras, ending with Stop during a
-#             trial and passive replay; then leaves Bpod ready for auto-detection
-#
-# Close MATLAB and stop any session first: the real check takes over the Bpod port.
-# Environment (defaults in brackets): OUT [~/chipmunk-rig-checks/<time>], BPOD [~/Bpod_Gen2],
-# BPOD_PORT [/dev/ttyACM0], CAMERA_CONFIG [~/labcams/default.json], DISPLAY [:1],
-# XAUTHORITY [~/.Xauthority]. Prints PASS/FAIL per check and ALL_PASS at the end.
+# Runs the chipmunk_solo checks on a rig, each in a fresh MATLAB, on a temporary clone.
+#   run_rig_checks.sh [offline|emulator|real|all]   (default: all)
+# Close MATLAB first. Env overrides: OUT, BPOD, BPOD_PORT, CAMERA_CONFIG, DISPLAY, XAUTHORITY.
 set -u
 MODE=${1:-all}
 case $MODE in offline|emulator|real|all) ;; *) echo "usage: $0 [offline|emulator|real|all]"; exit 2;; esac
@@ -35,12 +24,12 @@ emulator() { echo "addpath('$BPOD'); Bpod('EMU'); global BpodSystem; if ~isequal
 if [ "$MODE" = offline ] || [ "$MODE" = all ]; then
   for f in "$S"/check_*.m; do
     n=$(basename "$f" .m)
-    case $n in  # emulator/real-Bpod sessions, hand-driven checks, and the isolation check below
+    case $n in  # run below or by hand
       check_chipmunk_*|check_passive_replay_emulator|check_native_picker|check_historical_equivalence|check_original_isolation) continue;;
     esac
     check "$n" "cd('$S'); $n; disp('CHECK_DONE')" CHECK_DONE
   done
-  check original_isolation "cd('$S'); check_original_isolation('$T')" ORIGINAL_ISOLATION_PASS  # cd, not addpath: the check rejects Solo folders on the path
+  check original_isolation "cd('$S'); check_original_isolation('$T')" ORIGINAL_ISOLATION_PASS  # cd, not addpath
 fi
 
 if [ "$MODE" = emulator ] || [ "$MODE" = all ]; then
@@ -57,8 +46,7 @@ if [ "$MODE" = real ] || [ "$MODE" = all ]; then
   export CHIPMUNK_REAL_BPOD_CHECK=1
   check real_bpod "addpath('$BPOD'); Bpod('$BPOD_PORT'); global BpodSystem; assert(BpodSystem.EmulatorMode==0,'not real Bpod'); cd('$S'); check_chipmunk_replay_session('$OUT/real',{'VisualTask','MultipleModalitiesTask'},'$CAMERA_CONFIG'); disp('CHECK_DONE'); close all force" CHECK_DONE
   unset CHIPMUNK_REAL_BPOD_CHECK
-  # A session that ends abnormally can leave Bpod "connected" (no discovery bytes) and a stale
-  # port lock, so the next Bpod() cannot find the port. Clear both.
+  # Clear stale port locks and leave Bpod discoverable
   pkill -x MATLAB; sleep 5
   for f in /run/lock/LCK..* /var/lock/LCK..*; do [ -e "$f" ] && { p=$(tr -d ' \n' < "$f"); kill -0 "$p" 2>/dev/null || rm -f "$f"; }; done
   check bpod_reset "addpath('$BPOD'); addpath(genpath(fullfile('$BPOD','Functions'))); s=ArCOMObject_Bpod('$BPOD_PORT',12000000); pause(1.5); n=s.bytesAvailable; if n>0, s.read(n,'uint8'); end; if n==0, s.write('Z','uint8'); pause(2); n=s.bytesAvailable; end; clear s; assert(n>0,'Bpod sends no discovery bytes'); disp('BPOD_DISCOVERABLE')" BPOD_DISCOVERABLE

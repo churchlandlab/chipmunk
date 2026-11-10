@@ -1,28 +1,19 @@
 # chipmunk
 
 Freely moving auditory and visual evidence-accumulation task for mice, adapted from
-Raposo et al. 2012 and run with [Bpod Gen 2](https://github.com/sanworks/Bpod_Gen2).
-Mice poke a center port to start a trial, watch and/or listen to a stochastic train of
-flashes or clicks, and report their choice at a left or right port.
+Raposo et al. 2012. Runs on [Bpod Gen 2](https://github.com/sanworks/Bpod_Gen2).
 
-## What's here
-
-| Folder | Contents |
+| Folder | |
 |---|---|
-| [`chipmunk/`](chipmunk/README.md) | The original protocol: demonstrator/observer task variants and miniscope synchronization. |
-| [`chipmunk_solo/`](chipmunk_solo/README.md) | The Solo protocol for single mice, with camera recording, optional Neuropixels recording through SpikeGLX, stimulus manipulations and passive stimulus replay. |
-| [`labdata_plugin/`](labdata_plugin/README.md) | The labdata plugin that imports sessions from both protocols. |
-| [`tests/`](tests) | Python tests for the labdata plugin. |
-| [`custom_parts/`](custom_parts), [`hardware_setup/`](hardware_setup) | Hardware for both setups: enclosure, nose-poke and miniscope designs, parts lists (`parts_list_with_observer.xlsx` adds the observer side) and nose-poke assembly instructions. |
-| [`docs/`](docs/accounting-contract.md) | How the plugin counts trials, choices and rewards. |
+| [`chipmunk/`](chipmunk/README.md) | Original protocol (demonstrator/observer) |
+| [`chipmunk_solo/`](chipmunk_solo/README.md) | Solo protocol |
+| [`labdata_plugin/`](labdata_plugin/README.md) | labdata plugin for both protocols |
+| [`tests/`](tests) | Plugin tests |
+| [`custom_parts/`](custom_parts), [`hardware_setup/`](hardware_setup) | Hardware designs, parts lists, assembly instructions |
 
 ## Install
 
-The two protocols are separate Bpod protocols. Clone this repository anywhere and link
-each protocol folder you use into Bpod's `Protocols` folder, keeping these exact names:
-Bpod settings, the runners and the legacy launchers look for them.
-
-Linux or macOS:
+Clone the repo and link each protocol you use into `Bpod Local/Protocols`, keeping the folder names.
 
 ```sh
 git clone https://github.com/churchlandlab/chipmunk.git ~/chipmunk
@@ -30,25 +21,13 @@ ln -s ~/chipmunk/chipmunk      ~/"Bpod Local/Protocols/chipmunk"
 ln -s ~/chipmunk/chipmunk_solo ~/"Bpod Local/Protocols/chipmunk_solo"
 ```
 
-Windows (a directory junction needs no administrator rights):
+On Windows, use `mklink /J` instead of `ln -s`.
 
-```bat
-git clone https://github.com/churchlandlab/chipmunk.git C:\code\chipmunk
-mklink /J "<Bpod Local>\Protocols\chipmunk" C:\code\chipmunk\chipmunk
-mklink /J "<Bpod Local>\Protocols\chipmunk_solo" C:\code\chipmunk\chipmunk_solo
-```
-
-Both protocols contain functions with the same names but different behavior, and each
-runner adds only its own `Functions` folder to the MATLAB path. Do not add the whole
-repository to the path, and restart MATLAB when switching between protocols.
-
-Protocol-specific setup, calibration and training are in the [chipmunk](chipmunk/README.md)
-and [chipmunk_solo](chipmunk_solo/README.md) READMEs.
+Don't add the whole repo to the MATLAB path; the two protocols have functions with the same names. Restart MATLAB when switching protocols.
 
 ### labdata plugin
 
-Register the plugin in `~/labdata/user_preferences.json`, pointing at this repository's
-`labdata_plugin` folder:
+In `~/labdata/user_preferences.json`:
 
 ```json
 "plugins": {
@@ -56,11 +35,9 @@ Register the plugin in `~/labdata/user_preferences.json`, pointing at this repos
 }
 ```
 
-To add a **Chipmunk** page to the labdata dashboard, also install
-[chipmunk-dashboard](https://github.com/rojasgabriel/chipmunk-dashboard) in the same Python
-environment.
+For the dashboard page, install [chipmunk-dashboard](https://github.com/rojasgabriel/chipmunk-dashboard).
 
 ## Tests
 
-- **Parser:** `python -m unittest` from `tests/` (needs numpy, pandas and scipy). GitHub Actions runs these on every push and pull request.
-- **Solo task:** `chipmunk_solo/tests/run_rig_checks.sh` on a rig, before deploying a new version. See the [testing guide](chipmunk_solo/docs/testing.md).
+- Plugin: `python -m unittest` in `tests/`. Runs on GitHub on every push.
+- Solo task: `chipmunk_solo/tests/run_rig_checks.sh` on a rig. See [testing](chipmunk_solo/docs/testing.md).
