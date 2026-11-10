@@ -470,7 +470,7 @@ class ReviewerBlockersTest(unittest.TestCase):
         frame['Reward'] = [np.array([np.nan, np.nan])]
         frame['DemonDidNotChoose'] = [np.array([.5, .51])]
         root = ROOT.parent
-        paths = list((root / 'Functions/StateMatrices').glob('*.m')) + list((root / 'chipmunk_solo/Functions/StateMatrices').glob('*.m'))
+        paths = list((root / 'chipmunk/Functions/StateMatrices').glob('*.m')) + list((root / 'chipmunk_solo/Functions/StateMatrices').glob('*.m'))
         import re
         stopping = []
         for path in paths:
