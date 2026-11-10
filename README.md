@@ -1,116 +1,61 @@
 # chipmunk
 
-Freely moving auditory and visual discrimination task for mice (adapted from Raposo et al. 2012)
+Freely moving auditory and visual evidence-accumulation task for mice, adapted from
+Raposo et al. 2012 and run with [Bpod Gen 2](https://github.com/sanworks/Bpod_Gen2).
+Mice poke a center port to start a trial, watch and/or listen to a stochastic train of
+flashes or clicks, and report their choice at a left or right port.
 
+## What's here
 
-### Introduction
+| Folder | Contents |
+|---|---|
+| [`chipmunk/`](chipmunk/README.md) | The original protocol: demonstrator/observer task variants and miniscope synchronization. |
+| [`chipmunk_solo/`](chipmunk_solo/README.md) | The Solo protocol for single mice, with camera recording, optional Neuropixels recording through SpikeGLX, stimulus manipulations and passive stimulus replay. |
+| [`labdata_plugin/`](labdata_plugin/README.md) | The labdata plugin that imports sessions from both protocols. |
+| [`tests/`](tests) | Python tests for the labdata plugin. |
+| [`custom_parts/`](custom_parts), [`partslist.xlsx`](partslist.xlsx), [`Old_ports_and_setup/`](Old_ports_and_setup) | Hardware designs and parts shared by both setups. |
+| [`docs/`](docs/accounting-contract.md) | How the plugin counts trials, choices and rewards. |
 
-This repo contains code, setup description, assembly instructions and parts design to build a freely moving behavior setup.
+## Install
 
-The task is a visual and/or auditory accumulation of evidence task. The stimuli is stochastic ticks and/or flashes.
+The two protocols are separate Bpod protocols. Clone this repository anywhere and link
+each protocol folder you use into Bpod's `Protocols` folder, keeping these exact names:
+Bpod settings, the runners and the legacy launchers look for them.
 
+Linux or macOS:
 
-### Description of the setup
+```sh
+git clone https://github.com/churchlandlab/chipmunk.git ~/chipmunk
+ln -s ~/chipmunk/chipmunk      ~/"Bpod Local/Protocols/chipmunk"
+ln -s ~/chipmunk/chipmunk_solo ~/"Bpod Local/Protocols/chipmunk_solo"
+```
 
-[partslist here](partslist.xlsx)
-	
-![There should be a picture here.](images/setupdescription.png)
-	
-Here goes a description in words.
-	
-3d parts for building the setup are in the **custom_parts/3d** folder.
-	
-The walls are laser cut from *pololu* and the drawings are in the **custom_parts/enclosure**
-	
-The visual and auditory stimuli printed circuit boards are [here](https://github.com/churchlandlab/SpatialSparrow/tree/dev-couto/pcb/led_panel_split) and can be ordered from *SeeedStudio*.
-	
-### Software instalation
+Windows (a directory junction needs no administrator rights):
 
-#### labdata dashboard
+```bat
+git clone https://github.com/churchlandlab/chipmunk.git C:\code\chipmunk
+mklink /J "<Bpod Local>\Protocols\chipmunk" C:\code\chipmunk\chipmunk
+mklink /J "<Bpod Local>\Protocols\chipmunk_solo" C:\code\chipmunk\chipmunk_solo
+```
 
-The labdata plugin works without the optional dashboard. To add a **Chipmunk**
-page to the labdata dashboard, install
-[chipmunk-dashboard](https://github.com/rojasgabriel/chipmunk-dashboard) in the
-same Python environment used to run `labdata dashboard`.
+Both protocols contain functions with the same names but different behavior, and each
+runner adds only its own `Functions` folder to the MATLAB path. Do not add the whole
+repository to the path, and restart MATLAB when switching between protocols.
 
-#### Bpod gen 2
+Protocol-specific setup, calibration and training are in the [chipmunk](chipmunk/README.md)
+and [chipmunk_solo](chipmunk_solo/README.md) READMEs.
 
-Install Bpod from the repository [here](https://github.com/sanworks/Bpod_Gen2). This was tested with commit `329bd9e`.
+### labdata plugin
 
+Register the plugin in `~/labdata/user_preferences.json`, pointing at this repository's
+`labdata_plugin` folder:
 
-### chipmunk task
-Clone the repository to `Bpod Local/Protocols`. If you make changes; create a branch and remember to commit changes regularly.
+```json
+"plugins": {
+    "chipmunk": "/path/to/chipmunk/labdata_plugin"
+}
+```
 
-### Solo protocol in this repository
-
-The original `chipmunk` protocol and its `Functions` remain at the repository
-root. `chipmunk_solo/` is the separate Solo protocol tree. Install or link that
-directory as `Bpod Local/Protocols/chipmunk_solo`, alongside the root checkout
-installed as `Bpod Local/Protocols/chipmunk`. Keep those names: Bpod settings,
-the Solo runner, and the legacy launchers use them. Install the optional legacy
-launchers as described in [the Solo README](chipmunk_solo/README.md).
-
-Both protocols have functions with the same names but different implementations.
-Each runner adds its own `Functions` tree to the MATLAB path. Do not recursively
-add the whole repository to the path; restart MATLAB between protocols to avoid
-stale path entries or cached functions. Validate both task paths on a rig before
-deployment. The Python plugin stays at `labdata_plugin`.
-
-Integration provenance: Solo `1124a0a` plus dropdown commit `39dac75`;
-original Chipmunk and unpublished Hodgkin migration `73a2059` (including
-dashboard history and main through `a112fde`); omission-state fix `5a01280`;
-and CLI fix `12a7c8c`. The integration merge records the Hodgkin history as a
-parent, followed by a restoration of its tree at the root. The separate
-`chipmunk_unique_stim` project is not included.
-
-
-
-### Calibration 
-
-##### Stimuli
-
-The visual stimuli LEDs response curve should have a plot here.
-
-The auditory speaker response curves were measured with X microphone and a picture should be here.
-
-This needs to be done for every rig? Stored somewhere? Where?
-
-#### Water reward size
-
-Use BPOD to do this. An explanation should be here.
-
-### Behavior monitoring
-
-Cameras wiring for sync is done like this. (Needs diagram.)
-
-Use cameras that have GPIO connections like the FLIR Chamaeleon 3. 
-On the Chamaeleon 3 USB you can use the Purple wire (GPIO 2). Connect to BPod to signal trial start and/or end.  To sync multiple cameras use the Green wire and set one of the cameras as master (It is smart to use the same sampling rate). 
-
-
-Cameras should be set like the following picture. This gives the tracking results with DeepLabCut below (figure).
-
-### Training strategy
-
-Training has 3 phases:
-
-1. Habituation - description of what happens in this phase. How long it lasts. When it ends.
-
-2. Training phase - during these phase mice do the task but only with easy stimuli. This takes around 4 weeks.
-
-3. Testing/experiment phase - mice are now considered experts and difficult stimuli are introduced. Mice perform X above chance.
-	
-Figure of performance, accross days. Code to produce this figure in the **notebooks** folder
-	
-
-### TODO
-
-Arena size is 20x20cm. An additional chamber can attached to hold an observer.
- 
-1. walls and floor - laser cut drawings there is an additional 3d part to connect the walls - use transparent red acrylic #2423 from *Pololu*, 6mm. Where can we find small hinges?
-2. test the stimuli and put the results in a figure here somewhere. With a description of how to do this.
-3. Do we use a sound card?? What the latency? Fixed? How fixed?
-4. 3d parts for the ports 2 - adapt the design so that head gear on a mouse is not does not touch the port during licking. Can we do this just with a spout and capacitive sensing?
-5. What's in the current port PCB, where the drawing?
-6. try different training strategies. Find the best strategy. What the best way to get multimodal enhancement? What is the best loudness and visual saliency? 
-
-Most of these can be done in parallel, some can't. Version 1 can be rough for most of these (we can use code and audio from MudSkipper2 for now.) 
+To add a **Chipmunk** page to the labdata dashboard, also install
+[chipmunk-dashboard](https://github.com/rojasgabriel/chipmunk-dashboard) in the same Python
+environment. Run the plugin tests from `tests/` with `python -m unittest`.
