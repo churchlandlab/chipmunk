@@ -15,9 +15,11 @@ if nargin < 2
     experiments = {'VisualTask', 'MultipleModalitiesTask', 'VisualTask'};
 end
 assert(isempty(badReplayEnable) || ~isempty(trialLimit), 'Invalid replay edit requires natural completion.');
-% Full FakeSubject protocol integration. Run only in a fresh, idle Bpod emulator.
+% Full FakeSubject protocol integration. Run only in a fresh, idle Bpod emulator, or on an idle
+% real Bpod with CHIPMUNK_REAL_BPOD_CHECK=1 (run_rig_checks.sh real).
 global BpodSystem ChipmunkSessionTest
-assert(BpodSystem.EmulatorMode == 1 && BpodSystem.Status.BeingUsed == 0);
+assert(BpodSystem.Status.BeingUsed == 0 && (BpodSystem.EmulatorMode == 1 || strcmp(getenv('CHIPMUNK_REAL_BPOD_CHECK'), '1')), ...
+    'Run in an idle Bpod emulator, or set CHIPMUNK_REAL_BPOD_CHECK=1 for a real Bpod.');
 root = fileparts(fileparts(mfilename('fullpath')));
 oldPaths = BpodSystem.Path;
 oldFolder = pwd;
