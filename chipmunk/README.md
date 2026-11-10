@@ -12,13 +12,13 @@ The task is a visual and/or auditory accumulation of evidence task. The stimuli 
 
 ### Description of the setup
 
-[partslist here](../partslist.xlsx)
+[partslist here](hardware/partslist.xlsx) (includes the observer-side parts; the shared list is [here](../hardware_setup/parts_list.xlsx))
 	
 *There should be a picture here.*
 	
 Here goes a description in words.
 	
-3d parts for building the setup are in the **[custom_parts/3d](../custom_parts/3d)** folder.
+3d parts for building the setup are in the **[hardware](hardware)** folder.
 	
 The walls are laser cut from *pololu* and the drawings are in the **[custom_parts/enclosure](../custom_parts/enclosure)**
 	
