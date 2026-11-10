@@ -13,7 +13,7 @@ flashes or clicks, and report their choice at a left or right port.
 | [`chipmunk_solo/`](chipmunk_solo/README.md) | The Solo protocol for single mice, with camera recording, optional Neuropixels recording through SpikeGLX, stimulus manipulations and passive stimulus replay. |
 | [`labdata_plugin/`](labdata_plugin/README.md) | The labdata plugin that imports sessions from both protocols. |
 | [`tests/`](tests) | Python tests for the labdata plugin. |
-| [`custom_parts/`](custom_parts), [`hardware_setup/`](hardware_setup) | Enclosure and nose-poke designs, parts list and nose-poke assembly instructions, shared by both setups. Parts used only by the original setup (observer side, miniscope) are in [`chipmunk/hardware/`](chipmunk/hardware). |
+| [`custom_parts/`](custom_parts), [`hardware_setup/`](hardware_setup) | Hardware for both setups: enclosure, nose-poke and miniscope designs, parts lists (`parts_list_with_observer.xlsx` adds the observer side) and nose-poke assembly instructions. |
 | [`docs/`](docs/accounting-contract.md) | How the plugin counts trials, choices and rewards. |
 
 ## Install
