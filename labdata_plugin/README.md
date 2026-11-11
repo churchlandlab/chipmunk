@@ -7,7 +7,7 @@ Imports sessions from both protocols.
 
 Populate `Chipmunk` before `ChipmunkPassive`.
 
-The Chipmunk tab in `labdata dashboard` is in `dashboard/`. It needs `dash` and `plotly<7`.
+The Chipmunk tab in `labdata dashboard` is in `dashboard/`. It needs `pip install -U "labdata[dashboard]" dash "plotly<7"`.
 
 ## Trials
 

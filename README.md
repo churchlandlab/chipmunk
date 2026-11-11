@@ -35,9 +35,17 @@ In `~/labdata/user_preferences.json`:
 }
 ```
 
-For the Chipmunk tab in `labdata dashboard`, install `dash` and `plotly<7` in the same environment.
+For the Chipmunk tab in `labdata dashboard`, install in the same environment:
+
+```sh
+pip install -U "labdata[dashboard]" dash "plotly<7"
+```
 
 ## Tests
 
 - Plugin: `python -m unittest` in `tests/`, and `pytest tests/dashboard` for the dashboard. Both run on GitHub on every push.
 - Solo task: `chipmunk_solo/tests/run_rig_checks.sh` on a rig. See [testing](chipmunk_solo/docs/testing.md).
+
+## License
+
+MIT, except `chipmunk_solo/vendor/SpikeGLX-MATLAB-SDK`, which keeps its own license.
