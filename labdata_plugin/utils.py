@@ -497,7 +497,7 @@ def _read_setting(session_data, setting_name):
 
 
 def _configured_reward_volume(value):
-    """A saved calibration target in uL; empty/NaN means unknown, never measured."""
+    """Reward volume set for a trial in uL; empty/NaN means unknown."""
     value = np.asarray(value)
     if value.size == 0:
         return None

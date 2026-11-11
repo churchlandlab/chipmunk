@@ -40,7 +40,7 @@ class Chipmunk(dj.Imported):
         stim_rate_vision = NULL             : float      # visual stimulus rate [Hz]
         category_boundary                   : float
         rewarded_position                   : enum('left','right')
-        configured_reward_volume = NULL     : float  # correct-side TrialSettings calibration target [uL], not measured water
+        configured_reward_volume = NULL     : float  # reward volume set for the correct side on this trial [uL]
         stim_events = NULL                  : longblob   # Intended onsets relative to trial start: visual for multisensory, otherwise the active channel
         stim_event_duration = NULL          : double     # Duration of individual flashes or clicks
         min_isi = NULL                      : double     # The shortest allowed interval between flashes or clicks
