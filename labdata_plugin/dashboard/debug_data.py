@@ -78,7 +78,3 @@ def multisession_metrics(
         for idx, day in enumerate(session_dates)
     ]
     return metrics
-
-
-def prewarm_multisession_cache(*_args, **_kwargs) -> None:
-    return None

@@ -1,6 +1,5 @@
 """Data fetching and metric computation."""
 
-import os
 import threading
 import time
 from collections.abc import Callable
@@ -14,13 +13,8 @@ import pandas as pd
 from labdata.schema import DecisionTask, Watering  # type: ignore
 from chipmunk import Chipmunk  # type: ignore
 
-from .perf import perf_log
-
 _DB_LOCK = threading.RLock()
-_CACHE_TTL_SECONDS = int(os.getenv("CHIPMUNK_CACHE_TTL_SECONDS", "1800"))
-_PREWARM_ENABLED = os.getenv("CHIPMUNK_PREWARM", "1") == "1"
-_PREWARM_LOCK = threading.Lock()
-_PREWARM_INFLIGHT: set[tuple[tuple[str, ...], int, str | None]] = set()
+_CACHE_TTL_SECONDS = 1800
 
 
 def _ttl_lru_cache(
@@ -43,14 +37,7 @@ def _ttl_lru_cache(
 
 @_ttl_lru_cache(maxsize=1)
 def get_all_subjects() -> list[str]:
-    """Fetch all unique subject names from the database.
-
-    Returns:
-        A sorted list of unique subject names.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK``.
-    """
+    """Sorted unique subject names from the database."""
     with _DB_LOCK:
         subjects = DecisionTask.TrialSet().fetch("subject_name")
     return sorted(set(subjects))
@@ -58,22 +45,7 @@ def get_all_subjects() -> list[str]:
 
 @_ttl_lru_cache(maxsize=1)
 def get_subjects_with_recent_sessions(days: int = 7) -> set[str]:
-    """Return subjects with at least one session recorded in the last ``days`` days.
-
-    Session names are expected to follow the ``YYYYMMDD_HHMMSS`` format; any
-    session whose leading 8-character date component is on or after the cutoff
-    date counts as recent.
-
-    Args:
-        days: Number of days to look back from today (default: 14).
-
-    Returns:
-        A set of subject names that have had at least one session in the last
-        ``days`` days.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK``.
-    """
+    """Subjects with a ``YYYYMMDD_*`` session on or after today minus ``days``."""
     cutoff = (date.today() - timedelta(days=days)).strftime("%Y%m%d")  # noqa: DTZ011 — lab-local calendar day
     with _DB_LOCK:
         recent_trials = DecisionTask.TrialSet() & f"session_name >= '{cutoff}'"
@@ -83,19 +55,7 @@ def get_subjects_with_recent_sessions(days: int = 7) -> set[str]:
 
 @_ttl_lru_cache(maxsize=64)
 def get_subject_data(subject: str) -> pd.DataFrame:
-    """Fetch all trial-set rows for a subject.
-
-    Args:
-        subject: Subject name to query.
-
-    Returns:
-        A DataFrame of trial-set rows ordered by ``session_name``.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK`` and logs timing metrics
-        when profiling is enabled.
-    """
-    start = time.perf_counter()
+    """Trial-set rows for one subject, ordered by ``session_name``."""
     fields = [
         "subject_name",
         "session_name",
@@ -109,29 +69,14 @@ def get_subject_data(subject: str) -> pd.DataFrame:
         rel = DecisionTask.TrialSet() & f"subject_name = '{subject}'"
         try:
             rows = rel.fetch(*fields, order_by="session_name", as_dict=True)
-            df = pd.DataFrame(rows)
-            perf_log("get_subject_data", start, subject=subject, rows=len(df))
-            return df
+            return pd.DataFrame(rows)
         except Exception:  # noqa: BLE001 — DataJoint fetch failure surface is broad
-            df = pd.DataFrame(rel)
-            perf_log("get_subject_data_fallback", start, subject=subject, rows=len(df))
-            return df
+            return pd.DataFrame(rel)
 
 
 @_ttl_lru_cache(maxsize=64)
 def get_session_trials(subject: str, session_name: str) -> pd.DataFrame:
-    """Fetch per-trial Chipmunk rows for a single session.
-
-    Args:
-        subject: Subject name to query.
-        session_name: Session name to query.
-
-    Returns:
-        A DataFrame of per-trial rows ordered by ``trial_num``.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK``.
-    """
+    """Per-trial Chipmunk rows for one session, ordered by ``trial_num``."""
     restriction = f"subject_name = '{subject}' AND session_name = '{session_name}'"
     with _DB_LOCK:
         return pd.DataFrame(
@@ -143,17 +88,7 @@ def get_session_trials(subject: str, session_name: str) -> pd.DataFrame:
 
 @_ttl_lru_cache(maxsize=64)
 def get_subject_water(subject: str) -> dict[str, float]:
-    """Fetch water volume by session for a subject.
-
-    Args:
-        subject: Subject name to query.
-
-    Returns:
-        A mapping from ``session_name`` to water volume in mL.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK``.
-    """
+    """Water volume (mL) keyed by ``session_name``."""
     with _DB_LOCK:
         rows = (DecisionTask * Watering & f"subject_name = '{subject}'").fetch(
             "session_name", "water_volume", as_dict=True
@@ -165,21 +100,7 @@ def get_subject_water(subject: str) -> dict[str, float]:
 def get_trials_for_sessions(
     subject: str, session_names: tuple[str, ...]
 ) -> dict[str, pd.DataFrame]:
-    """Fetch per-trial rows for multiple sessions in one query.
-
-    Args:
-        subject: Subject name to query.
-        session_names: Session names to include.
-
-    Returns:
-        A mapping from ``session_name`` to a trial DataFrame for that session.
-        Returns an empty dict when no sessions are provided or no rows exist.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK`` and logs timing metrics
-        when profiling is enabled.
-    """
-    start = time.perf_counter()
+    """Per-trial rows for several sessions, grouped by ``session_name``."""
     if not session_names:
         return {}
 
@@ -199,13 +120,6 @@ def get_trials_for_sessions(
     grouped: dict[str, pd.DataFrame] = {}
     for session, session_df in df.groupby("session_name", sort=False):
         grouped[str(session)] = session_df.reset_index(drop=True)
-    perf_log(
-        "get_trials_for_sessions",
-        start,
-        subject=subject,
-        sessions=len(session_names),
-        rows=len(df),
-    )
     return grouped
 
 
@@ -213,21 +127,7 @@ def get_trials_for_sessions(
 def get_wait_medians_for_sessions(
     subject: str, session_names: tuple[str, ...]
 ) -> dict[str, float]:
-    """Compute median wait time per session using trial timing columns.
-
-    Args:
-        subject: Subject name to query.
-        session_names: Session names to include.
-
-    Returns:
-        A mapping from ``session_name`` to median wait time in seconds.
-        Returns an empty dict when inputs or rows are empty after filtering.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK`` and logs timing metrics
-        when profiling is enabled.
-    """
-    start = time.perf_counter()
+    """Median wait time (s) per session."""
     if not session_names:
         return {}
 
@@ -252,32 +152,12 @@ def get_wait_medians_for_sessions(
         return {}
 
     grouped = valid.groupby("session_name", sort=False)["wait"].median().to_dict()
-    out = {str(k): float(v) for k, v in grouped.items()}
-    perf_log(
-        "get_wait_medians_for_sessions",
-        start,
-        subject=subject,
-        sessions=len(session_names),
-        rows=len(df),
-    )
-    return out
+    return {str(k): float(v) for k, v in grouped.items()}
 
 
 @_ttl_lru_cache(maxsize=256)
 def get_subjects_for_date(date_str: str) -> list[str]:
-    """Return subjects that have at least one session on the given calendar date.
-
-    Args:
-        date_str: Date in ``YYYYMMDD`` format (the raw prefix used in session names).
-
-    Returns:
-        A sorted list of subject names with sessions starting on that date.
-        Returns an empty list when the date string is empty, not exactly 8 digits,
-        or no matches exist.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK``.
-    """
+    """Subjects with a session whose name starts with ``YYYYMMDD``."""
     if not date_str or not date_str.isdigit() or len(date_str) != 8:
         return []
     with _DB_LOCK:
@@ -288,15 +168,7 @@ def get_subjects_for_date(date_str: str) -> list[str]:
 
 
 def clear_data_cache() -> None:
-    """Clear all in-memory cached data and metric results.
-
-    Returns:
-        None.
-
-    Side Effects:
-        Invalidates TTL/LRU caches for subject lists, sessions, trial fetches,
-        and computed metrics so subsequent reads hit the database again.
-    """
+    """Drop TTL/LRU caches so the next reads hit the database."""
     get_all_subjects.cache_clear()
     get_subjects_with_recent_sessions.cache_clear()
     get_subject_data.cache_clear()
@@ -310,73 +182,9 @@ def clear_data_cache() -> None:
     multisession_metrics.cache_clear()
 
 
-def prewarm_multisession_cache(
-    subjects: list[str], sessions_back: int = 30, start_date: str | None = None
-) -> None:
-    """Precompute multi-session metrics in a background thread.
-
-    Args:
-        subjects: Subject names to prewarm.
-        sessions_back: Number of sessions to include per subject.
-        start_date: Optional anchor date in ``YYYY-MM-DD`` format.
-
-    Returns:
-        None.
-
-    Side Effects:
-        Starts a daemon thread that populates ``multisession_metrics`` cache
-        entries, guarded by in-flight deduplication and lock coordination.
-        No-op when prewarming is disabled or subject list is empty.
-    """
-    if not _PREWARM_ENABLED or not subjects:
-        return
-
-    key = (tuple(sorted(set(subjects))), int(sessions_back), start_date)
-    with _PREWARM_LOCK:
-        if key in _PREWARM_INFLIGHT:
-            return
-        _PREWARM_INFLIGHT.add(key)
-
-    def _worker() -> None:
-        """Compute and populate multi-session cache entries in the background.
-
-        Returns:
-            None.
-
-        Side Effects:
-            Invokes ``multisession_metrics`` for each subject in the prewarm key,
-            updates the in-flight tracking set under lock, and emits perf logs.
-        """
-        start = time.perf_counter()
-        try:
-            for subject in key[0]:
-                multisession_metrics(subject, key[1], key[2], False, 3)
-        finally:
-            with _PREWARM_LOCK:
-                _PREWARM_INFLIGHT.discard(key)
-            perf_log(
-                "prewarm_multisession_cache",
-                start,
-                subjects=len(key[0]),
-                sessions_back=key[1],
-            )
-
-    threading.Thread(target=_worker, daemon=True).start()
-
-
 @_ttl_lru_cache(maxsize=64)
 def get_sessions(subject: str) -> list[str]:
-    """Fetch session names for a subject in chronological order.
-
-    Args:
-        subject: Subject name to query.
-
-    Returns:
-        A list of ``session_name`` values ordered ascending.
-
-    Side Effects:
-        Executes a database query under ``_DB_LOCK``.
-    """
+    """Session names for a subject, chronological."""
     with _DB_LOCK:
         sessions = (DecisionTask.TrialSet() & f"subject_name = '{subject}'").fetch(
             "session_name", order_by="session_name"
@@ -385,15 +193,7 @@ def get_sessions(subject: str) -> list[str]:
 
 
 def _compute_intensity(trials: pd.DataFrame) -> np.ndarray:
-    """Compute per-trial stimulus intensity from modality-specific rates.
-
-    Args:
-        trials: Trial DataFrame containing modality, rate, and boundary columns.
-
-    Returns:
-        A NumPy array where each entry is ``stim_rate - category_boundary``
-        for the trial's rewarded modality.
-    """
+    """Per-trial ``stim_rate - category_boundary`` for the rewarded modality."""
     intensity = np.full(len(trials), np.nan)
     for mod, rate_col in [
         ("audio", "stim_rate_audio"),
@@ -409,29 +209,30 @@ def _compute_intensity(trials: pd.DataFrame) -> np.ndarray:
     return intensity
 
 
+def _rolling_stat(
+    x_vals: np.ndarray,
+    y_vals: np.ndarray,
+    window: int,
+    *,
+    stat=np.median,
+    fallback_single: bool = False,
+) -> tuple[list[int], list[float]]:
+    roll_x: list[int] = []
+    roll_y: list[float] = []
+    for start in range(0, len(y_vals) - window + 1, 5):
+        roll_x.append(int(np.mean(x_vals[start : start + window])))
+        roll_y.append(float(stat(y_vals[start : start + window])))
+    if fallback_single and not roll_x and len(y_vals):
+        roll_x.append(int(np.mean(x_vals)))
+        roll_y.append(float(stat(y_vals)))
+    return roll_x, roll_y
+
+
 @_ttl_lru_cache(maxsize=256)
 def session_metrics(subject: str, session_name: str) -> dict | None:
-    """Compute single-session behavioral metrics used by dashboard figures.
-
-    Args:
-        subject: Subject name to query.
-        session_name: Session name to analyze.
-
-    Returns:
-        A dict of arrays and summary values for outcomes, psychometric and
-        chronometric curves, rolling metrics, initiation, wait, and reaction
-        time distributions. Returns ``None`` when no trial rows are found.
-
-    Side Effects:
-        Reads cached trial data and logs timing metrics when profiling is
-        enabled.
-    """
-    start = time.perf_counter()
+    """Single-session arrays used by dashboard figures, or ``None`` if empty."""
     trials = get_session_trials(subject, session_name)
     if trials.empty:
-        perf_log(
-            "session_metrics", start, subject=subject, session=session_name, rows=0
-        )
         return None
 
     intensity = _compute_intensity(trials)
@@ -507,11 +308,7 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     init_trial_nums = init_trial_nums[init_sorted_idx]
     init_vals = init_vals[init_sorted_idx]
 
-    # Rolling median of initiation time (20-trial window)
-    init_roll_x, init_roll_y = [], []
-    for start in range(0, len(init_vals) - win + 1, 5):
-        init_roll_x.append(int(np.mean(init_trial_nums[start : start + win])))
-        init_roll_y.append(float(np.median(init_vals[start : start + win])))
+    init_roll_x, init_roll_y = _rolling_stat(init_trial_nums, init_vals, win)
 
     # Wait times: actual vs minimum
     wait_actual = trials["t_react"].to_numpy() - trials["t_stim"].to_numpy()
@@ -541,11 +338,7 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     rt_trial_nums = rt_trial_nums[rt_sorted_idx]
     rt_vals = rt_vals[rt_sorted_idx]
 
-    # Rolling median of RT (20-trial window)
-    rt_roll_x, rt_roll_y = [], []
-    for start in range(0, len(rt_vals) - win + 1, 5):
-        rt_roll_x.append(int(np.mean(rt_trial_nums[start : start + win])))
-        rt_roll_y.append(float(np.median(rt_vals[start : start + win])))
+    rt_roll_x, rt_roll_y = _rolling_stat(rt_trial_nums, rt_vals, win)
 
     # Response times (movement time): response - react, split by choice.
     response_raw = trials["t_response"].to_numpy() - trials["t_react"].to_numpy()
@@ -585,43 +378,26 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     wait_trial_nums_left = wait_trial_nums[left_choice_mask]
     wait_trial_nums_right = wait_trial_nums[right_choice_mask]
 
-    # Rolling helper used for split traces.
-    def _rolling_median(
-        x_vals: np.ndarray,
-        y_vals: np.ndarray,
-        window: int = win,
-        fallback_single: bool = False,
-    ) -> tuple[list[int], list[float]]:
-        roll_x: list[int] = []
-        roll_y: list[float] = []
-        for start in range(0, len(y_vals) - window + 1, 5):
-            roll_x.append(int(np.mean(x_vals[start : start + window])))
-            roll_y.append(float(np.median(y_vals[start : start + window])))
-        if fallback_single and not roll_x and len(y_vals):
-            roll_x.append(int(np.mean(x_vals)))
-            roll_y.append(float(np.median(y_vals)))
-        return roll_x, roll_y
-
-    wait_delta_left_roll_x, wait_delta_left_roll_y = _rolling_median(
-        wait_trial_nums_left, wait_delta_left
+    wait_delta_left_roll_x, wait_delta_left_roll_y = _rolling_stat(
+        wait_trial_nums_left, wait_delta_left, win
     )
-    wait_delta_right_roll_x, wait_delta_right_roll_y = _rolling_median(
-        wait_trial_nums_right, wait_delta_right
+    wait_delta_right_roll_x, wait_delta_right_roll_y = _rolling_stat(
+        wait_trial_nums_right, wait_delta_right, win
     )
-    wait_left_roll_x, wait_left_roll_y = _rolling_median(
-        wait_trial_nums_left, wait_left
+    wait_left_roll_x, wait_left_roll_y = _rolling_stat(
+        wait_trial_nums_left, wait_left, win
     )
-    wait_right_roll_x, wait_right_roll_y = _rolling_median(
-        wait_trial_nums_right, wait_right
+    wait_right_roll_x, wait_right_roll_y = _rolling_stat(
+        wait_trial_nums_right, wait_right, win
     )
-    response_roll_x, response_roll_y = _rolling_median(
-        response_trial_nums, response_times
+    response_roll_x, response_roll_y = _rolling_stat(
+        response_trial_nums, response_times, win
     )
-    response_roll_left_x, response_roll_left_y = _rolling_median(
-        response_trial_nums_left, response_left
+    response_roll_left_x, response_roll_left_y = _rolling_stat(
+        response_trial_nums_left, response_left, win
     )
-    response_roll_right_x, response_roll_right_y = _rolling_median(
-        response_trial_nums_right, response_right
+    response_roll_right_x, response_roll_right_y = _rolling_stat(
+        response_trial_nums_right, response_right, win
     )
 
     # Inter-trial intervals from consecutive trial starts, split by preceding outcome.
@@ -665,33 +441,31 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
             iti_after_no_choice.append(iti)
             iti_trial_nums_after_no_choice.append(iti_trial_num)
     iti_vals = np.asarray(iti_all, dtype=float)
-    iti_roll_x, iti_roll_y = _rolling_median(
-        np.asarray(iti_trial_nums, dtype=int),
-        iti_vals,
-        window=iti_roll_win,
+    iti_roll_x, iti_roll_y = _rolling_stat(
+        np.asarray(iti_trial_nums, dtype=int), iti_vals, iti_roll_win
     )
-    iti_roll_correct_x, iti_roll_correct_y = _rolling_median(
+    iti_roll_correct_x, iti_roll_correct_y = _rolling_stat(
         np.asarray(iti_trial_nums_after_correct, dtype=int),
         np.asarray(iti_after_correct, dtype=float),
-        window=iti_roll_win,
+        iti_roll_win,
         fallback_single=True,
     )
-    iti_roll_incorrect_x, iti_roll_incorrect_y = _rolling_median(
+    iti_roll_incorrect_x, iti_roll_incorrect_y = _rolling_stat(
         np.asarray(iti_trial_nums_after_incorrect, dtype=int),
         np.asarray(iti_after_incorrect, dtype=float),
-        window=iti_roll_win,
+        iti_roll_win,
         fallback_single=True,
     )
-    iti_roll_ew_x, iti_roll_ew_y = _rolling_median(
+    iti_roll_ew_x, iti_roll_ew_y = _rolling_stat(
         np.asarray(iti_trial_nums_after_ew, dtype=int),
         np.asarray(iti_after_ew, dtype=float),
-        window=iti_roll_win,
+        iti_roll_win,
         fallback_single=True,
     )
-    iti_roll_no_choice_x, iti_roll_no_choice_y = _rolling_median(
+    iti_roll_no_choice_x, iti_roll_no_choice_y = _rolling_stat(
         np.asarray(iti_trial_nums_after_no_choice, dtype=int),
         np.asarray(iti_after_no_choice, dtype=float),
-        window=iti_roll_win,
+        iti_roll_win,
         fallback_single=True,
     )
 
@@ -722,28 +496,11 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
         trial_count_x = []
         trial_count_trial_nums = []
 
-    # Rolling median of wait delta (20-trial window)
-    wait_delta_x, wait_delta_y = [], []
-    for start in range(0, len(wait_delta) - win + 1, 5):
-        wait_delta_x.append(int(np.mean(wait_trial_nums[start : start + win])))
-        wait_delta_y.append(float(np.median(wait_delta[start : start + win])))
-
-    # Rolling median of wait actual (20-trial window)
-    wait_roll_x, wait_roll_y = [], []
-    for start in range(0, len(wait_actual) - win + 1, 5):
-        wait_roll_x.append(int(np.mean(wait_trial_nums[start : start + win])))
-        wait_roll_y.append(float(np.median(wait_actual[start : start + win])))
-
-    # Rolling EW Rate (20-trial window)
-    ew_roll_x, ew_roll_y = [], []
-    ew_raw = trials.early_withdrawal.to_numpy()  # 0 or 1
-    # We want rolling mean of this binary vector vs trial number
-    # Assuming trials are sorted by trial_num, which they are from fetch(order_by="trial_num")
+    wait_delta_x, wait_delta_y = _rolling_stat(wait_trial_nums, wait_delta, win)
+    wait_roll_x, wait_roll_y = _rolling_stat(wait_trial_nums, wait_actual, win)
+    ew_raw = trials.early_withdrawal.to_numpy()
     trial_nums_all = trials.trial_num.to_numpy()
-
-    for start in range(0, len(ew_raw) - win + 1, 5):
-        ew_roll_x.append(int(np.mean(trial_nums_all[start : start + win])))
-        ew_roll_y.append(float(np.mean(ew_raw[start : start + win])))
+    ew_roll_x, ew_roll_y = _rolling_stat(trial_nums_all, ew_raw, win, stat=np.mean)
 
     def _range_text(values: np.ndarray, precision: int = 2) -> str | None:
         finite_vals = values[np.isfinite(values)]
@@ -982,13 +739,6 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
         "ew_roll_x": ew_roll_x,  # rolling EW x
         "ew_roll_y": ew_roll_y,  # rolling EW y
     }
-    perf_log(
-        "session_metrics",
-        start,
-        subject=subject,
-        session=session_name,
-        rows=len(trials),
-    )
     return out
 
 
@@ -1000,27 +750,9 @@ def multisession_metrics(
     smooth: bool = False,
     smooth_window: int = 3,
 ) -> dict | None:
-    """Compute cross-session trend metrics for dashboard time series.
-
-    Args:
-        subject: Subject name to analyze.
-        sessions_back: Number of recent sessions to include.
-        start_date: Optional anchor date in ``YYYY-MM-DD`` format.
-        smooth: Whether to apply rolling mean smoothing to output series.
-        smooth_window: Rolling window size used when smoothing is enabled.
-
-    Returns:
-        A dict of aligned x-axis values and per-session metric series,
-        optionally smoothed. Returns ``None`` when no subject data is found.
-
-    Side Effects:
-        Reads cached subject/session aggregates and logs timing metrics when
-        profiling is enabled.
-    """
-    start = time.perf_counter()
+    """Cross-session trend series, or ``None`` if the subject has no data."""
     df = get_subject_data(subject).copy()
     if df.empty:
-        perf_log("multisession_metrics", start, subject=subject, sessions=0)
         return None
 
     df = df.sort_values("session_name")
@@ -1048,7 +780,6 @@ def multisession_metrics(
         if not df.empty:
             anchor_dt = df["session_dt"].iloc[-1]
         else:  # pragma: no cover — df can't be empty here (already checked above)
-            perf_log("multisession_metrics", start, subject=subject, sessions=0)
             return None
 
     # Take the last N sessions
@@ -1172,12 +903,4 @@ def multisession_metrics(
 
     out["x"] = x_axis
     out["session_dates"] = session_dates
-    perf_log(
-        "multisession_metrics",
-        start,
-        subject=subject,
-        sessions=len(d),
-        smooth=smooth,
-        smooth_window=smooth_window,
-    )
     return out

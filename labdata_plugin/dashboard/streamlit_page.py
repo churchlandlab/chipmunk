@@ -9,72 +9,13 @@ from typing import Any
 
 import plotly.graph_objects as go
 
-_SINGLE_FIGURE_IDS = (
-    "frac-correct",
-    "p-right",
-    "chrono",
-    "session-perf",
-    "init-line",
-    "init-hist",
-    "wait-delta-line",
-    "wait-delta-hist",
-    "wait-floor-line",
-    "wait-floor-hist",
-    "response-time-line",
-    "response-time",
-    "iti-dist",
-    "trial-count-time",
-    "water-cumulative",
-    "iti-rolling",
-)
-
-_MULTI_FIGURE_IDS = (
-    "performance",
-    "ew-rate",
-    "side-bias",
-    "init-times",
-    "median-rt",
-    "median-wait",
-    "trial-counts",
-    "water",
-    "training-time",
-)
-
-_OVERVIEW_ROWS = (
-    ("frac-correct", "p-right", "chrono", "session-perf"),
-    ("trial-count-time", "water-cumulative"),
-)
-
-_TIMING_ROWS = (
-    ("init-line", "init-hist"),
-    ("wait-delta-line", "wait-delta-hist"),
-    ("wait-floor-line", "wait-floor-hist"),
-    ("response-time-line", "response-time"),
-    ("iti-rolling", "iti-dist"),
-)
-
-_MULTI_ROWS = (
-    ("performance", "ew-rate", "side-bias", "trial-counts"),
-    ("init-times", "median-wait", "median-rt", "water", "training-time"),
-)
-
-_TALL_FIGURES = frozenset(
-    {
-        "session-perf",
-        "init-line",
-        "wait-delta-line",
-        "wait-floor-line",
-        "response-time-line",
-        "water-cumulative",
-        "init-hist",
-        "wait-delta-hist",
-        "wait-floor-hist",
-        "response-time",
-        "iti-dist",
-        "trial-count-time",
-        "training-time",
-        "iti-rolling",
-    }
+from .app import (
+    MULTI_FIGURE_IDS,
+    MULTI_ROWS,
+    OVERVIEW_ROWS,
+    SINGLE_FIGURE_IDS,
+    TALL_FIGURE_IDS,
+    TIMING_ROWS,
 )
 
 
@@ -137,7 +78,7 @@ def _show_figure_rows(
         columns = st.columns(len(row), gap="small")
         for column, figure_id in zip(columns, row, strict=True):
             figure = figures[figure_id]
-            figure.update_layout(height=320 if figure_id in _TALL_FIGURES else 300)
+            figure.update_layout(height=320 if figure_id in TALL_FIGURE_IDS else 300)
             with column:
                 st.plotly_chart(
                     figure,
@@ -288,7 +229,7 @@ def render_dashboard(schema: Any = None) -> None:
     selected_older = [subject for subject in selected_subjects if subject not in recent]
 
     single_figures = _figure_map(
-        _SINGLE_FIGURE_IDS,
+        SINGLE_FIGURE_IDS,
         renderers["single"](
             selected_recent,
             selected_older,
@@ -305,27 +246,8 @@ def render_dashboard(schema: Any = None) -> None:
         selected_date,
     )
 
-    st.subheader("Single Session", divider="gray")
-    overview_tab, timing_tab = st.tabs(["Overview", "Timing"])
-    with overview_tab:
-        _show_figure_rows(
-            st,
-            single_figures,
-            _OVERVIEW_ROWS,
-            namespace="single-overview",
-        )
-        with st.expander("Session settings"):
-            st.code(settings, language=None)
-    with timing_tab:
-        _show_figure_rows(
-            st,
-            single_figures,
-            _TIMING_ROWS,
-            namespace="single-timing",
-        )
-
     multi_figures = _figure_map(
-        _MULTI_FIGURE_IDS,
+        MULTI_FIGURE_IDS,
         renderers["multi"](
             selected_recent,
             selected_older,
@@ -336,10 +258,29 @@ def render_dashboard(schema: Any = None) -> None:
             0,
         ),
     )
-    st.subheader("Multi Session", divider="gray")
-    _show_figure_rows(
-        st,
-        multi_figures,
-        _MULTI_ROWS,
-        namespace="multi",
-    )
+
+    single_tab, multi_tab = st.tabs(["Single Session", "Multi Session"])
+    with single_tab:
+        st.subheader("Overview", divider="gray")
+        _show_figure_rows(
+            st,
+            single_figures,
+            OVERVIEW_ROWS,
+            namespace="single-overview",
+        )
+        with st.expander("Session settings"):
+            st.code(settings, language=None)
+        st.subheader("Timing", divider="gray")
+        _show_figure_rows(
+            st,
+            single_figures,
+            TIMING_ROWS,
+            namespace="single-timing",
+        )
+    with multi_tab:
+        _show_figure_rows(
+            st,
+            multi_figures,
+            MULTI_ROWS,
+            namespace="multi",
+        )

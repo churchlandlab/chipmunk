@@ -1,11 +1,12 @@
 body {
   margin: 0;
+  font-family: sans-serif;
 }
 
 .dashboard-root {
   background: #f6f7fb;
   color: #1f2630;
-  font-family: IBM Plex Sans, sans-serif;
+  font-family: sans-serif;
   height: 100vh;
   overflow: hidden;
   padding: 12px;
@@ -156,6 +157,10 @@ body {
 
 .dashboard-row {
   align-items: stretch;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  margin-bottom: 12px;
   min-width: 0;
 }
 

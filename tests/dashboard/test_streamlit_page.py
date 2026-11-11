@@ -4,11 +4,13 @@ import plotly.graph_objects as go
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from dashboard.app import (
+    MULTI_FIGURE_IDS,
+    OVERVIEW_ROWS,
+    SINGLE_FIGURE_IDS,
+    TIMING_ROWS,
+)
 from dashboard.streamlit_page import (
-    _MULTI_FIGURE_IDS,
-    _OVERVIEW_ROWS,
-    _SINGLE_FIGURE_IDS,
-    _TIMING_ROWS,
     _available_dates,
     _clear_data_caches,
     _data_provider,
@@ -92,26 +94,26 @@ def test_clear_data_caches():
 
 
 def test_figure_map_preserves_dash_output_order():
-    figures = tuple(go.Figure() for _ in _SINGLE_FIGURE_IDS)
+    figures = tuple(go.Figure() for _ in SINGLE_FIGURE_IDS)
 
-    mapped = _figure_map(_SINGLE_FIGURE_IDS, figures)
+    mapped = _figure_map(SINGLE_FIGURE_IDS, figures)
 
-    assert tuple(mapped) == _SINGLE_FIGURE_IDS
+    assert tuple(mapped) == SINGLE_FIGURE_IDS
     assert mapped["frac-correct"] is figures[0]
     with pytest.raises(ValueError, match="Expected 16 figures"):
-        _figure_map(_SINGLE_FIGURE_IDS, figures[:-1])
+        _figure_map(SINGLE_FIGURE_IDS, figures[:-1])
 
 
 def test_streamlit_rows_match_dash_layout():
-    assert _OVERVIEW_ROWS[0] == (
+    assert OVERVIEW_ROWS[0] == (
         "frac-correct",
         "p-right",
         "chrono",
         "session-perf",
     )
-    assert sum(len(row) for row in _TIMING_ROWS) == 10
-    assert len(_SINGLE_FIGURE_IDS) == 16
-    assert len(_MULTI_FIGURE_IDS) == 9
+    assert sum(len(row) for row in TIMING_ROWS) == 10
+    assert len(SINGLE_FIGURE_IDS) == 16
+    assert len(MULTI_FIGURE_IDS) == 9
 
 
 def test_show_figure_rows_uses_unique_keys_and_dash_heights():

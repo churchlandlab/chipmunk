@@ -1,6 +1,6 @@
 """Integration tests using real third-party libraries.
 
-Unlike test_app.py and test_data.py — which mock all third-party libs — these
+Unlike test_data.py — which mocks database access — these
 tests import the actual installed versions of dash, plotly, pandas, and numpy.
 They catch runtime breakage that mocked tests miss: removed trace types,
 renamed kwargs, changed function signatures, and so on.
@@ -92,7 +92,6 @@ def _import_app_with_real_libs():
     fake_data.get_subjects_for_date = mock.Mock(return_value=[])
     fake_data.session_metrics = mock.Mock(return_value=None)
     fake_data.multisession_metrics = mock.Mock(return_value=None)
-    fake_data.prewarm_multisession_cache = mock.Mock()
 
     patches = {**_fake_db_modules(), "dashboard.data": fake_data}
     with mock.patch.dict(sys.modules, patches):
@@ -135,7 +134,6 @@ def _import_app_fake_dash_real_plotly():
     fake_data.get_subjects_for_date = mock.Mock(return_value=[])
     fake_data.session_metrics = mock.Mock(return_value=None)
     fake_data.multisession_metrics = mock.Mock(return_value=None)
-    fake_data.prewarm_multisession_cache = mock.Mock()
 
     patches = {
         **_fake_db_modules(),
@@ -630,24 +628,25 @@ class TestCallbacksWithRealPlotly(unittest.TestCase):
         self.assertIsNotNone(figures[4].layout.yaxis.range)
         self.assertIsNotNone(figures[6].layout.yaxis.range)
         self.assertIsNotNone(figures[8].layout.yaxis.range)
-        # Wait-floor dist panel includes aggregate + split traces.
+        # Initiation / wait-floor dist panels use density histograms.
+        self.assertIsInstance(figures[5].data[0], go.Histogram)
         self.assertGreaterEqual(len(figures[9].data), 1)
-        self.assertIsInstance(figures[9].data[0], go.Scatter)
+        self.assertIsInstance(figures[9].data[0], go.Histogram)
         # Response-time rolling plot (index 10): raw + rolling (+ split hidden traces)
         self.assertGreaterEqual(len(figures[10].data), 3)
         self.assertIsInstance(figures[10].data[0], go.Scattergl)
         self.assertEqual(figures[10].layout.updatemenus[0].buttons[0].label, "Choice")
         self.assertEqual(figures[10].layout.updatemenus[0].active, -1)
-        # Response-time dist (index 11): combined KDE + split hidden traces
+        # Response-time dist (index 11): combined histogram + split hidden traces
         self.assertGreaterEqual(len(figures[11].data), 3)
-        self.assertIsInstance(figures[11].data[0], go.Scatter)
+        self.assertIsInstance(figures[11].data[0], go.Histogram)
         self.assertEqual(figures[11].layout.updatemenus[0].buttons[0].label, "Choice")
         self.assertEqual(figures[6].layout.updatemenus[0].buttons[0].label, "Choice")
         self.assertEqual(figures[8].layout.updatemenus[0].buttons[0].label, "Choice")
         self.assertEqual(figures[12].layout.updatemenus[0].buttons[0].label, "Outcome")
         # ITI dist panel (index 12) includes aggregate + split traces.
         self.assertGreaterEqual(len(figures[12].data), 1)
-        self.assertIsInstance(figures[12].data[0], go.Scatter)
+        self.assertIsInstance(figures[12].data[0], go.Histogram)
         # Trial-count-time (index 13) is a rolling scatter in single-subject mode
         self.assertEqual(len(figures[13].data), 2)
         self.assertIsInstance(figures[13].data[0], go.Scatter)
@@ -813,15 +812,11 @@ class TestCallbacksWithRealPlotly(unittest.TestCase):
                 "get_sessions",
                 return_value=["20260105_010101", "20260114_120000"],
             ),
-            mock.patch.object(self.appmod, "prewarm_multisession_cache") as prewarm,
         ):
             result = update_date_options([], ["subject-a"], 0, 0)
 
         self.assertEqual(
             result, ("2026-01-10", "2026-01-05", "2026-01-10", "2026-01-10")
-        )
-        prewarm.assert_called_once_with(
-            ["subject-a"], sessions_back=30, start_date="2026-01-10"
         )
 
     def test_update_single_skips_subjects_with_falsy_session_name(self):
@@ -871,6 +866,48 @@ class TestCallbacksWithRealPlotly(unittest.TestCase):
         self.assertEqual(figures[8].layout.title.text, "Training Time")
         self.assertEqual(figures[8].layout.yaxis.ticktext[3], "09:00")
         self.assertEqual(list(figures[8].layout.yaxis.range), [24, 0])
+
+    def test_toggle_sidebar_callback_updates_class_name(self):
+        app = self.appmod.create_app()
+        toggle_sidebar = app.callbacks["_toggle_sidebar"]
+        collapsed, class_name, icon, *_rest = toggle_sidebar(1, False)
+        self.assertTrue(collapsed)
+        self.assertEqual(class_name, "dashboard-root dashboard-root--sidebar-collapsed")
+        self.assertEqual(icon, "➡️")
+        collapsed, class_name, icon, *_rest = toggle_sidebar(2, True)
+        self.assertFalse(collapsed)
+        self.assertEqual(class_name, "dashboard-root")
+
+    def test_update_time_options_filters_and_defaults_to_latest(self):
+        app = self.appmod.create_app()
+        update_time_options = app.callbacks["_update_time_options"]
+        self.assertEqual(update_time_options(None, [], ["subject-a"]), ([], None))
+        with mock.patch.object(
+            self.appmod,
+            "get_sessions",
+            return_value=[
+                "20260102_010101",
+                "20260102_120000",
+                "20260103_000000",
+                "20260102_BAD",
+            ],
+        ):
+            options, value = update_time_options("2026-01-02", [], ["subject-a"])
+        self.assertEqual(len(options), 3)
+        self.assertEqual(options[-1]["value"], "20260102_BAD")
+        self.assertEqual(value, "20260102_BAD")
+
+    def test_clear_subjects_callback_returns_empty_lists(self):
+        app = self.appmod.create_app()
+        self.assertEqual(app.callbacks["_clear_subjects"](1), ([], []))
+
+    def test_update_single_and_multi_return_empty_figures_without_subjects(self):
+        app = self.appmod.create_app()
+        with mock.patch.object(self.appmod, "get_sessions", return_value=[]):
+            singles = app.callbacks["_update_single"](["subject-a"], [], None, 0, None)
+        self.assertEqual(len(singles), 16)
+        multis = app.callbacks["_update_multi"]([], [], 10, None, [], 3, 0)
+        self.assertEqual(len(multis), 9)
 
 
 # ---------------------------------------------------------------------------

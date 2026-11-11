@@ -3,7 +3,6 @@
 import math
 import os
 import statistics
-import time
 from datetime import date as _date
 from importlib import import_module
 from typing import Any, cast
@@ -11,8 +10,6 @@ from typing import Any, cast
 import plotly.colors
 import plotly.graph_objects as go
 from dash import Dash, Input, Output, State, ctx, dcc, html
-
-from .perf import perf_log
 
 _data = import_module(
     ".debug_data" if os.getenv("CHIPMUNK_UI_DEBUG", "0") == "1" else ".data",
@@ -24,7 +21,6 @@ get_sessions = _data.get_sessions
 get_subjects_for_date = _data.get_subjects_for_date
 session_metrics = _data.session_metrics
 multisession_metrics = _data.multisession_metrics
-prewarm_multisession_cache = _data.prewarm_multisession_cache
 
 COLORS = plotly.colors.qualitative.Plotly
 _MARGIN: dict[str, int] = {"l": 50, "r": 20, "t": 42, "b": 80}
@@ -34,7 +30,51 @@ _CLEAN: dict[str, Any] = {
 }
 _AXIS_CLEAN = {"showgrid": False, "zeroline": False, "tickfont": {"color": "#56606b"}}
 _LEGEND: dict[str, Any] = {"visible": False}
-_TALL_GRAPH_IDS = frozenset(
+OVERVIEW_ROWS = (
+    ("frac-correct", "p-right", "chrono", "session-perf"),
+    ("trial-count-time", "water-cumulative"),
+)
+TIMING_ROWS = (
+    ("init-line", "init-hist"),
+    ("wait-delta-line", "wait-delta-hist"),
+    ("wait-floor-line", "wait-floor-hist"),
+    ("response-time-line", "response-time"),
+    ("iti-rolling", "iti-dist"),
+)
+MULTI_ROWS = (
+    ("performance", "ew-rate", "side-bias", "trial-counts"),
+    ("init-times", "median-wait", "median-rt", "water", "training-time"),
+)
+SINGLE_FIGURE_IDS = (
+    "frac-correct",
+    "p-right",
+    "chrono",
+    "session-perf",
+    "init-line",
+    "init-hist",
+    "wait-delta-line",
+    "wait-delta-hist",
+    "wait-floor-line",
+    "wait-floor-hist",
+    "response-time-line",
+    "response-time",
+    "iti-dist",
+    "trial-count-time",
+    "water-cumulative",
+    "iti-rolling",
+)
+MULTI_FIGURE_IDS = (
+    "performance",
+    "ew-rate",
+    "side-bias",
+    "init-times",
+    "median-rt",
+    "median-wait",
+    "trial-counts",
+    "water",
+    "training-time",
+)
+TALL_FIGURE_IDS = frozenset(
     {
         "session-perf",
         "init-line",
@@ -49,6 +89,7 @@ _TALL_GRAPH_IDS = frozenset(
         "iti-dist",
         "trial-count-time",
         "training-time",
+        "iti-rolling",
     }
 )
 _MAX_W = "560px"  # max width per plot
@@ -65,14 +106,7 @@ _THEME = {
 
 
 def _empty_fig(msg: str = "Select subject(s)") -> go.Figure:
-    """Build a placeholder figure shown when no data selection is available.
-
-    Args:
-        msg: Annotation text displayed in the middle of the empty figure.
-
-    Returns:
-        A Plotly figure with hidden axes and a centered message annotation.
-    """
+    """Placeholder figure with a centered message."""
     fig = go.Figure()
     fig.update_layout(
         xaxis={"visible": False},
@@ -85,15 +119,7 @@ def _empty_fig(msg: str = "Select subject(s)") -> go.Figure:
 
 
 def _layout(fig: go.Figure, **kw) -> None:
-    """Apply shared dashboard layout defaults and optional per-figure overrides.
-
-    Args:
-        fig: Figure to style.
-        **kw: Plotly layout keyword overrides merged onto default settings.
-
-    Returns:
-        None. The input figure is updated in place.
-    """
+    """Apply shared dashboard layout defaults."""
     # Default layout settings
     config = dict(
         margin=_MARGIN,
@@ -101,11 +127,11 @@ def _layout(fig: go.Figure, **kw) -> None:
         hoverlabel={
             "bgcolor": "rgba(255, 255, 255, 0.9)",
             "font_size": 12,
-            "font_family": "IBM Plex Sans, sans-serif",
+            "font_family": "sans-serif",
         },
         hovermode="x unified",
         font={
-            "family": "IBM Plex Sans, sans-serif",
+            "family": "sans-serif",
             "color": _THEME["text"],
             "size": 12,
         },
@@ -119,7 +145,6 @@ def _layout(fig: go.Figure, **kw) -> None:
         kw["title"] = {
             "text": kw["title"],
             "font": {
-                "family": "Space Grotesk, sans-serif",
                 "size": 14,
                 "color": _THEME["text"],
             },
@@ -170,14 +195,7 @@ def _robust_y_range(
 
 
 def create_app() -> Dash:
-    """Create and configure the Chipmunk Dash application.
-
-    Returns:
-        A fully configured Dash app with layout, callbacks, and styles.
-
-    Side Effects:
-        Reads subjects from the data layer during app construction.
-    """
+    """Chipmunk Dash app with layout and callbacks."""
     subjects = get_all_subjects()
     recent_subjects = get_subjects_with_recent_sessions()
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
@@ -186,9 +204,6 @@ def create_app() -> Dash:
         title="chipmunk dashboard",
         suppress_callback_exceptions=True,
         assets_folder=assets_dir,
-        external_stylesheets=[
-            "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
-        ],
     )
 
     # Auto-refresh interval (60 minutes)
@@ -197,19 +212,6 @@ def create_app() -> Dash:
     def _build_subject_options(
         all_subjects: list[str], recent: set[str]
     ) -> tuple[list[dict], list[dict]]:
-        """Build separate checklist option lists for recent and older subjects.
-
-        Subjects with a session in the last 14 days are shown in accent color
-        and bold weight so they are immediately visible without scrolling.
-
-        Args:
-            all_subjects: Full sorted list of subject names.
-            recent: Set of subject names with recent sessions.
-
-        Returns:
-            A ``(recent_opts, older_opts)`` tuple where recent subjects carry a
-            styled ``html.Span`` label and older subjects use a plain string.
-        """
         recent_opts = [
             {
                 "label": html.Span(
@@ -228,7 +230,7 @@ def create_app() -> Dash:
     def _graph(gid: str) -> dcc.Graph:
         """Create a standardized graph component used in dashboard rows."""
         graph_class = "dashboard-graph"
-        if gid in _TALL_GRAPH_IDS:
+        if gid in TALL_FIGURE_IDS:
             graph_class = f"{graph_class} dashboard-graph--tall"
         return dcc.Graph(
             id=gid,
@@ -247,23 +249,10 @@ def create_app() -> Dash:
         return f"{hours:02d}:{minutes:02d}"
 
     def _row(*ids: str) -> html.Div:
-        """Create a grid row of standardized graph components.
-
-        Args:
-            *ids: Graph component ids to render in the row.
-
-        Returns:
-            A ``html.Div`` containing one graph per id in a responsive grid.
-        """
         return html.Div(
             [_graph(i) for i in ids],
             className="dashboard-row",
-            style={
-                "display": "grid",
-                "gridTemplateColumns": f"repeat({len(ids)}, 1fr)",
-                "gap": "12px",
-                "marginBottom": "12px",
-            },
+            style={"--cols": str(len(ids))},
         )
 
     def _apply_button_toggle(
@@ -317,67 +306,7 @@ def create_app() -> Dash:
         on_visible = [idx in split_idx for idx in range(trace_count)]
         _apply_button_toggle(fig, off_visible, on_visible, label)
 
-    def _kde_line_xy(
-        values: list[float], points: int = 128
-    ) -> tuple[list[float], list[float]]:
-        """Compute x/y points for a Gaussian KDE line."""
-        finite_vals: list[float] = []
-        for raw_val in values:
-            try:
-                val = float(raw_val)
-            except (TypeError, ValueError):
-                continue
-            if math.isfinite(val):
-                finite_vals.append(val)
-        n_vals = len(finite_vals)
-        if n_vals == 0:
-            return [], []
-        if n_vals == 1:
-            center = finite_vals[0]
-            span = max(abs(center) * 0.1, 0.05)
-            x_min = center - span
-            x_max = center + span
-            bandwidth = max(span / 3.0, 1e-3)
-            xs = [x_min + (x_max - x_min) * i / (points - 1) for i in range(points)]
-            norm = 1.0 / (bandwidth * math.sqrt(2.0 * math.pi))
-            ys = [
-                norm * math.exp(-0.5 * ((x_val - center) / bandwidth) ** 2)
-                for x_val in xs
-            ]
-            return xs, ys
-
-        sorted_vals = sorted(finite_vals)
-        x_min = sorted_vals[0]
-        x_max = sorted_vals[-1]
-        if math.isclose(x_min, x_max):
-            span = max(abs(x_min) * 0.1, 0.05)
-            x_min -= span
-            x_max += span
-
-        mean_val = sum(finite_vals) / n_vals
-        variance = sum((v - mean_val) ** 2 for v in finite_vals) / max(n_vals - 1, 1)
-        std_val = math.sqrt(max(variance, 1e-12))
-        q1 = sorted_vals[int((n_vals - 1) * 0.25)]
-        q3 = sorted_vals[int((n_vals - 1) * 0.75)]
-        iqr_sigma = (q3 - q1) / 1.34 if q3 > q1 else std_val
-        sigma = min(std_val, iqr_sigma) if iqr_sigma > 0 else std_val
-        bandwidth = 0.9 * sigma * (n_vals ** (-1.0 / 5.0))
-        if (not math.isfinite(bandwidth)) or bandwidth <= 0:
-            bandwidth = max((x_max - x_min) / 25.0, 1e-3)
-
-        xs = [x_min + (x_max - x_min) * i / (points - 1) for i in range(points)]
-        norm = 1.0 / (n_vals * bandwidth * math.sqrt(2.0 * math.pi))
-        ys = [
-            norm
-            * sum(
-                math.exp(-0.5 * ((x_val - sample) / bandwidth) ** 2)
-                for sample in finite_vals
-            )
-            for x_val in xs
-        ]
-        return xs, ys
-
-    def _add_kde_line_trace(
+    def _add_density_hist(
         fig: go.Figure,
         values: list[float],
         *,
@@ -388,25 +317,21 @@ def create_app() -> Dash:
         visible: bool,
         hover_label: str,
     ) -> None:
-        """Render a KDE distribution as a line trace."""
-        xs, ys = _kde_line_xy(values)
-        if not xs:
+        if not values:
             return
         fig.add_trace(
-            go.Scatter(
-                x=xs,
-                y=ys,
-                mode="lines",
+            go.Histogram(
+                x=values,
                 name=name,
-                line={"color": color, "width": 2},
-                fill="tozeroy",
-                opacity=0.4,
+                marker_color=color,
+                opacity=0.55,
+                histnorm="probability density",
                 legendgroup=legendgroup,
                 showlegend=showlegend,
+                visible=visible,
                 hovertemplate="%{x:.3f}s · density %{y:.3f}<extra>"
                 + hover_label
                 + "</extra>",
-                visible=visible,
             )
         )
 
@@ -537,8 +462,7 @@ def create_app() -> Dash:
     # -- content sections -----------------------------------------------------
     single_overview = html.Div(
         [
-            _row("frac-correct", "p-right", "chrono", "session-perf"),
-            _row("trial-count-time", "water-cumulative"),
+            *[_row(*ids) for ids in OVERVIEW_ROWS],
             html.Div(
                 [
                     html.Details(
@@ -565,13 +489,7 @@ def create_app() -> Dash:
         className="single-tab-pane",
     )
     single_timing = html.Div(
-        [
-            _row("init-line", "init-hist"),
-            _row("wait-delta-line", "wait-delta-hist"),
-            _row("wait-floor-line", "wait-floor-hist"),
-            _row("response-time-line", "response-time"),
-            _row("iti-rolling", "iti-dist"),
-        ],
+        [_row(*ids) for ids in TIMING_ROWS],
         className="single-tab-pane",
     )
     single_section = html.Div(
@@ -603,8 +521,7 @@ def create_app() -> Dash:
                 "Multi Session",
                 style={"margin": "24px 0 12px", "borderBottom": "1px solid #ddd"},
             ),
-            _row("performance", "ew-rate", "side-bias", "trial-counts"),
-            _row("init-times", "median-wait", "median-rt", "water", "training-time"),
+            *[_row(*ids) for ids in MULTI_ROWS],
         ]
     )
 
@@ -622,11 +539,7 @@ def create_app() -> Dash:
                 [
                     html.H2(
                         "Chipmunk Dashboard",
-                        style={
-                            "margin": 0,
-                            "fontFamily": "Space Grotesk, sans-serif",
-                            "letterSpacing": "0.2px",
-                        },
+                        style={"margin": 0},
                     ),
                     html.Button(
                         "⬅️",
@@ -689,17 +602,6 @@ def create_app() -> Dash:
         )
 
     def _sessions_on_date(sessions_list: list[str], date_val: str) -> str | None:
-        """Return the latest session name for a subject on a given calendar date.
-
-        Args:
-            sessions_list: Pre-fetched list of session names for the subject,
-                in ascending chronological order.
-            date_val: Date in ``YYYY-MM-DD`` format.
-
-        Returns:
-            The latest ``session_name`` for that day, or ``None`` if no session
-            exists on that date for the subject.
-        """
         raw_date = date_val.replace("-", "")  # YYYYMMDD
         day_sessions = [s for s in sessions_list if s.startswith(raw_date)]
         return day_sessions[-1] if day_sessions else None
@@ -718,34 +620,6 @@ def create_app() -> Dash:
     def _update_date_options(
         subjects_recent, subjects_older, n_intervals, _today_clicks
     ):
-        """Update date-picker bounds spanning all selected subjects.
-
-        Callback Inputs:
-            - ``subjects-recent.value``
-            - ``subjects-older.value``
-            - ``auto-refresh.n_intervals``
-            - ``today-button.n_clicks``
-
-        Callback Outputs:
-            - ``session-date.date``
-            - ``session-date.min_date_allowed``
-            - ``session-date.max_date_allowed``
-            - ``session-date.initial_visible_month``
-
-        Args:
-            subjects_recent: Selected recent subject names.
-            subjects_older: Selected older subject names.
-            n_intervals: Auto-refresh tick counter (unused except as trigger).
-            _today_clicks: Today button click count (unused; presence in
-                ``ctx.triggered_id`` is the signal).
-
-        Returns:
-            A tuple with selected date and allowed date bounds, or ``None`` values
-            when no sessions are available.
-
-        Side Effects:
-            Triggers multi-session cache prewarming anchored to the latest date.
-        """
         today = _date.today().isoformat()  # noqa: DTZ011 — lab-local calendar day
         if ctx.triggered_id == "today-button":
             return today, None, today, today
@@ -766,7 +640,6 @@ def create_app() -> Dash:
 
         min_d = min(all_dates)
         max_d = min(max(all_dates), today)
-        prewarm_multisession_cache(subjects, sessions_back=30, start_date=max_d)
         return max_d, min_d, today, max_d
 
     @app.callback(
@@ -777,26 +650,6 @@ def create_app() -> Dash:
         Input("subjects-older", "value"),
     )
     def _update_time_options(date_val, subjects_recent, subjects_older):
-        """Update session-time dropdown options for the selected calendar day.
-
-        Callback Inputs:
-            - ``session-date.date``
-            - ``subjects-recent.value``
-            - ``subjects-older.value``
-
-        Callback Outputs:
-            - ``session-time.options``
-            - ``session-time.value``
-
-        Args:
-            date_val: Selected date in ``YYYY-MM-DD`` format.
-            subjects_recent: Selected recent subject names.
-            subjects_older: Selected older subject names.
-
-        Returns:
-            Dropdown options for sessions on that day and the default selected
-            value (latest session for the day), or empty outputs.
-        """
         subjects = (subjects_recent or []) + (subjects_older or [])
         if not date_val or not subjects:
             return [], None
@@ -833,21 +686,6 @@ def create_app() -> Dash:
         prevent_initial_call=True,
     )
     def _clear_subjects(n_clicks):
-        """Clear all subject selections when the reset button is clicked.
-
-        Callback Inputs:
-            - ``clear-subjects.n_clicks``
-
-        Callback Outputs:
-            - ``subjects-recent.value``
-            - ``subjects-older.value``
-
-        Args:
-            n_clicks: Button click count provided by Dash.
-
-        Returns:
-            A pair of empty lists to clear both subject checklist values.
-        """
         return [], []
 
     @app.callback(
@@ -858,27 +696,6 @@ def create_app() -> Dash:
         Input("auto-refresh", "n_intervals"),
     )
     def _update_subject_options(date_val, _n_intervals):
-        """Refresh the subject checklist options, filtered to the selected date.
-
-        Callback Inputs:
-            - ``session-date.date``
-            - ``auto-refresh.n_intervals``
-
-        Callback Outputs:
-            - ``subjects-recent.options``
-            - ``subjects-older.options``
-            - ``subjects-divider.style``
-
-        Args:
-            date_val: Selected date in ``YYYY-MM-DD`` format, or ``None``.
-            _n_intervals: Auto-refresh tick counter (unused).
-
-        Returns:
-            A tuple of recent options, older options, and divider style dict.
-            When a date is selected, only subjects with sessions on that date
-            are included. Falls back to all subjects when no date is set.
-            The divider is hidden when either group is empty.
-        """
         all_subjs = get_all_subjects()
         if date_val:
             raw_date = date_val.replace("-", "")
@@ -896,22 +713,7 @@ def create_app() -> Dash:
 
     # ── Single-session plots ─────────────────────────────────────────────────
     @app.callback(
-        Output("frac-correct", "figure"),
-        Output("p-right", "figure"),
-        Output("chrono", "figure"),
-        Output("session-perf", "figure"),
-        Output("init-line", "figure"),
-        Output("init-hist", "figure"),
-        Output("wait-delta-line", "figure"),
-        Output("wait-delta-hist", "figure"),
-        Output("wait-floor-line", "figure"),
-        Output("wait-floor-hist", "figure"),
-        Output("response-time-line", "figure"),
-        Output("response-time", "figure"),
-        Output("iti-dist", "figure"),
-        Output("trial-count-time", "figure"),
-        Output("water-cumulative", "figure"),
-        Output("iti-rolling", "figure"),
+        *[Output(gid, "figure") for gid in SINGLE_FIGURE_IDS],
         Input("subjects-recent", "value"),
         Input("subjects-older", "value"),
         Input("session-time", "value"),
@@ -921,38 +723,6 @@ def create_app() -> Dash:
     def _update_single(
         subjects_recent, subjects_older, session_name, n_intervals, session_date
     ):
-        """Render all single-session figures for the current selection.
-
-        Callback Inputs:
-            - ``subjects-recent.value``
-            - ``subjects-older.value``
-            - ``session-time.value``
-            - ``auto-refresh.n_intervals``
-
-        Callback State:
-            - ``session-date.date``
-
-        Callback Outputs:
-            Sixteen figures for outcomes, psychometric/chronometric, performance,
-            initiation, post-go center dwell, wait-floor, response-time, session
-            pacing, and ITI rolling-trend views.
-
-        Args:
-            subjects_recent: Selected recent subject names.
-            subjects_older: Selected older subject names.
-            session_name: Selected session name for the first subject.
-            n_intervals: Auto-refresh tick counter (unused except as trigger).
-            session_date: Currently selected date in ``YYYY-MM-DD`` format, or
-                ``None``. When set and multiple subjects are selected, each
-                additional subject resolves its session from this date.
-        Returns:
-            A 16-item tuple of Plotly figures in callback output order.
-
-        Side Effects:
-            Reads cached session metrics and emits performance logs when enabled.
-        """
-        start = time.perf_counter()
-        n = 16
         subjects = (subjects_recent or []) + (subjects_older or [])
 
         sessions_by_subject = {s: get_sessions(s) for s in subjects}
@@ -960,8 +730,7 @@ def create_app() -> Dash:
 
         if not valid_subjects:
             e = _empty_fig()
-            perf_log("_update_single", start, subjects=0)
-            return tuple(e for _ in range(n))
+            return tuple(e for _ in range(len(SINGLE_FIGURE_IDS)))
 
         multi = len(subjects) > 1
         multi_col = len(valid_subjects) > 1
@@ -1177,7 +946,7 @@ def create_app() -> Dash:
                         )
                     )
                 else:
-                    _add_kde_line_trace(
+                    _add_density_hist(
                         fig_ih,
                         sm["init_times"],
                         name=subj,
@@ -1345,7 +1114,7 @@ def create_app() -> Dash:
                         wdh_split_idx.append(wdh_trace_count)
                         wdh_trace_count += 1
                 else:
-                    _add_kde_line_trace(
+                    _add_density_hist(
                         fig_wdh,
                         sm["wait_delta_times"],
                         name=subj,
@@ -1358,7 +1127,7 @@ def create_app() -> Dash:
                     wdh_combined_idx.append(wdh_trace_count)
                     wdh_trace_count += 1
                     if left_delta_times:
-                        _add_kde_line_trace(
+                        _add_density_hist(
                             fig_wdh,
                             left_delta_times,
                             name="Left",
@@ -1371,7 +1140,7 @@ def create_app() -> Dash:
                         wdh_split_idx.append(wdh_trace_count)
                         wdh_trace_count += 1
                     if right_delta_times:
-                        _add_kde_line_trace(
+                        _add_density_hist(
                             fig_wdh,
                             right_delta_times,
                             name="Right",
@@ -1536,7 +1305,7 @@ def create_app() -> Dash:
                         wfh_split_idx.append(wfh_trace_count)
                         wfh_trace_count += 1
                 else:
-                    _add_kde_line_trace(
+                    _add_density_hist(
                         fig_wfh,
                         sm["wait_times"],
                         name=subj,
@@ -1549,7 +1318,7 @@ def create_app() -> Dash:
                     wfh_combined_idx.append(wfh_trace_count)
                     wfh_trace_count += 1
                     if wait_left_times:
-                        _add_kde_line_trace(
+                        _add_density_hist(
                             fig_wfh,
                             wait_left_times,
                             name="Left",
@@ -1562,7 +1331,7 @@ def create_app() -> Dash:
                         wfh_split_idx.append(wfh_trace_count)
                         wfh_trace_count += 1
                     if wait_right_times:
-                        _add_kde_line_trace(
+                        _add_density_hist(
                             fig_wfh,
                             wait_right_times,
                             name="Right",
@@ -1740,7 +1509,7 @@ def create_app() -> Dash:
                     rt_trace_count += 1
             else:
                 if response_times:
-                    _add_kde_line_trace(
+                    _add_density_hist(
                         fig_rt,
                         response_times,
                         name="All choices",
@@ -1753,7 +1522,7 @@ def create_app() -> Dash:
                     rt_combined_idx.append(rt_trace_count)
                     rt_trace_count += 1
                 if response_left:
-                    _add_kde_line_trace(
+                    _add_density_hist(
                         fig_rt,
                         response_left,
                         name="Left",
@@ -1766,7 +1535,7 @@ def create_app() -> Dash:
                     rt_split_idx.append(rt_trace_count)
                     rt_trace_count += 1
                 if response_right:
-                    _add_kde_line_trace(
+                    _add_density_hist(
                         fig_rt,
                         response_right,
                         name="Right",
@@ -1837,7 +1606,7 @@ def create_app() -> Dash:
                             itid_split_idx.append(itid_trace_count)
                             itid_trace_count += 1
                 else:
-                    _add_kde_line_trace(
+                    _add_density_hist(
                         fig_itid,
                         iti_vals,
                         name=subj,
@@ -1856,7 +1625,7 @@ def create_app() -> Dash:
                         ("After No Choice", iti_after_no_choice, "#6b7280"),
                     ]:
                         if vals:
-                            _add_kde_line_trace(
+                            _add_density_hist(
                                 fig_itid,
                                 vals,
                                 name=label,
@@ -2166,6 +1935,7 @@ def create_app() -> Dash:
                 title="Initiation Dist",
                 xaxis_title="time (s)",
                 yaxis_title="density",
+                barmode="overlay",
             )
 
         # Row 3
@@ -2192,6 +1962,7 @@ def create_app() -> Dash:
                 title="Center Dwell Dist",
                 xaxis_title="time (s)",
                 yaxis_title="density",
+                barmode="overlay",
             )
         _apply_split_toggle(
             fig_wdh, wdh_combined_idx, wdh_split_idx, wdh_trace_count, "Choice"
@@ -2219,6 +1990,7 @@ def create_app() -> Dash:
                 title="Minimum Wait Dist",
                 xaxis_title="time (s)",
                 yaxis_title="density",
+                barmode="overlay",
             )
         _apply_split_toggle(
             fig_wfh, wfh_combined_idx, wfh_split_idx, wfh_trace_count, "Choice"
@@ -2252,6 +2024,7 @@ def create_app() -> Dash:
                 title="Response Time Dist",
                 xaxis_title="time (s)",
                 yaxis_title="density",
+                barmode="overlay",
             )
         if multi_col:
             _layout(
@@ -2266,6 +2039,7 @@ def create_app() -> Dash:
                 title="ITI Dist",
                 xaxis_title="time (s)",
                 yaxis_title="density",
+                barmode="overlay",
             )
         _apply_split_toggle(
             fig_itid, itid_combined_idx, itid_split_idx, itid_trace_count, "Outcome"
@@ -2313,7 +2087,6 @@ def create_app() -> Dash:
             fig_itir, itir_combined_idx, itir_split_idx, itir_trace_count, "Outcome"
         )
 
-        perf_log("_update_single", start, subjects=len(valid_subjects), multi=multi)
         return (
             fig_fc,
             fig_pr,
@@ -2390,15 +2163,7 @@ def create_app() -> Dash:
 
     # ── Multi-session plots ──────────────────────────────────────────────────
     @app.callback(
-        Output("performance", "figure"),
-        Output("ew-rate", "figure"),
-        Output("side-bias", "figure"),
-        Output("init-times", "figure"),
-        Output("median-rt", "figure"),
-        Output("median-wait", "figure"),
-        Output("trial-counts", "figure"),
-        Output("water", "figure"),
-        Output("training-time", "figure"),
+        *[Output(gid, "figure") for gid in MULTI_FIGURE_IDS],
         Input("subjects-recent", "value"),
         Input("subjects-older", "value"),
         Input("sessions-back", "value"),
@@ -2416,44 +2181,11 @@ def create_app() -> Dash:
         smooth_window,
         n_intervals,
     ):
-        """Render all multi-session trend figures for selected subjects.
-
-        Callback Inputs:
-            - ``subjects-recent.value``
-            - ``subjects-older.value``
-            - ``sessions-back.value``
-            - ``session-date.date``
-            - ``smooth-metrics.value``
-            - ``smooth-window.value``
-            - ``auto-refresh.n_intervals``
-
-        Callback Outputs:
-            Nine figures for performance, EW rate, bias, medians, trial counts,
-            water earned, and training time.
-
-        Args:
-            subjects_recent: Selected recent subject names.
-            subjects_older: Selected older subject names.
-            sessions_back: Number of recent sessions to include.
-            session_date: Shared anchor date used to align subject timelines.
-            smooth_vals: Smoothing toggle values from checklist.
-            smooth_window: Moving-average window size when smoothing is enabled.
-            n_intervals: Auto-refresh tick counter (unused except as trigger).
-        Returns:
-            A 9-item tuple of Plotly figures in callback output order.
-
-        Side Effects:
-            Reads cached multi-session metrics and emits performance logs when
-            profiling is enabled.
-        """
-        start = time.perf_counter()
-        n = 9
         subjects = (subjects_recent or []) + (subjects_older or [])
 
         if not subjects:
             e = _empty_fig()
-            perf_log("_update_multi", start, subjects=0)
-            return tuple(e for _ in range(n))
+            return tuple(e for _ in range(len(MULTI_FIGURE_IDS)))
 
         do_smooth = "smooth" in (smooth_vals or [])
         win = smooth_window or 3
@@ -2724,14 +2456,6 @@ def create_app() -> Dash:
             },
         )
 
-        perf_log(
-            "_update_multi",
-            start,
-            subjects=len(subjects),
-            sessions_back=sessions_back,
-            smooth=do_smooth,
-            smooth_window=win,
-        )
         return (
             fig_perf,
             fig_ew,
