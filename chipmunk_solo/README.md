@@ -46,12 +46,12 @@ Replay is saved in `SessionData.PassiveReplay` and in `<subject>/<session>/chipm
 Leave the SpikeGLX host blank for behavior only. Set it (e.g. `jupiter.local`) to record.
 
 1. Open SpikeGLX on Jupiter.
-2. Start the protocol and click **Prepare recording**. It detects the connected probes and the XIO.
+2. Start the protocol, check the probe docks and XIO in **Devices** and click **Prepare recording**.
 3. Click **Start session**. Stop saves the behavior, stops the cameras and then stops the recording.
 
 SpikeGLX saves to `<data root>/<subject>/<session>/ephys_g0/` on the recording computer. The rig needs passwordless SSH to it (`ssh -o BatchMode=yes jupiter.local hostname` should work). Settings are saved in `spikeglx_prefs.mat`.
 
-Tabs: **Devices** (detected probes and XIO), **Probe** (AP overview), **Analog** (OneBox inputs), **Digital** (XD0–XD11 and sync) and **Anatomy** (planned probe track from the VVASP surgery plan).
+Tabs: **Devices**, **Probe** (AP overview), **Analog** (OneBox inputs), **Digital** (XD0–XD11 and sync) and **Anatomy** (planned probe track from the VVASP surgery plan).
 
 The VVASP folder is set in the Anatomy tab (`D:/VVASP` on Jupiter). Profiles are made with `tools/export_vvasp_anatomy.py`. These are surgery plans, not histology.
 

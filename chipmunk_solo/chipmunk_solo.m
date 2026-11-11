@@ -505,7 +505,7 @@ finishSession();
             save(BpodSystem.Path.CurrentDataFile{1},'SessionData')
             % The task file keeps PassiveReplay because it owns the Bpod clock and every sync pulse.
             % The copy in chipmunk_passive/ is the separate passive-stimulation dataset.
-            if isfield(BpodSystem.Data,'PassiveReplay') && BpodSystem.Data.PassiveReplay.nRequested > 0
+            if isfield(BpodSystem.Data,'PassiveReplay') && BpodSystem.Data.PassiveReplay.nCompleted > 0
                 PassiveReplay = BpodSystem.Data.PassiveReplay;
                 [taskFolder,taskName] = fileparts(BpodSystem.Path.CurrentDataFile{1});
                 passiveFolder = fullfile(fileparts(taskFolder),'chipmunk_passive');

@@ -19,15 +19,19 @@ assert(ChipmunkSpikeGLTest.enables==1);
 s=spikeglx_client('begin');assert(s.recording && ChipmunkSpikeGLTest.enables==1);
 spikeglx_client('shutdown');assert(~ChipmunkSpikeGLTest.running && ChipmunkSpikeGLTest.stops==1);
 
-% Prepare always detects; the last working set is tried first.
-resetServer();spikeglx_client('set','devices','(20,1,1)(20,obx)');
+% Prepare verifies the checked devices every time, even if SpikeGLX still holds an older match.
+resetServer();spikeglx_client('set','devices','');
+s=spikeglx_client('prepare');assert(~s.running && contains(s.lastError,'at least one'));
+ChipmunkSpikeGLTest.devices='(20,1,1)(20,obx)';spikeglx_client('set','devices','(20,1,1)(20,obx)');
 s=spikeglx_client('prepare');assert(s.running && ChipmunkSpikeGLTest.detects==1,'%s',s.lastError);
 spikeglx_client('shutdown');
-% A probe moved to another port, on a fresh SpikeGLX, is found without help.
+% Probe moved to port 2 on a fresh SpikeGLX: checking port 2 is enough.
 resetServer();ChipmunkSpikeGLTest.validated=false;ChipmunkSpikeGLTest.attached='(20,2,1)(20,obx)';
+ChipmunkSpikeGLTest.devices='(20,1,1)(20,obx)';
 spikeglx_client('set','devices','(20,1,1)(20,obx)');
-s=spikeglx_client('prepare');assert(s.running,'%s',s.lastError);
-assert(strcmp(ChipmunkSpikeGLTest.devices,'(20,2,1)(20,obx)') && strcmp(s.devices,'(20,2,1)(20,obx)'));
+s=spikeglx_client('prepare');assert(~s.running && contains(s.lastError,'not ready'));
+spikeglx_client('set','devices','(20,2,1)(20,obx)');
+s=spikeglx_client('prepare');assert(s.running && strcmp(ChipmunkSpikeGLTest.devices,'(20,2,1)(20,obx)'),'%s',s.lastError);
 spikeglx_client('shutdown');
 resetServer();ChipmunkSpikeGLTest.runName='previous';ChipmunkSpikeGLTest.existingNames={'previous'};
 spikeglx_client('set','devices','(20,obx)');
@@ -193,10 +197,14 @@ tabs=get(get(ancestor(ha.anatomyDir,'uitab'),'Parent'),'Children');
 assert(isequal(get(tabs,'Title'),{'Devices';'Probe';'Analog';'Digital';'Anatomy'}));
 labels=findall(BpodSystem.GUIHandles.Figures.SpikeGLX,'Type','uicontrol','Style','text');
 for k=1:numel(labels),assert(~any(contains(string(get(labels(k),'String')),'Check probe docks')));end
+set(ha.deviceTable,'Data',spikeglxDeviceRows(''));
+invoke(ha.start);s=spikeglx_client('get');
+assert(~s.running && contains(s.lastError,'at least one'));
 devices='(20,1,2)(20,2,1)(20,obx)';ChipmunkSpikeGLTest.attached=devices;
+set(ha.deviceTable,'Data',spikeglxDeviceRows(devices));
 invoke(ha.start);assert(ChipmunkSpikeGLTest.running && ~ChipmunkSpikeGLTest.saving);
 assert(strcmp(ChipmunkSpikeGLTest.devices,devices));
-assert(isequal(get(ha.devices,'String'),{'(20,1,2)';'(20,2,1)';'(20,obx)'}));
+assert(strcmp(get(ha.deviceTable,'Enable'),'off'));
 log=get(ha.actionLog,'String');assert(any(contains(log,'Prepared: acquisition ON; recording OFF')));
 assert(strcmp(get(button,'Enable'),'on'));
 invoke(button);assert(ChipmunkSpikeGLTest.saving && strcmp(get(button,'String'),'Update settings'));
@@ -211,7 +219,7 @@ ChipmunkSpikeGLTest=struct('running',false,'saving',false,'targetSaving',false, 
  'pending',0,'runName','','existingNames',{{}},'dataDir','test-data','validated',true,'startSaves',false, ...
  'detects',0,'connectFailure',false,'detectFailure',false,'startFailure',false,'starts',0,'stops',0,'enables',0,'devices','','attached','(20,1,1)(20,obx)','probeList','()','anatomy',{{}},'metadata',struct());
 spikeglx_client('init','FakeSubject_workflow');spikeglx_client('set','host','unit-test');
-spikeglx_client('set','devices','');spikeglx_client('set','anatomyDir','');
+spikeglx_client('set','devices','(20,1,1)(20,obx)');spikeglx_client('set','anatomyDir','');
 end
 function restore(oldPath,oldBpod,oldServer,prefs,hadPrefs,original)
 global BpodSystem ChipmunkSpikeGLTest

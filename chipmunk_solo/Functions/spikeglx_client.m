@@ -213,9 +213,10 @@ function result = spikeglx_client(cmd, varargin)
             state=prepareFolder(state);
             if ~isempty(state.dataDir),SetDataDir(hSGL,0,recordingFolder(state));end
             try,params=GetParams(hSGL);if ~isempty(fieldnames(params)),SetRunName(hSGL,state.runName);end;catch,end
-            state.devices=detectDevices(state.devices);
+            % SpikeGLX only starts runs on settings verified against the attached hardware.
+            assert(~isempty(state.devices),'Select at least one probe dock or XIO.');
+            SelectDevices(hSGL,state.devices,2); % Detect + Verify | Save
             state.remoteDevices=readDeviceSelection();
-            savePrefs(state);
             state=logAction(state,['Devices verified: ' state.devices]);
         catch ME
             state.lastError = ['Recording setup is not ready: ' ME.message];
@@ -262,28 +263,6 @@ function result = spikeglx_client(cmd, varargin)
         catch ME
             state.anatomyStatus=['Anatomy not applied: ' ME.message];
         end
-    end
-
-    function selection = detectDevices(last)
-        % SpikeGLX only starts runs on a configuration verified against the attached hardware
-        % (Detect + Verify | Save). Try the last set, then each port alone, so a moved probe is found.
-        if ~isempty(last)
-            try,SelectDevices(hSGL,last,2);selection=last;return;catch,end
-        end
-        slot=regexp(last,'\((\d+),','tokens','once');
-        if isempty(slot),slot=20;else,slot=str2double(slot{1});end
-        oneBox=slot>=20 && slot<=31;
-        xio='';if oneBox,xio=sprintf('(%d,obx)',slot);end
-        selection='';
-        for port=1:2+2*~oneBox
-            for dock=1:2
-                probe=sprintf('(%d,%d,%d)',slot,port,dock);
-                try,SelectDevices(hSGL,[probe xio],1);selection=[selection probe];catch,end %#ok<AGROW>
-            end
-        end
-        selection=[selection xio];
-        assert(~isempty(selection),'No probes or XIO detected on slot %d.',slot);
-        SelectDevices(hSGL,selection,2);
     end
 
     function selection = readDeviceSelection()

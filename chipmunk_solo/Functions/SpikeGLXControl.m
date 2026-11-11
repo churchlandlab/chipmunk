@@ -106,8 +106,11 @@ function SpikeGLXControl(action)
         title(ha.anatomyAxes,'No surgery plan loaded');
         ha.anatomyRegion=uicontrol(anatomyTab,'Style','text','Units','normalized', ...
             'Position',[.04 .02 .92 .10],'String','','HorizontalAlignment','left');
-        ha.devices=uicontrol(devicesTab,'Style','text','Units','normalized', ...
-            'Position',[.04 .10 .92 .80],'String','','HorizontalAlignment','left');
+        ha.deviceTable=uitable(devicesTab,'Units','normalized','Position',[.04 .10 .92 .85], ...
+            'Data',spikeglxDeviceRows(state.devices),'ColumnName',{'Record','Slot','Port','Dock'}, ...
+            'ColumnFormat',{'logical','numeric',{'1','2','3','4','XIO'},'numeric'}, ...
+            'ColumnEditable',[true true true true],'RowName',[], ...
+            'ColumnWidth',{55 55 65 55},'CellEditCallback',@onDeviceEdit);
         ha.start = uicontrol(fig, 'Style', 'pushbutton', 'Units', 'normalized', ...
             'Position', [0.06 0.67 0.88 0.055], 'String', 'Prepare recording', ...
             'Callback', @onPrepare);
@@ -154,10 +157,7 @@ function SpikeGLXControl(action)
         set(BpodSystem.GUIHandles.Figures.SpikeGLX,'Name',title);
         set(ha.title,'String',title);
         if state.running,editable='off';else,editable='on';end
-        set([ha.host ha.port ha.dataDir ha.anatomyDir ha.anatomyReload],'Enable',editable);
-        devices=regexp(state.remoteDevices,'\([^()]+\)','match');
-        if isempty(devices),devices={'Detected on Prepare recording'};end
-        set(ha.devices,'String',devices);
+        set([ha.host ha.port ha.dataDir ha.anatomyDir ha.anatomyReload ha.deviceTable],'Enable',editable);
         if ~isequal(get(ha.actionLog,'String'),state.actionLog(:))
             set(ha.actionLog,'String',state.actionLog,'Value',max(1,numel(state.actionLog)), ...
                 'ListboxTop',max(1,numel(state.actionLog)-4));
@@ -228,6 +228,7 @@ function SpikeGLXControl(action)
         end
         ha = BpodSystem.GUIHandles.SpikeGLX;
         try
+            devices=spikeglxDeviceSelection(get(ha.deviceTable,'Data'));
             port=str2double(get(ha.port,'String'));
             assert(isscalar(port) && isfinite(port) && port==fix(port) && port>=1 && port<=65535, ...
                 'Port must be an integer from 1 to 65535.');
@@ -237,8 +238,15 @@ function SpikeGLXControl(action)
         spikeglx_client('set', 'host', get(ha.host, 'String'));
         spikeglx_client('set', 'port', port);
         spikeglx_client('set', 'dataDir', get(ha.dataDir, 'String'));
+        spikeglx_client('set', 'devices', devices);
         spikeglx_client('set', 'anatomyDir', get(ha.anatomyDir, 'String'));
         valid=true;
+    end
+
+
+    function onDeviceEdit(~,~)
+        if readFields(),spikeglx_client('set','lastError','');end
+        refreshFigure();
     end
 
 

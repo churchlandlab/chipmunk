@@ -141,6 +141,7 @@ for session = 1:numel(experiments)
     if ~isempty(badReplayEnable)
         assert(strcmp(data.PassiveReplay.status,'failed') && data.PassiveReplay.nCompleted == 0);
         assert(~isempty(data.PassiveReplay.errorMessage));
+        assert(~isfile(passiveFile),'No passive dataset without completed replays.');
     elseif enabled
         assert(data.PassiveReplay.nCompleted == 3 && strcmp(data.PassiveReplay.status,'completed'));
         passive = load(passiveFile);
