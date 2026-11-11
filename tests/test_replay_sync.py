@@ -44,25 +44,6 @@ class ReplaySyncTest(unittest.TestCase):
         self.ns['re'] = re
         times, _ = self.ns['_handle_chipmunk_camera_sync'](0, log, comm, range(400), trials)
         np.testing.assert_allclose(times, 56 + np.arange(400) * .0125, atol=1e-9)
-        with self.assertRaisesRegex(ValueError, 'two matched sync anchors'):  # never stores NaN
-            self.ns['_handle_chipmunk_camera_sync'](0, log, comm[:1], range(400), trials)
-
-    def test_frame_times_fit_one_line_through_quantized_anchors(self):
-        fit = self.ns['_frames_to_bpod_time']
-        period, n = .0125, 3000
-        true = 10 + np.arange(n) * period * (1 + 20e-6)  # 20 ppm clock difference
-        sync = 10 + np.array([.7, 3.1, 4.4, 7.9, 9.2, 12.6])  # Bpod sync times inside the video
-        first_seen = np.searchsorted(true, sync)  # anchors are late by up to one frame
-        err = np.abs(fit(sync, first_seen, n) - true)
-        self.assertLess(err.max(), period)  # within a frame, including far extrapolation
-        piecewise = np.interp(np.arange(n), first_seen, sync)
-        piecewise[first_seen[-1]:] = sync[-1] + (np.arange(first_seen[-1], n) - first_seen[-1]) * (
-            (sync[-1] - sync[-2]) / (first_seen[-1] - first_seen[-2]))
-        self.assertLess(err.max(), np.abs(piecewise - true).max())
-        # A camera whose rate changes keeps piecewise interpolation, with a warning.
-        self.ns['extrapolate_time_from_clock'] = lambda t, f, x: np.interp(x, f, t)
-        with self.assertWarnsRegex(UserWarning, 'constant frame rate'):
-            fit([0., 1., 2., 4.], [0, 100, 200, 250], 300)
 
     def test_invalid_sync_cannot_silently_drop_a_pulse(self):
         for stamp in (None,float('nan'),2.):
@@ -75,11 +56,11 @@ class ReplaySyncTest(unittest.TestCase):
         for start in [100,300,600,800,1100]: gpio[start:start+10]=1
         log=pd.DataFrame({0:frames,1:frames/100,2:gpio})
         calls=[]
-        fit=self.ns['_frames_to_bpod_time']
-        def anchors(times,indices,n_frames,**kwargs):
+        fit=self.ns['extrapolate_time_from_clock']
+        def anchors(times,indices,frames):
             calls.append((times,indices))
-            return fit(times,indices,n_frames,**kwargs)
-        self.ns['_frames_to_bpod_time']=anchors
+            return fit(times,indices,frames)
+        self.ns['extrapolate_time_from_clock']=anchors
         times,events=self.ns['_handle_chipmunk_camera_sync'](0,log,[],frames,self.active,self.passive)
         np.testing.assert_equal(calls[0][0],[1,3,6,8,11])
         np.testing.assert_equal(calls[0][1],[100,300,600,800,1100])

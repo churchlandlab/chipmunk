@@ -280,12 +280,12 @@ class CameraPulseTest(unittest.TestCase):
         self.ns = parser_namespace()
         self.calls = []
 
-        fit = self.ns['_frames_to_bpod_time']
+        fit = self.ns['extrapolate_time_from_clock']
 
-        def anchors(times, frames, n_frames, **kwargs):
+        def anchors(times, frames, x):
             self.calls.append((list(times), list(frames)))
-            return fit(times, frames, n_frames, **kwargs)
-        self.ns['_frames_to_bpod_time'] = anchors
+            return fit(times, frames, x)
+        self.ns['extrapolate_time_from_clock'] = anchors
 
     def align(self, pulses, replay, stopped=None, extra_channels=(), fps=100, active=None, replay_metadata=None):
         n_frames = int(max(pulses) * fps) + 3 * fps

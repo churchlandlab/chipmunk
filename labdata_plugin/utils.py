@@ -718,29 +718,6 @@ def _bpod_sync_pulse_numbers(n_active, n_passive, stopped_trial_pulse=None):
     return np.r_[np.arange(n_active), np.arange(n_passive) + n_active + gap]
 
 
-def _frames_to_bpod_time(bpod_times, anchor_frames, n_frames, max_residual=None):
-    """Bpod time of every video frame from sync anchors (frame index -> Bpod time).
-
-    Each anchor is the first frame that saw a sync pulse, so it is late by up to
-    a frame. Piecewise interpolation keeps that error per segment and stretches
-    it past the first and last anchors. One line through all anchors averages it
-    out: on Venus (2026-11-06, OneBox frame strobes as truth) the max error fell
-    from 24.9 to 11.5 ms. If anchors leave a constant frame rate by more than
-    max_residual (default one frame), keep piecewise interpolation.
-    """
-    bpod_times = np.asarray(bpod_times, dtype=float)
-    anchor_frames = np.asarray(anchor_frames, dtype=float)
-    if len(bpod_times) < 2 or bpod_times.shape != anchor_frames.shape:
-        raise ValueError('Camera alignment needs at least two matched sync anchors')
-    slope, offset = np.polyfit(anchor_frames, bpod_times, 1)
-    residual = np.abs(bpod_times - (slope * anchor_frames + offset)).max()
-    if residual > (abs(slope) if max_residual is None else max_residual):
-        warnings.warn(f'Camera sync anchors deviate {residual * 1000:.1f} ms from a constant frame rate; '
-                      'using piecewise interpolation.')
-        return extrapolate_time_from_clock(bpod_times, anchor_frames, np.arange(n_frames))
-    return slope * np.arange(n_frames) + offset
-
-
 def _replay_gpio_onsets(channels, t, trialmarkers, n_active, stopped_trial_pulse=None, passive_replay=None):
     """Require a unique interval-supported mapping across all GPIO channels.
 
@@ -853,7 +830,7 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
         # Replay sessions must match exactly; the loop below keeps its tolerance for other sessions.
         onsets = _replay_gpio_onsets(zip(channel_selection, gpio), t, trialmarkers,
                                      len(trialdicts), stopped_trial_pulse, passive_replay)
-        frametimes = _frames_to_bpod_time(trialmarkers, frame_num[onsets], len(vid))
+        frametimes = extrapolate_time_from_clock(trialmarkers, frame_num[onsets], np.arange(len(vid)))
     for iin,g in ([] if passive_trials or passive_replay is not None else zip(channel_selection,gpio)):
         # do this only if there is a sync connected.
         onsets = np.where(np.hstack([0,np.diff(g.astype(np.int8))])>0)[0]
@@ -863,7 +840,7 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
             # get the frametimes (prefered method)
             # right now doing this only if rig_t and frame_num[events] have the same size of be off by 1
             if (len(trialmarkers) == len(onsets)) or (len(trialmarkers)+1 == len(onsets)):
-                frametimes = _frames_to_bpod_time(trialmarkers, frame_num[onsets[:len(trialmarkers)]], len(vid))
+                frametimes = extrapolate_time_from_clock(trialmarkers, frame_num[onsets[:len(trialmarkers)]], np.arange(len(vid)))
             else:
                 warnings.warn(f'Camera sync pulse count {len(onsets)} does not match Bpod {len(trialmarkers)}.')
     if frametimes is None and (passive_trials or passive_replay is not None):
@@ -889,8 +866,7 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
                 trialtimes.append(trialmarkers[idx[0]])
                 frame_nums.append(frame_num[ii])
         print(f'Using the frametimes from the network log. This will be approximate [cam{icam}].')
-        # Network log latency is jitter, not a rate change: always fit one line.
-        frametimes = _frames_to_bpod_time(trialtimes, frame_nums, len(vid), max_residual=np.inf)
+        frametimes = extrapolate_time_from_clock(trialtimes, frame_nums, np.arange(len(vid)))
     events = []
     for iin,g in zip(channel_selection,gpio):
         if not len(frametimes) == len(g):

@@ -23,7 +23,7 @@ Solo saves replay to `<subject>/<session>/chipmunk_passive/`. Each `ChipmunkPass
 
 Every trial and replay sends a sync pulse. If Stop cuts a trial short, its pulse is sent but the trial isn't saved; Solo marks this with `StoppedTrialPulse`, and the replay pulses are numbered past it.
 
-Camera frame times come from a line fit through the frames where sync pulses arrive. If no camera input carries the sync, the labcams log is used instead.
+Camera frame times are interpolated between the frames where sync pulses arrive. If no camera input carries the sync, the labcams log is used instead.
 
 ## Repopulating
 

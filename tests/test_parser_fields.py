@@ -6,6 +6,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 
 ROOT = Path(__file__).resolve().parents[1] / 'labdata_plugin'
 
@@ -15,7 +16,10 @@ def parser_namespace():
     tree = ast.Module(body=[n for n in source.body
                            if isinstance(n, ast.FunctionDef)],
                       type_ignores=[])
-    namespace = {'np': np, 'pd': pd, 'warnings': warnings}
+    # labdata's extrapolate_time_from_clock
+    clock = lambda master_clock, master_events, slave_events: interp1d(
+        master_events, master_clock, fill_value='extrapolate')(slave_events)
+    namespace = {'np': np, 'pd': pd, 'warnings': warnings, 'extrapolate_time_from_clock': clock}
     exec(compile(tree, str(ROOT / 'utils.py'), 'exec'), namespace)
     return namespace
 
