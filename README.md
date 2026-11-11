@@ -7,7 +7,7 @@ Raposo et al. 2012. Runs on [Bpod Gen 2](https://github.com/sanworks/Bpod_Gen2).
 |---|---|
 | [`chipmunk/`](chipmunk/README.md) | Original protocol (demonstrator/observer) |
 | [`chipmunk_solo/`](chipmunk_solo/README.md) | Solo protocol |
-| [`labdata_plugin/`](labdata_plugin/README.md) | labdata plugin for both protocols |
+| [`labdata_plugin/`](labdata_plugin/README.md) | labdata plugin and dashboard for both protocols |
 | [`tests/`](tests) | Plugin tests |
 | [`custom_parts/`](custom_parts), [`hardware_setup/`](hardware_setup) | Hardware designs, parts lists, assembly instructions |
 
@@ -23,7 +23,7 @@ ln -s ~/chipmunk/chipmunk_solo ~/"Bpod Local/Protocols/chipmunk_solo"
 
 On Windows, use `mklink /J` instead of `ln -s`.
 
-Don't add the whole repo to the MATLAB path; the two protocols have functions with the same names. Restart MATLAB when switching protocols.
+Don't add the whole repo to the MATLAB path; the two protocols have functions with the same names.
 
 ### labdata plugin
 
@@ -35,9 +35,9 @@ In `~/labdata/user_preferences.json`:
 }
 ```
 
-For the dashboard page, install [chipmunk-dashboard](https://github.com/rojasgabriel/chipmunk-dashboard).
+For the Chipmunk tab in `labdata dashboard`, install `dash` and `plotly<7` in the same environment.
 
 ## Tests
 
-- Plugin: `python -m unittest` in `tests/`. Runs on GitHub on every push.
+- Plugin: `python -m unittest` in `tests/`, and `pytest tests/dashboard` for the dashboard. Both run on GitHub on every push.
 - Solo task: `chipmunk_solo/tests/run_rig_checks.sh` on a rig. See [testing](chipmunk_solo/docs/testing.md).
