@@ -11,7 +11,7 @@ global BpodSystem ChipmunkShutdownTest
 oldBpod=BpodSystem;oldTest=ChipmunkShutdownTest;
 cleanup=onCleanup(@() restore(folder,oldPath,oldBpod,oldTest));
 fid=fopen(fullfile(folder,'shutdownHarness.m'),'w');
-fprintf(fid,'function shutdownHarness()\nglobal BpodSystem ChipmunkShutdownTest\nephysOn=true;udplabcams=[];\nshutdownChipmunk();\n%s\n%s\nend\n',body,fileread(fullfile(root,'tests','fixtures','shutdown','endpoints.txt')));
+fprintf(fid,'function shutdownHarness()\nglobal BpodSystem ChipmunkShutdownTest\nephysOn=true;udplabcams=[];sessionClosed=false;\nshutdownChipmunk();\ntry,shutdownChipmunk();catch,end\n%s\n%s\nend\n',body,fileread(fullfile(root,'tests','fixtures','shutdown','endpoints.txt')));
 fclose(fid);addpath(folder);
 for failure={'none','save','sound'}
     BpodSystem=struct('ProtocolSettings',struct('demonID','FakeSubject'), ...
@@ -31,7 +31,7 @@ for failure={'none','save','sound'}
         assert(threw,'Save failure was swallowed');
     end
 end
-fprintf('PASS: behavioral save precedes camera/sound shutdown; ephys stops last, including save/sound failures\n');
+fprintf('PASS: behavioral save precedes camera/sound shutdown; ephys stops last, including save/sound failures; shutdown runs once\n');
 end
 function restore(folder,oldPath,oldBpod,oldTest)
 global BpodSystem ChipmunkShutdownTest

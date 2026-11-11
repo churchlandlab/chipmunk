@@ -18,6 +18,7 @@ ensureStimulusManipulationSettings();
 ensureOptionalRecordingSettings();
 S = BpodSystem.ProtocolSettings;
 ephysOn = ephysRecordingEnabled(S);
+sessionClosed = false;
 if ~isfield(S, 'baseWait') %Settings saved before baseWait existed ran the half-second task
     S.baseWait = 0.5;
     BpodSystem.ProtocolSettings.baseWait = S.baseWait;
@@ -496,6 +497,9 @@ finishSession();
 
     function shutdownChipmunk()
         % ponytail: one shutdown for the stop button and for errors.
+        % Runs once, so an error after Stop can't save or offer the upload twice.
+        if sessionClosed,return;end
+        sessionClosed=true;
         % Keep ephys acquiring through behavioral saving and camera/sound cleanup.
         streamCleanup=onCleanup(@() finishStreams(ephysOn,udplabcams));
         mergeSettingsNotes();
