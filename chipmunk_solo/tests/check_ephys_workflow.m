@@ -19,33 +19,23 @@ assert(ChipmunkSpikeGLTest.enables==1);
 s=spikeglx_client('begin');assert(s.recording && ChipmunkSpikeGLTest.enables==1);
 spikeglx_client('shutdown');assert(~ChipmunkSpikeGLTest.running && ChipmunkSpikeGLTest.stops==1);
 
-resetServer();ChipmunkSpikeGLTest.validated=false;
-s=spikeglx_client('prepare');assert(~s.running && contains(s.lastError,'not ready'));
-spikeglx_client('set','devices','(20,obx)');
-s=spikeglx_client('prepare');assert(s.running && strcmp(ChipmunkSpikeGLTest.devices,'(20,obx)'));
+% Prepare always detects; the last working set is tried first.
+resetServer();spikeglx_client('set','devices','(20,1,1)(20,obx)');
+s=spikeglx_client('prepare');assert(s.running && ChipmunkSpikeGLTest.detects==1,'%s',s.lastError);
 spikeglx_client('shutdown');
-% Reuse only a live, validated match, independent of device ordering.
-resetServer();ChipmunkSpikeGLTest.devices='(20,1,1)(20,obx)';
-spikeglx_client('set','devices','(20,obx)(20,1,1)');
-s=spikeglx_client('prepare');assert(s.running && ChipmunkSpikeGLTest.detects==0);
+% A probe moved to another port, on a fresh SpikeGLX, is found without help.
+resetServer();ChipmunkSpikeGLTest.validated=false;ChipmunkSpikeGLTest.attached='(20,2,1)(20,obx)';
+spikeglx_client('set','devices','(20,1,1)(20,obx)');
+s=spikeglx_client('prepare');assert(s.running,'%s',s.lastError);
+assert(strcmp(ChipmunkSpikeGLTest.devices,'(20,2,1)(20,obx)') && strcmp(s.devices,'(20,2,1)(20,obx)'));
 spikeglx_client('shutdown');
-% An external device change, invalid configuration, or incomplete address query forces validation.
-for reason=1:3
-    resetServer();ChipmunkSpikeGLTest.devices='(20,1,1)(20,obx)';
-    spikeglx_client('set','devices','(20,1,1)(20,obx)');
-    if reason==1,ChipmunkSpikeGLTest.devices='(20,obx)';end
-    if reason==2,ChipmunkSpikeGLTest.validated=false;end
-    if reason==3,ChipmunkSpikeGLTest.addressFailure=true;end
-    s=spikeglx_client('prepare');assert(s.running && ChipmunkSpikeGLTest.detects==1,'%s',s.lastError);
-    spikeglx_client('shutdown');
-end
 resetServer();ChipmunkSpikeGLTest.runName='previous';ChipmunkSpikeGLTest.existingNames={'previous'};
 spikeglx_client('set','devices','(20,obx)');
 s=spikeglx_client('prepare');assert(s.running && strcmp(s.remoteRunName,'FakeSubject_workflow'),'%s',s.lastError);
 spikeglx_client('shutdown');
 resetServer();ChipmunkSpikeGLTest.detectFailure=true;
 spikeglx_client('set','devices','(20,obx)');
-s=spikeglx_client('prepare');assert(~s.running && contains(s.lastError,'detection failed'));
+s=spikeglx_client('prepare');assert(~s.running && contains(s.lastError,'detection failed'),'%s',s.lastError);
 resetServer();ChipmunkSpikeGLTest.startFailure=true;
 s=spikeglx_client('prepare');assert(~s.running && ~s.ownedRun);
 resetServer();ChipmunkSpikeGLTest.connectFailure=true;
@@ -198,17 +188,15 @@ assert(contains(get(ha.title,'String'),'unit-test:4142'));
 assert(~contains(get(ha.title,'String'),'Jupiter'));
 assert(any(contains(string(get(ha.status,'String')),'SpikeGLX network: connected')));
 assert(~any(contains(string(get(ha.status,'String')),'test server')));
-assert(isgraphics(ancestor(ha.anatomy,'uitab'),'uitab'),'Surgery-plan status should live in Advanced');
+assert(strcmp(get(ancestor(ha.anatomyDir,'uitab'),'Title'),'Anatomy'));
+tabs=get(get(ancestor(ha.anatomyDir,'uitab'),'Parent'),'Children');
+assert(isequal(get(tabs,'Title'),{'Devices';'Probe';'Analog';'Digital';'Anatomy'}));
 labels=findall(BpodSystem.GUIHandles.Figures.SpikeGLX,'Type','uicontrol','Style','text');
 for k=1:numel(labels),assert(~any(contains(string(get(labels(k),'String')),'Check probe docks')));end
-set(ha.useSpikeGLX,'Value',0);set(ha.deviceTable,'Data',spikeglxDeviceRows(''));
-invoke(ha.start);s=spikeglx_client('get');
-assert(~s.running && contains(s.lastError,'at least one'));
-devices='(20,1,2)(20,2,1)(20,obx)';
-set(ha.deviceTable,'Data',spikeglxDeviceRows(devices));
+devices='(20,1,2)(20,2,1)(20,obx)';ChipmunkSpikeGLTest.attached=devices;
 invoke(ha.start);assert(ChipmunkSpikeGLTest.running && ~ChipmunkSpikeGLTest.saving);
 assert(strcmp(ChipmunkSpikeGLTest.devices,devices));
-assert(strcmp(get(ha.deviceTable,'Enable'),'off'));
+assert(isequal(get(ha.devices,'String'),{'(20,1,2)';'(20,2,1)';'(20,obx)'}));
 log=get(ha.actionLog,'String');assert(any(contains(log,'Prepared: acquisition ON; recording OFF')));
 assert(strcmp(get(button,'Enable'),'on'));
 invoke(button);assert(ChipmunkSpikeGLTest.saving && strcmp(get(button,'String'),'Update settings'));
@@ -221,7 +209,7 @@ global ChipmunkSpikeGLTest
 clear spikeglx_client
 ChipmunkSpikeGLTest=struct('running',false,'saving',false,'targetSaving',false, ...
  'pending',0,'runName','','existingNames',{{}},'dataDir','test-data','validated',true,'startSaves',false, ...
- 'detects',0,'connectFailure',false,'detectFailure',false,'startFailure',false,'starts',0,'stops',0,'enables',0,'devices','','probeList','()','anatomy',{{}},'metadata',struct());
+ 'detects',0,'connectFailure',false,'detectFailure',false,'startFailure',false,'starts',0,'stops',0,'enables',0,'devices','','attached','(20,1,1)(20,obx)','probeList','()','anatomy',{{}},'metadata',struct());
 spikeglx_client('init','FakeSubject_workflow');spikeglx_client('set','host','unit-test');
 spikeglx_client('set','devices','');spikeglx_client('set','anatomyDir','');
 end

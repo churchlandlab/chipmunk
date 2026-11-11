@@ -209,35 +209,16 @@ function result = spikeglx_client(cmd, varargin)
             return
         end
         try
-            assert(ischar(state.devices) && isempty(regexp(state.devices,'[\r\n]','once')), ...
-                'Device selection must be a single line.');
             assert(~isempty(state.runName),'Start the Bpod protocol before preparing recording.');
             state=prepareFolder(state);
             if ~isempty(state.dataDir),SetDataDir(hSGL,0,recordingFolder(state));end
-            validated=false;
-            try,params=GetParams(hSGL);validated=~isempty(fieldnames(params));catch,end
-            if validated,SetRunName(hSGL,state.runName);end
-            lastwarn('');
+            try,params=GetParams(hSGL);if ~isempty(fieldnames(params)),SetRunName(hSGL,state.runName);end;catch,end
+            state.devices=detectDevices(state.devices);
             state.remoteDevices=readDeviceSelection();
-            requested=sort(regexp(regexprep(state.devices,'\s',''),'\([^()]+\)','match'));
-            current=sort(regexp(state.remoteDevices,'\([^()]+\)','match'));
-            complete=isempty(regexprep(state.devices,'\([^()]+\)|\s',''));
-            reuse=validated && complete && ~isempty(state.remoteDevices) && isequal(requested,current);
-            if ~isempty(strtrim(state.devices)) && ~reuse
-                SelectDevices(hSGL,state.devices,2);
-                state.remoteDevices=readDeviceSelection();
-                state=logAction(state,['Devices verified: ' state.devices]);
-            else
-                assert(validated,'SpikeGLX configuration has not been validated.');
-                state.remoteDevices=readDeviceSelection();
-                state=logAction(state,['Reusing validated SpikeGLX devices: ' state.remoteDevices]);
-            end
+            savePrefs(state);
+            state=logAction(state,['Devices verified: ' state.devices]);
         catch ME
-            message=ME.message;
-            sdkWarning=lastwarn;
-            if startsWith(sdkWarning,'ERROR SELECTDEVS'),message=sdkWarning;end
-            state.lastError = ['Recording setup is not ready: ' message ...
-                ' Select devices in Advanced or Detect and Verify | Save in SpikeGLX.'];
+            state.lastError = ['Recording setup is not ready: ' ME.message];
             return
         end
         state = doStart(state);
@@ -281,6 +262,28 @@ function result = spikeglx_client(cmd, varargin)
         catch ME
             state.anatomyStatus=['Anatomy not applied: ' ME.message];
         end
+    end
+
+    function selection = detectDevices(last)
+        % SpikeGLX only starts runs on a configuration verified against the attached hardware
+        % (Detect + Verify | Save). Try the last set, then each port alone, so a moved probe is found.
+        if ~isempty(last)
+            try,SelectDevices(hSGL,last,2);selection=last;return;catch,end
+        end
+        slot=regexp(last,'\((\d+),','tokens','once');
+        if isempty(slot),slot=20;else,slot=str2double(slot{1});end
+        oneBox=slot>=20 && slot<=31;
+        xio='';if oneBox,xio=sprintf('(%d,obx)',slot);end
+        selection='';
+        for port=1:2+2*~oneBox
+            for dock=1:2
+                probe=sprintf('(%d,%d,%d)',slot,port,dock);
+                try,SelectDevices(hSGL,[probe xio],1);selection=[selection probe];catch,end %#ok<AGROW>
+            end
+        end
+        selection=[selection xio];
+        assert(~isempty(selection),'No probes or XIO detected on slot %d.',slot);
+        SelectDevices(hSGL,selection,2);
     end
 
     function selection = readDeviceSelection()
@@ -579,6 +582,10 @@ function result = spikeglx_client(cmd, varargin)
             stream.nXA = nXA;
             stream.nDW = nDW;
             stream.nSY = counts(3);
+            if nXA > 0
+                stream.toVolts = GetStreamI16ToVolts(hSGL, 1, 0, 0);
+                [stream.vMin, stream.vMax] = GetStreamVoltageRange(hSGL, 1, 0);
+            end
         end
     end
 

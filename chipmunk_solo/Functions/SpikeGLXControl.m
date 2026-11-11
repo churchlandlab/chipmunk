@@ -90,50 +90,31 @@ function SpikeGLXControl(action)
 
         tabs = uitabgroup(fig,'Units','normalized','Position',[0.02 0.02 0.96 0.44]);
         devicesTab = uitab(tabs,'Title','Devices');
-        neuralTab = uitab(tabs,'Title','Neural');
-        analogTab = uitab(tabs,'Title','OneBox analog');
-        digitalTab = uitab(tabs,'Title','Digital IO');
+        neuralTab = uitab(tabs,'Title','Probe');
+        analogTab = uitab(tabs,'Title','Analog');
+        digitalTab = uitab(tabs,'Title','Digital');
         anatomyTab = uitab(tabs,'Title','Anatomy');
-        advancedTab = uitab(tabs,'Title','Advanced');
+        uicontrol(anatomyTab,'Style','text','Units','normalized', ...
+            'Position',[.04 .90 .24 .07],'String','VVASP folder','HorizontalAlignment','left');
+        ha.anatomyDir=uicontrol(anatomyTab,'Style','edit','Units','normalized', ...
+            'Position',[.28 .89 .36 .09],'String',state.anatomyDir,'Callback',@(s,e) readFields());
         ha.anatomyReload=uicontrol(anatomyTab,'Style','pushbutton','Units','normalized', ...
             'Position',[.66 .89 .30 .09],'String','Reload plan','Callback',@onAnatomyReload);
-        ha.anatomyAxes=axes('Parent',anatomyTab,'Units','normalized','Position',[.16 .18 .80 .62]);
+        ha.anatomy=uicontrol(anatomyTab,'Style','text','Units','normalized', ...
+            'Position',[.04 .81 .92 .07],'String',state.anatomyStatus,'HorizontalAlignment','left');
+        ha.anatomyAxes=axes('Parent',anatomyTab,'Units','normalized','Position',[.16 .18 .80 .58]);
         title(ha.anatomyAxes,'No surgery plan loaded');
         ha.anatomyRegion=uicontrol(anatomyTab,'Style','text','Units','normalized', ...
             'Position',[.04 .02 .92 .10],'String','','HorizontalAlignment','left');
-        ha.useSpikeGLX=uicontrol(devicesTab,'Style','checkbox','Units','normalized', ...
-            'Position',[.04 .85 .92 .10],'String','Use current SpikeGLX selection', ...
-            'Value',isempty(state.devices),'Callback',@onUseSpikeGLX);
-        ha.deviceTable=uitable(devicesTab,'Units','normalized','Position',[.04 .15 .92 .68], ...
-            'Data',spikeglxDeviceRows(state.devices),'ColumnName',{'Record','Slot','Port','Dock'}, ...
-            'ColumnFormat',{'logical','numeric',{'1','2','3','4','XIO'},'numeric'}, ...
-            'ColumnEditable',[true true true true],'RowName',[], ...
-            'ColumnWidth',{55 55 65 55},'CellEditCallback',@onDeviceEdit);
-        ha.connect = uicontrol(advancedTab, 'Style', 'pushbutton', 'Units', 'normalized', ...
-            'Position', [0.06 0.48 0.26 0.12], 'String', 'Connect', ...
-            'Callback', @onConnect);
+        ha.devices=uicontrol(devicesTab,'Style','text','Units','normalized', ...
+            'Position',[.04 .10 .92 .80],'String','','HorizontalAlignment','left');
         ha.start = uicontrol(fig, 'Style', 'pushbutton', 'Units', 'normalized', ...
             'Position', [0.06 0.67 0.88 0.055], 'String', 'Prepare recording', ...
             'Callback', @onPrepare);
-        ha.enable = uicontrol(advancedTab, 'Style', 'pushbutton', 'Units', 'normalized', ...
-            'Position', [0.36 0.48 0.27 0.12], 'String', 'Enable recording', ...
-            'Callback', @onEnable);
-        ha.disable = uicontrol(advancedTab, 'Style', 'pushbutton', 'Units', 'normalized', ...
-            'Position', [0.67 0.48 0.27 0.12], 'String', 'Disable recording', ...
-            'Callback', @onDisable);
-        ha.stop = uicontrol(advancedTab, 'Style', 'pushbutton', 'Units', 'normalized', ...
-            'Position', [0.06 0.27 0.88 0.12], 'String', 'Stop acquisition', ...
-            'Callback', @onStop);
 
         ha.actionLog=uicontrol(fig,'Style','listbox','Units','normalized', ...
             'Position',[.06 .55 .88 .105],'String',{},'FontSize',9, ...
             'TooltipString','Timestamped actions and failures for this session');
-        ha.anatomy = uicontrol(advancedTab,'Style','text','Units','normalized', ...
-            'Position',[.06 .65 .88 .15],'String',state.anatomyStatus,'HorizontalAlignment','left');
-        uicontrol(advancedTab,'Style','text','Units','normalized', ...
-            'Position',[.06 .13 .28 .10],'String','VVASP folder on host','HorizontalAlignment','left');
-        ha.anatomyDir=uicontrol(advancedTab,'Style','edit','Units','normalized', ...
-            'Position',[.35 .13 .59 .10],'String',state.anatomyDir,'Callback',@(s,e) readFields());
         ha.error = uicontrol(fig, 'Style', 'text', 'Units', 'normalized', ...
             'Position', [0.06 0.465 0.88 0.065], 'String', '', ...
             'HorizontalAlignment', 'left', 'ForegroundColor', [0.7 0 0], ...
@@ -173,11 +154,10 @@ function SpikeGLXControl(action)
         set(BpodSystem.GUIHandles.Figures.SpikeGLX,'Name',title);
         set(ha.title,'String',title);
         if state.running,editable='off';else,editable='on';end
-        set([ha.host ha.port ha.dataDir ha.useSpikeGLX ha.anatomyDir ha.anatomyReload],'Enable',editable);
-        set(ha.deviceTable,'Enable',editable);
-        if get(ha.useSpikeGLX,'Value') && ~isempty(state.remoteDevices)
-            set(ha.deviceTable,'Data',spikeglxDeviceRows(state.remoteDevices));
-        end
+        set([ha.host ha.port ha.dataDir ha.anatomyDir ha.anatomyReload],'Enable',editable);
+        devices=regexp(state.remoteDevices,'\([^()]+\)','match');
+        if isempty(devices),devices={'Detected on Prepare recording'};end
+        set(ha.devices,'String',devices);
         if ~isequal(get(ha.actionLog,'String'),state.actionLog(:))
             set(ha.actionLog,'String',state.actionLog,'Value',max(1,numel(state.actionLog)), ...
                 'ListboxTop',max(1,numel(state.actionLog)-4));
@@ -202,11 +182,6 @@ function SpikeGLXControl(action)
         end
     end
 
-
-    function onConnect(~, ~)
-        tryConnect();
-        refreshFigure();
-    end
 
     function onAnatomyReload(~,~)
         if readFields(),spikeglx_client('loadanatomy');end
@@ -241,43 +216,7 @@ function SpikeGLXControl(action)
 
     function onPrepare(~, ~)
         if ~readFields(),refreshFigure();return;end
-        ha=BpodSystem.GUIHandles.SpikeGLX;
-        if ~get(ha.useSpikeGLX,'Value') && isempty(spikeglxDeviceSelection(get(ha.deviceTable,'Data')))
-            spikeglx_client('set','lastError','Select at least one probe dock or XIO.');
-            spikeglx_client('log','Prepare rejected: no devices selected');
-            refreshFigure();return
-        end
         spikeglx_client('prepare');
-        refreshFigure();
-    end
-
-
-    function onEnable(~, ~)
-        if ~readFields(),refreshFigure();return;end
-        state = spikeglx_client('enable');
-        if state.recording && state.ownedRun && isempty(state.lastError)
-            [ok,message]=labcams_ephys('start');
-            if ~ok
-                spikeglx_client('disable');
-                spikeglx_client('set','lastError',message);spikeglx_client('log',message);
-            end
-        end
-        refreshFigure();
-    end
-
-
-    function onDisable(~, ~)
-        spikeglx_client('disable');
-        [ok,message]=labcams_ephys('stop');
-        if ~ok,spikeglx_client('log',message);warning('chipmunk_solo:CameraStop','%s',message);end
-        refreshFigure();
-    end
-
-
-    function onStop(~, ~)
-        spikeglx_client('stop');
-        [ok,message]=labcams_ephys('stop');
-        if ~ok,spikeglx_client('log',message);warning('chipmunk_solo:CameraStop','%s',message);end
         refreshFigure();
     end
 
@@ -289,8 +228,6 @@ function SpikeGLXControl(action)
         end
         ha = BpodSystem.GUIHandles.SpikeGLX;
         try
-            devices='';
-            if ~get(ha.useSpikeGLX,'Value'),devices=spikeglxDeviceSelection(get(ha.deviceTable,'Data'));end
             port=str2double(get(ha.port,'String'));
             assert(isscalar(port) && isfinite(port) && port==fix(port) && port>=1 && port<=65535, ...
                 'Port must be an integer from 1 to 65535.');
@@ -300,20 +237,8 @@ function SpikeGLXControl(action)
         spikeglx_client('set', 'host', get(ha.host, 'String'));
         spikeglx_client('set', 'port', port);
         spikeglx_client('set', 'dataDir', get(ha.dataDir, 'String'));
-        spikeglx_client('set', 'devices', devices);
         spikeglx_client('set', 'anatomyDir', get(ha.anatomyDir, 'String'));
         valid=true;
-    end
-
-    function onDeviceEdit(~,~)
-        ha=BpodSystem.GUIHandles.SpikeGLX;
-        set(ha.useSpikeGLX,'Value',0);
-        if readFields(),spikeglx_client('set','lastError','');end
-        refreshFigure();
-    end
-
-    function onUseSpikeGLX(~,~)
-        readFields();refreshFigure();
     end
 
 
@@ -403,25 +328,24 @@ function SpikeGLXControl(action)
             title(ax,'No analog inputs acquired');
             return
         end
-        d = traces.obx.data(:,analog);
+        % Volts on the SpikeGLX input range, so the scale stays fixed.
+        d = traces.obx.data(:,analog) * traces.obx.toVolts;
         t = traces.obx.t;
         chans = traces.obx.channels(analog);
-        d = d - median(d, 1);
-        scale = max(std(d, 0, 1));
-        if scale == 0
-            scale = 1;
-        end
+        lo = traces.obx.vMin; span = traces.obx.vMax - lo;
         hold(ax, 'on');
         nChan = size(d, 2);
         for c = 1:nChan
-            plot(ax, t, d(:, c) / scale + (c - 1) * 4, 'k');
-            text(ax, t(1), (c - 1) * 4, sprintf('  ch %d', chans(c)), ...
+            offset = (c - 1) * span;
+            plot(ax, t, d(:, c) + offset, 'k');
+            text(ax, t(1), lo + offset, sprintf('  ch %d', chans(c)), ...
                 'VerticalAlignment', 'bottom', 'FontSize', 8);
         end
         hold(ax, 'off');
         xlim(ax, [0 max(t(end), eps)]);
-        ylim(ax, [-3, max(nChan - 1, 0) * 4 + 3]);
+        ylim(ax, [lo, lo + nChan * span]);
         set(ax, 'YTick', []);
+        ylabel(ax, sprintf('%g to %g V per channel', lo, traces.obx.vMax));
         xlabel(ax, 'time (s)');
         title(ax, 'OneBox analog inputs');
     end

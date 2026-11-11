@@ -42,10 +42,13 @@ classdef SpikeGL < handle
         end
         function SelectDevices(s,v,level)
             global ChipmunkSpikeGLTest
-            assert(level==2);
+            assert(ismember(level,[1 2]));
             ChipmunkSpikeGLTest.detects=ChipmunkSpikeGLTest.detects+1;
-            ChipmunkSpikeGLTest.devices=v;
             if ChipmunkSpikeGLTest.detectFailure,error('Test:Detect','Device detection failed');end
+            requested=regexp(v,'\([^()]+\)','match');
+            assert(~isempty(requested) && all(cellfun(@(d) contains(ChipmunkSpikeGLTest.attached,d),requested)), ...
+                'ERROR SELECTDEVS: device not found');
+            ChipmunkSpikeGLTest.devices=v;
             assert(~ismember(ChipmunkSpikeGLTest.runName,ChipmunkSpikeGLTest.existingNames),'Run name already in use');
             ChipmunkSpikeGLTest.validated=true;
         end

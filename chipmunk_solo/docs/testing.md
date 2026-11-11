@@ -25,7 +25,7 @@ None of these measure physical LED, sound or TTL timing.
 | `check_passive_replay`, `check_stopped_trial_pulse` | Replay and the sync pulse of a stopped trial |
 | `check_labcams_udp`, `check_camera_registration` | Camera commands |
 | `check_ephys`, `check_ephys_workflow`, `check_ephys_shutdown_order` | Recording workflow and shutdown order |
-| `check_spikeglx_devices`, `check_spikeglx_disconnect` | Device selection, connection loss |
+| `check_spikeglx_disconnect` | Connection loss |
 | `check_ephys_digital`, `check_ephys_anatomy`, `check_shared_vvasp` | Digital IO, anatomy labels, VVASP records |
 | `check_original_isolation` | Original protocol uses its own functions |
 
