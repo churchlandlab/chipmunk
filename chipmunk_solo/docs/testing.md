@@ -27,7 +27,6 @@ None of these measure physical LED, sound or TTL timing.
 | `check_ephys`, `check_ephys_workflow`, `check_ephys_shutdown_order` | Recording workflow and shutdown order |
 | `check_spikeglx_devices`, `check_spikeglx_disconnect` | Device selection, connection loss |
 | `check_ephys_digital`, `check_ephys_anatomy`, `check_shared_vvasp` | Digital IO, anatomy labels, VVASP records |
-| `check_legacy_launchers` | `half_second_*` protocol names |
 | `check_original_isolation` | Original protocol uses its own functions |
 
 ## Emulator

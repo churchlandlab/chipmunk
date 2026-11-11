@@ -12,8 +12,6 @@ Use a real subject name or `FakeSubject`. For the emulator, start Bpod with `Bpo
 
 Pick a labcams config at startup, or leave it blank to keep the config of an already-open labcams.
 
-The existing `half_second_chipmunk_solo` and `half_second_chipmunk_ephys` protocol names still work; they launch this protocol from `compat/`.
-
 ## Stimulus manipulations
 
 Presets in Task control (need `isPoissonStim = 1`):
@@ -47,15 +45,15 @@ Replay is saved in `SessionData.PassiveReplay` and in `<subject>/<session>/chipm
 
 Leave the SpikeGLX host blank for behavior only. Set it (e.g. `jupiter.local`) to record.
 
-1. On Jupiter, open **Chipmunk recording tools** (`rig/jupiter/Start-ChipmunkTools.ps1`).
-2. Start the protocol, pick the probe and XIO streams in **Devices** and click **Prepare recording**.
+1. Open SpikeGLX on Jupiter.
+2. Start the protocol and click **Prepare recording**. It detects the connected probes and the XIO.
 3. Click **Start session**. Stop saves the behavior, stops the cameras and then stops the recording.
 
 SpikeGLX saves to `<data root>/<subject>/<session>/ephys_g0/` on the recording computer. The rig needs passwordless SSH to it (`ssh -o BatchMode=yes jupiter.local hostname` should work). Settings are saved in `spikeglx_prefs.mat`.
 
-Tabs: **Devices**, **Neural** (AP overview), **OneBox analog**, **Digital IO** (XD0–XD11 and sync), **Anatomy** (planned probe track from the VVASP surgery plan) and **Advanced** (manual recording controls).
+Tabs: **Devices** (detected probes and XIO), **Probe** (AP overview), **Analog** (OneBox inputs), **Digital** (XD0–XD11 and sync) and **Anatomy** (planned probe track from the VVASP surgery plan).
 
-For the Anatomy tab, set **VVASP folder on host** in Advanced (`D:/VVASP` on Jupiter). Profiles are made with `tools/export_vvasp_anatomy.py`. These are surgery plans, not histology.
+The VVASP folder is set in the Anatomy tab (`D:/VVASP` on Jupiter). Profiles are made with `tools/export_vvasp_anatomy.py`. These are surgery plans, not histology.
 
 ![Digital IO tab](docs/screenshots/digital-io.png)
 
