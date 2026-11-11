@@ -28,12 +28,3 @@ Camera frame times are interpolated between the frames where sync pulses arrive.
 ## Repopulating
 
 `Chipmunk.populate(..., make_kwargs=dict(download_videos=False))` skips downloading the videos and keeps the existing camera rows. Existing weighings, notes and watering records are kept. Input files are not deleted.
-
-## Schema changes
-
-This version adds two columns. Apply them to a schema before importing with it:
-
-```sql
-ALTER TABLE `<schema>`.`_chipmunk__trial_parameters` ADD COLUMN `configured_reward_volume` float DEFAULT NULL COMMENT 'reward volume set for the correct side on this trial [uL]', ALGORITHM=INSTANT;
-ALTER TABLE `<schema>`.`_chipmunk` MODIFY COLUMN `setting_task_mode` enum('detection','discrimination','passive') NOT NULL, ALGORITHM=INSTANT;
-```
