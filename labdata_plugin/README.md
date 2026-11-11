@@ -7,6 +7,8 @@ Imports sessions from both protocols.
 
 Populate `Chipmunk` before `ChipmunkPassive`.
 
+The Chipmunk tab in `labdata dashboard` is in `dashboard/`. It needs `dash` and `plotly<7`.
+
 ## Trials
 
 - `rewarded` and `t_response` come from the `Reward`/`DemonReward` and `WrongChoice`/`DemonWrongChoice` states, matched by exact name. Any other state with "Reward" in its name fails the import.

@@ -7,12 +7,12 @@ from .utils import (
     process_chipmunk_file,
 )
 
-if find_spec("chipmunk_dashboard") is not None:
+if find_spec("dash") is not None:
     dashboard_name = "**Chipmunk**"
 
 
     def dashboard_function(schema=None):
         """Render the Chipmunk page in the labdata Streamlit dashboard."""
-        from chipmunk_dashboard.streamlit_page import render_dashboard
+        from .dashboard.streamlit_page import render_dashboard
 
         return render_dashboard(schema=schema)
