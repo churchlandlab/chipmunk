@@ -2,7 +2,7 @@ function check_chipmunk_replay_session(outputFolder, experiments, cameraConfig, 
 % Full FakeSubject sessions: three trials then Stop, or trialLimit trials to natural completion.
 % The first session runs without replay, the rest with replay switched on at Stop.
 % Run in a fresh, idle Bpod emulator, or on an idle real Bpod with
-% CHIPMUNK_REAL_BPOD_CHECK=1 (run_rig_checks.sh real).
+% CHIPMUNK_REAL_BPOD_CHECK=1.
 if nargin < 4
     trialLimit = [];
 end

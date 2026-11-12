@@ -108,4 +108,4 @@ By Lukas Oesch and Gabriel Rojas Bowe, circa 2024.
 
 ## Tests
 
-`tests/run_rig_checks.sh` runs all the checks on a rig. See [testing](docs/testing.md).
+MATLAB checks are in `tests/`. See [testing](docs/testing.md).

@@ -1,15 +1,11 @@
 # Testing
 
-Run all checks on a rig before deploying (close MATLAB first):
+Run each check in a fresh MATLAB, from `chipmunk_solo/tests`:
 
 ```sh
-chipmunk_solo/tests/run_rig_checks.sh           # everything, about an hour
-chipmunk_solo/tests/run_rig_checks.sh offline   # or: offline | emulator | real
+matlab -batch "check_core_task"
+matlab -batch "addpath('~/Bpod_Gen2'); startBpodEmulator; check_chipmunk_outcomes(tempname,1,1)"
 ```
-
-Logs go to `~/chipmunk-rig-checks/<time>/`. Settings for other rigs are at the top of the script.
-
-To run one check by hand, from `chipmunk_solo/` in a fresh MATLAB: `addpath('tests'); check_core_task`.
 
 None of these measure physical LED, sound or TTL timing.
 
@@ -30,7 +26,7 @@ None of these measure physical LED, sound or TTL timing.
 
 ## Emulator
 
-Each runs in `Bpod('EMU')`.
+Each runs after `startBpodEmulator` and takes an output folder.
 
 | Check | |
 |---|---|
@@ -42,7 +38,7 @@ Each runs in `Bpod('EMU')`.
 
 ## Real Bpod
 
-`run_rig_checks.sh real` runs `check_chipmunk_replay_session` on the real Bpod with cameras, ending with Stop during a trial and replay.
+With `CHIPMUNK_REAL_BPOD_CHECK=1` set, `check_chipmunk_replay_session(folder,{'VisualTask','MultipleModalitiesTask'},cameraConfig)` runs on the real Bpod with cameras, ending with Stop during a trial and replay.
 
 ## By hand
 
