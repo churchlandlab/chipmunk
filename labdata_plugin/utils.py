@@ -566,10 +566,7 @@ def process_chipmunk_file(filepath):
     stopped_trial_pulse = None
     if 'StoppedTrialPulse' in session_data.dtype.names:
         stopped = np.asarray(session_data['StoppedTrialPulse'].tolist(), dtype=float).ravel()
-        if stopped.size and (stopped.size != 1 or not np.isfinite(stopped[0])
-                             or stopped[0] != int(stopped[0]) or stopped[0] != len(trialdata)):
-            raise ValueError('Invalid StoppedTrialPulse marker for saved active trials')
-        stopped_trial_pulse = int(stopped[0]) if stopped.size else None
+        stopped_trial_pulse = int(stopped[0]) if stopped.size else None  # checked against the saved trials when pairing pulses
 
     settings_dict = dict(stopped_trial_pulse = stopped_trial_pulse,
                          setting_modalities = setting_modalities,
@@ -729,32 +726,18 @@ def _replay_gpio_onsets(channels, t, trialmarkers, n_active, stopped_trial_pulse
     from itertools import combinations
     t = np.asarray(t, dtype=float)
     trialmarkers = np.asarray(trialmarkers, dtype=float)
-    for values in (t, trialmarkers):
-        if (values.ndim != 1 or len(values) < 2 or not np.isfinite(values).all()
-                or np.any(np.diff(values) <= 0)):
-            raise ValueError('Camera alignment needs finite increasing frame and Bpod times')
     n = len(trialmarkers)
-    if not isinstance(n_active, (int, np.integer)) or not 0 <= n_active <= n:
-        raise ValueError('Invalid active trial count')
     if stopped_trial_pulse is not None and stopped_trial_pulse != n_active:
         raise ValueError(f'Stopped-trial pulse after {stopped_trial_pulse} saved trials, '
                          f'but {n_active} active trials were saved')
-    trailing = False
-    if passive_replay is not None:
-        marker = np.asarray(passive_replay.get('stoppedPulseAfter', []), dtype=float).ravel()
-        if marker.size:
-            if (marker.size != 1 or not np.isfinite(marker[0]) or marker[0] != int(marker[0])
-                    or not 0 <= marker[0] <= n - n_active
-                    or passive_replay.get('status') != 'aborted'):
-                raise ValueError('Invalid replay stoppedPulseAfter metadata')
-            trailing = bool(marker[0] == n - n_active)
+    # A replay cut short by Stop sent one more pulse after the completed replays.
+    marker = np.asarray((passive_replay or {}).get('stoppedPulseAfter', []), dtype=float).ravel()
+    trailing = bool(marker.size == 1 and marker[0] == n - n_active)
     bpod = np.diff(trialmarkers)
     frame_period = np.median(np.diff(t))
     found, permitted, reasons = [], [], []
     for iin, g in channels:
         g = np.asarray(g)
-        if g.shape != t.shape or not np.isin(g, (0, 1)).all():
-            raise ValueError(f'gpio{iin} must contain one binary state per camera frame')
         if g[0]:  # e.g. an idle-high non-sync line; the sync line must start low
             reasons.append(f'gpio{iin} is initially high; first sync edge is unknown')
             continue

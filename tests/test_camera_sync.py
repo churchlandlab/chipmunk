@@ -154,6 +154,11 @@ class CameraPulseTest(unittest.TestCase):
         self.align([1, 3, 6, 8.5, 11, 13], [11., 13.], stopped=3, extra_channels=([14.9],))
         self.assertEqual(self.calls[0][1], [100, 300, 600, 1100, 1300])
 
+    def test_channels_that_fit_with_different_pulses_are_ambiguous(self):
+        with self.assertRaisesRegex(ValueError, 'ambiguous'):
+            self.align([1, 3, 6, 8.5, 11, 13], [11., 13.], stopped=3,
+                       extra_channels=([1.03, 3.03, 6.03, 8.53, 11.03, 13.03],))
+
     def test_interval_tolerance_is_two_frame_periods(self):
         # Same 0.03 s offset on both replay pulses: 3 frames at 100 Hz fails, 1.5 frames at 50 Hz passes.
         late = [1, 3, 6, 8.5, 11.03, 13.03]

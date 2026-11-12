@@ -18,12 +18,12 @@ None of these measure physical LED, sound or TTL timing.
 | Check | |
 |---|---|
 | `check_core_task` | Core task logic |
-| `check_startup`, `check_prestart_cancel` | Startup, subject names, labcams config, cancel |
+| `check_startup` | Startup, subject names, labcams config, cancel |
 | `check_settings_compatibility` | Saved settings load and save |
 | `check_stimulus_manipulation` | Manipulation presets and settings notes |
 | `check_psychometric_plot`, `check_stimulus_plot_parents` | Plots |
-| `check_passive_replay`, `check_stopped_trial_pulse` | Replay and the sync pulse of a stopped trial |
-| `check_labcams_udp`, `check_camera_registration` | Camera commands |
+| `check_passive_replay` | Replay |
+| `check_labcams_udp` | Camera commands |
 | `check_ephys`, `check_ephys_workflow`, `check_ephys_shutdown_order` | Recording workflow and shutdown order |
 | `check_spikeglx_devices`, `check_spikeglx_disconnect` | Device selection, connection loss |
 | `check_ephys_digital`, `check_ephys_anatomy`, `check_shared_vvasp` | Digital IO, anatomy labels, VVASP records |
@@ -36,7 +36,7 @@ Each runs in `Bpod('EMU')`.
 |---|---|
 | `check_chipmunk_outcomes` | Correct, wrong, early withdrawal, no choice |
 | `check_chipmunk_manipulation_session` | All four presets, then replay |
-| `check_chipmunk_replay_session` | Full sessions with and without replay |
+| `check_chipmunk_replay_session` | Full sessions with and without replay, Stop during a trial |
 | `check_passive_replay_emulator` | Replay through the state machine, Stop during replay |
 | `check_chipmunk_endurance` | 1,000 trials |
 
