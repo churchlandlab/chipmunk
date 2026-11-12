@@ -1,0 +1,169 @@
+function [sma, trialDelays, reviseChoiceFlag, pacedFlag] = MultipleModalitiesTaskSMA(correctSideOnCurrent, portLights)
+% [sma, trialDelays, reviseChoiceFlag, pacedFlag] = MultipleModalitiesTaskSMA(correctSideOnCurrent, portLights)
+%
+% State machine for a self-initiated discrimination trial. portLights turns
+% the port LEDs on (MultipleModalitiesTask). VisualTaskSMA calls this with
+% portLights false.
+%
+% ponytail: one assembler. VisualTaskSMA is the lights-off entry point so
+% existing settings files keep working.
+if nargin < 2
+    portLights = true;
+end
+global BpodSystem
+
+if exist('correctSideOnCurrent', 'var') && ~isempty(correctSideOnCurrent)
+    rewardedSide = correctSideOnCurrent;
+    if rewardedSide == 0
+        RewardValve = 2^0;
+        rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.leftRewardVolume, 1);
+        incorrectPortLED = 'PWM3';
+        leftPortAction = 'DemonReward';
+        rightPortAction = 'DemonWrongChoice';
+    elseif rewardedSide == 1
+        RewardValve = 2^2;
+        rewardValveTime = GetValveTimes(BpodSystem.ProtocolSettings.rightRewardVolume, 3);
+        incorrectPortLED = 'PWM1';
+        leftPortAction = 'DemonWrongChoice';
+        rightPortAction = 'DemonReward';
+    end
+else
+    rewardedSide = 0;
+    RewardValve = 2^0;
+    rewardValveTime = 0;
+    incorrectPortLED = 'PWM3';
+    leftPortAction = 'DemonReward';
+    rightPortAction = 'DemonWrongChoice';
+end
+
+if portLights
+    pwmAll = {'PWM1',255,'PWM2',255,'PWM3',255,'PWM4',255};
+    pwmSide = {'PWM1',255,'PWM3',255,'PWM4',255};
+    pwmCenter = {'PWM4',255};
+    pwmReward = {'PWM2',255, incorrectPortLED, 255, 'PWM4',255};
+else
+    pwmAll = {};
+    pwmSide = {};
+    pwmCenter = {};
+    pwmReward = {};
+end
+
+interTrialInterval = generate_random_delay(BpodSystem.ProtocolSettings.interTrialDurLambda, BpodSystem.ProtocolSettings.interTrialDurMin, BpodSystem.ProtocolSettings.interTrialDurMax);
+preStimDelay = generate_random_delay(BpodSystem.ProtocolSettings.preStimDelayLambda, BpodSystem.ProtocolSettings.preStimDelayMin, BpodSystem.ProtocolSettings.preStimDelayMax);
+
+if isequal(BpodSystem.ProtocolSettings.minWaitTime,'exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'Exp') || isequal(BpodSystem.ProtocolSettings.minWaitTime,'exponential')
+    baseWait = BpodSystem.ProtocolSettings.baseWait;
+    postWaitDelay = generate_random_delay(1/0.1, 0.01, baseWait); %mean 0.1 s
+    waitTime = baseWait + postWaitDelay;
+else
+    waitTime = BpodSystem.ProtocolSettings.minWaitTime;
+    postWaitDelay = 0;
+end
+
+trialDelays = struct();
+trialDelays.preStimDelay = preStimDelay;
+trialDelays.waitTime = waitTime;
+trialDelays.postStimDelay = postWaitDelay;
+trialDelays.interTrialInterval = interTrialInterval;
+trialDelays.virtualObsInitDelay = 0; %Kept so saved data and the trial-start cue keep their fields
+
+sma = NewStateMatrix();
+
+sma = AddState(sma, 'Name', 'Sync', ...
+    'Timer', 0.1, ...
+    'StateChangeCondition', {'Tup','TrialStart'},...
+    'OutputActions', withLights(pwmAll, {'BNC2', 1}));
+
+sma = AddState(sma, 'Name', 'TrialStart', ...
+    'Timer', interTrialInterval, ...
+    'StateChangeCondition', {'Tup','DemonWaitForCenterFixation'},...
+    'OutputActions', withLights({}, pwmAll));
+
+sma = AddState(sma, 'Name', 'DemonWaitForCenterFixation', ...
+    'Timer', 0, ...
+    'StateChangeCondition', {'Port2In','DemonInitFixation'},...
+    'OutputActions', withLights({}, pwmSide));
+
+sma = AddState(sma, 'Name', 'DemonInitFixation',...
+    'Timer', 0, ...
+    'StateChangeConditions', {'Tup','PreStimPeriod','Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', withLights({'SoftCode',2}, pwmSide));
+
+sma = AddState(sma, 'Name', 'PreStimPeriod',...
+    'Timer', preStimDelay, ...
+    'StateChangeConditions', {'Tup','PlayStimulus','Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', withLights({}, pwmCenter));
+
+sma = AddState(sma, 'Name', 'PlayStimulus',...
+    'Timer', 0, ...
+    'StateChangeConditions', {'Tup','DemonCenterFixationPeriod', 'Port2Out', 'DemonEarlyWithdrawal'},...
+    'OutputActions', withLights({'SoftCode',1}, pwmCenter));
+
+sma = AddState(sma, 'Name', 'DemonCenterFixationPeriod',...
+    'Timer', waitTime, ...
+    'StateChangeConditions', {'Tup','DemonGoCue','Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', withLights({}, pwmCenter));
+
+sma = AddState(sma, 'Name', 'DemonGoCue',...
+    'Timer', 0, ...
+    'StateChangeConditions', {'Tup','DemonWaitForWithdrawalFromCenter','Port2Out','DemonEarlyWithdrawal'},...
+    'OutputActions', withLights({'SoftCode',3}, pwmCenter));
+
+sma = AddState(sma, 'Name', 'DemonWaitForWithdrawalFromCenter',...
+    'Timer', 0, ...
+    'StateChangeConditions', {'Port2Out','DemonWaitForResponse'},...
+    'OutputActions', withLights({}, pwmCenter));
+
+sma = AddState(sma, 'Name', 'DemonWaitForResponse',...
+    'Timer', BpodSystem.ProtocolSettings.timeToChoose, ...
+    'StateChangeConditions', {'Port1In',leftPortAction,'Port3In',rightPortAction,'Tup','DemonDidNotChoose'},...
+    'OutputActions', withLights({}, pwmCenter));
+
+sma = AddState(sma,'Name', 'DemonReward',...
+    'Timer', rewardValveTime, ...
+    'StateChangeConditions', {'Tup','FinishTrial'},...
+    'OutputActions', withLights({'SoftCode',255,'ValveState', RewardValve}, pwmReward));
+
+sma = AddState(sma, 'Name', 'DemonWrongChoice',...
+    'Timer', 0, ...
+    'StateChangeConditions', {'Tup','DemonWrongChoicePunishment'},...
+    'OutputActions', withLights(pwmAll, {'SoftCode',255}));
+
+sma = AddState(sma, 'Name', 'DemonWrongChoicePunishment',...
+    'Timer', BpodSystem.ProtocolSettings.wrongPunishTimeout, ...
+    'StateChangeConditions', {'Tup','FinishTrial'},...
+    'OutputActions', withLights(pwmAll, {'SoftCode', 5}));
+
+sma = AddState(sma, 'Name', 'DemonEarlyWithdrawal',...
+    'Timer', 0, ...
+    'StateChangeConditions', {'Tup','DemonEarlyWithdrawalPunishment'},...
+    'OutputActions', withLights({'SoftCode',255}, pwmAll));
+
+sma = AddState(sma, 'Name', 'DemonEarlyWithdrawalPunishment',...
+    'Timer', BpodSystem.ProtocolSettings.earlyPunishTimeout, ...
+    'StateChangeConditions', {'Tup','FinishTrial'},...
+    'OutputActions', withLights(pwmAll, {'SoftCode',4}));
+
+sma = AddState(sma, 'Name', 'DemonDidNotChoose',...
+    'Timer', 0, ...
+    'StateChangeConditions', {'Tup','FinishTrial'},...
+    'OutputActions', withLights({'SoftCode',255}, pwmAll));
+
+sma = AddState(sma, 'Name', 'FinishTrial',...
+    'Timer', 0, ...
+    'StateChangeConditions', {'Tup','>exit'},...
+    'OutputActions', withLights({}, pwmAll));
+
+reviseChoiceFlag = false;
+pacedFlag = false;
+end
+
+function actions = withLights(base, lights)
+if isempty(lights)
+    actions = base;
+elseif isempty(base)
+    actions = lights;
+else
+    actions = [base, lights];
+end
+end
