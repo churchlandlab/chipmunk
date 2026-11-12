@@ -1,32 +1,44 @@
 # labdata plugin
 
-Imports sessions from both protocols.
+Imports Chipmunk sessions from both protocols into labdata and adds a Chipmunk tab to `labdata dashboard`.
 
-- `Chipmunk`: one row per session, with `Trial` and `TrialParameters`
-- `ChipmunkPassive`: passive replay, with one `Trial` row per replayed trial
+## Setup
 
-Populate `Chipmunk` before `ChipmunkPassive`.
+In `~/labdata/user_preferences.json`:
 
-The Chipmunk tab in `labdata dashboard` is in `dashboard/`. It needs `pip install -U "labdata[dashboard]" dash "plotly<7"`.
+```json
+"plugins": {
+    "chipmunk": "/path/to/chipmunk/labdata_plugin"
+}
+```
 
-## Trials
+For the dashboard tab, install in the same environment:
 
-- `rewarded` and `t_response` come from the `Reward`/`DemonReward` and `WrongChoice`/`DemonWrongChoice` states, matched by exact name. Any other state with "Reward" in its name fails the import.
-- `stim_events` are the intended pulse onsets from trial start, including repeats. For multisensory trials they're the visual channel.
-- `stim_duration` is cut at withdrawal, response or no choice. The no-choice cut only applies to state matrices that stop the stimulus on no choice.
-- `configured_reward_volume` is the reward volume set for the correct side on each trial (µL).
-- Times are on the Bpod clock from `TrialStartTimestamp`.
+```sh
+pip install -U "labdata[dashboard]" dash "plotly<7"
+```
 
-## Passive replay
+## Tables
 
-Solo saves replay to `<subject>/<session>/chipmunk_passive/`. Each `ChipmunkPassive.Trial` row links to its source trial in `Chipmunk.Trial` (`source_trial_num`) and has `t_sync`, `t_stim` and `t_stim_end` on the task's Bpod clock. Use `t_stim_end` for when the stimulus stopped; replay stops where the original trial did.
+| Table | |
+|---|---|
+| `Chipmunk` | One row per session: duration and task settings |
+| `Chipmunk.TrialParameters` | Stimulus and reward settings for each trial |
+| `Chipmunk.Trial` | Event times, pokes and outcome for each trial |
+| `ChipmunkPassive` | One row per passive replay |
+| `ChipmunkPassive.Trial` | One row per replayed trial, linked to its source trial in `Chipmunk.Trial` |
 
-## Sync
+Importing a session also adds its weight, notes, water and `DecisionTask` row in labdata.
 
-Every trial and replay sends a sync pulse. If Stop cuts a trial short, its pulse is sent but the trial isn't saved; Solo marks this with `StoppedTrialPulse`, and the replay pulses are numbered past it.
+All times are in seconds on the task's Bpod clock, replay included.
 
-Camera frame times are interpolated between the frames where sync pulses arrive. If no camera input carries the sync, the labcams log is used instead.
+## Populating
 
-## Repopulating
+```python
+from labdata import plugins
+chipmunk = plugins['chipmunk']
+chipmunk.Chipmunk.populate()
+chipmunk.ChipmunkPassive.populate()  # after Chipmunk
+```
 
-`Chipmunk.populate(..., make_kwargs=dict(download_videos=False))` skips downloading the videos and keeps the existing camera rows. Existing weighings, notes and watering records are kept. Input files are not deleted.
+`make_kwargs=dict(download_videos=False)` skips downloading the camera videos.
