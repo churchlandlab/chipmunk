@@ -25,21 +25,7 @@ On Windows, use `mklink /J` instead of `ln -s`.
 
 Don't add the whole repo to the MATLAB path; the two protocols have functions with the same names.
 
-### labdata plugin
-
-In `~/labdata/user_preferences.json`:
-
-```json
-"plugins": {
-    "chipmunk": "/path/to/chipmunk/labdata_plugin"
-}
-```
-
-For the Chipmunk tab in `labdata dashboard`, install in the same environment:
-
-```sh
-pip install -U "labdata[dashboard]" dash "plotly<7"
-```
+For the labdata plugin, see [`labdata_plugin/`](labdata_plugin/README.md).
 
 ## Tests
 
