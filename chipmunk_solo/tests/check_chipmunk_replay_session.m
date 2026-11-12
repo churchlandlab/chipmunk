@@ -1,7 +1,4 @@
-function check_chipmunk_replay_session(outputFolder, experiments, cameraConfig, trialLimit, badReplayEnable, runnerName)
-if nargin < 6
-    runnerName = 'chipmunk_solo';
-end
+function check_chipmunk_replay_session(outputFolder, experiments, cameraConfig, trialLimit, badReplayEnable)
 if nargin < 5
     badReplayEnable = '';
 end
@@ -26,9 +23,6 @@ oldFolder = pwd;
 oldLab = getenv('LABDATA_PATH');
 cleanup = onCleanup(@() restore(oldPaths,oldFolder,oldLab));
 addpath(root,fullfile(root,'tests'),genpath(fullfile(root,'Functions')));
-if ~strcmp(runnerName,'chipmunk_solo')
-    addpath(fullfile(root,'compat',runnerName));
-end
 mkdir(outputFolder);
 cd(outputFolder); % Match rig launches where the protocol is not the current folder.
 % Synthetic calibration is for emulator waveforms only; no production files are edited.
@@ -43,9 +37,6 @@ BpodSystem.Path.DataFolder = fullfile(outputFolder,'Data');
 isolateLabdataPrefs(BpodSystem.Path.DataFolder);
 
 for session = 1:numel(experiments)
-    if ~strcmp(runnerName,'chipmunk_solo')
-        addpath(fullfile(root,'compat',runnerName));
-    end
     enabled = session > 1;
     experiment = experiments{session};
     settings = load(fullfile(root,'Experiments',[experiment '.mat']));
@@ -81,12 +72,12 @@ for session = 1:numel(experiments)
     end
     s.passiveReplayEnable = 0; % Enabled only by editing the controls at Stop.
     BpodSystem.ProtocolSettings = s;
-    settingsFolder = fullfile(outputFolder,'FakeSubject',runnerName,'Session Settings');
+    settingsFolder = fullfile(outputFolder,'FakeSubject','chipmunk_solo','Session Settings');
     mkdir(settingsFolder);
     BpodSystem.Path.Settings = fullfile(settingsFolder,[experiment '.mat']);
     BpodSystem.Data = struct();
     BpodSystem.Status.BeingUsed = 1;
-    BpodSystem.Status.CurrentProtocolName = runnerName;
+    BpodSystem.Status.CurrentProtocolName = 'chipmunk_solo';
     BpodSystem.Status.CurrentStateName = '';
     BpodSystem.ProtocolStartTime = now*100000;
     ChipmunkSessionTest = struct('enable',enabled,'centerHeld',false,'sideHeld',false, ...
@@ -100,9 +91,9 @@ for session = 1:numel(experiments)
     driverCleanup = onCleanup(@() deleteIfValid(driver));
     start(driver);
     if isempty(trialLimit)
-        feval(runnerName);
+        chipmunk_solo;
     else
-        feval(runnerName,trialLimit);
+        chipmunk_solo(trialLimit);
     end
     stop(driver);
     callback = get(driver,'TimerFcn');

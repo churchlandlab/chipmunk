@@ -43,7 +43,7 @@ pip install -U "labdata[dashboard]" dash "plotly<7"
 
 ## Tests
 
-- Plugin: `python -m unittest` in `tests/`, and `pytest tests/dashboard` for the dashboard. Both run on GitHub on every push.
+- Plugin and dashboard: `pytest tests`. Runs on GitHub on every push.
 - Solo task: `chipmunk_solo/tests/run_rig_checks.sh` on a rig. See [testing](chipmunk_solo/docs/testing.md).
 
 ## License

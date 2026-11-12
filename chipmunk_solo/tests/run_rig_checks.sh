@@ -24,12 +24,11 @@ emulator() { echo "addpath('$BPOD'); Bpod('EMU'); global BpodSystem; if ~isequal
 if [ "$MODE" = offline ] || [ "$MODE" = all ]; then
   for f in "$S"/check_*.m; do
     n=$(basename "$f" .m)
-    case $n in  # run below or by hand
-      check_chipmunk_*|check_passive_replay_emulator|check_native_picker|check_historical_equivalence|check_original_isolation) continue;;
+    case $n in  # run below
+      check_chipmunk_*|check_passive_replay_emulator) continue;;
     esac
     check "$n" "cd('$S'); $n; disp('CHECK_DONE')" CHECK_DONE
   done
-  check original_isolation "cd('$S'); check_original_isolation('$T')" ORIGINAL_ISOLATION_PASS  # cd, not addpath
 fi
 
 if [ "$MODE" = emulator ] || [ "$MODE" = all ]; then

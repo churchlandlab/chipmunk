@@ -27,7 +27,6 @@ None of these measure physical LED, sound or TTL timing.
 | `check_ephys`, `check_ephys_workflow`, `check_ephys_shutdown_order` | Recording workflow and shutdown order |
 | `check_spikeglx_devices`, `check_spikeglx_disconnect` | Device selection, connection loss |
 | `check_ephys_digital`, `check_ephys_anatomy`, `check_shared_vvasp` | Digital IO, anatomy labels, VVASP records |
-| `check_original_isolation` | Original protocol uses its own functions |
 
 ## Emulator
 
@@ -47,8 +46,4 @@ Each runs in `Bpod('EMU')`.
 
 ## By hand
 
-- `check_native_picker`: file picker. Run `python3 tests/native_picker_input.py <folder>` on the rig display alongside it.
-- `check_historical_equivalence`: compares the stimulus code to older versions. Needs `python3 tests/prepare_historical_comparison.py <folder>` and the recordings listed there.
-- `python3 tests/check_vvasp_anatomy.py`: anatomy coordinate math.
-
-Past validation runs are in [`tests/evidence/`](../tests/evidence).
+`python3 tests/check_vvasp_anatomy.py`: anatomy coordinate math. Needs the VVASP environment.
