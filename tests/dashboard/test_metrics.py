@@ -157,3 +157,19 @@ def test_side_bias_is_nan_without_choices(data, monkeypatch):
     frame = sessions(["20260105_090000"], response_values=[[0, 0, 0]])
     result = multisession_metrics(data, monkeypatch, frame)
     assert math.isnan(result["side_bias"][0])
+
+
+
+def test_modalities_stay_separate_and_sessions_back_counts_sessions(data, monkeypatch):
+    names = ["20260105_090000", "20260105_090000", "20260106_120000", "20260107_120000"]
+    frame = sessions(names, trialset_description=["visual", "audio", "visual", "audio"])
+    monkeypatch.setattr(data, "get_subject_data", lambda *a, **k: frame)
+
+    assert data.get_subject_modalities("subject-a") == ["audio", "visual"]
+    visual = data.multisession_metrics("subject-a", sessions_back=2, modality="visual")
+    audio = data.multisession_metrics("subject-a", sessions_back=2, modality="audio")
+
+    assert visual["x"] == ["2026-01-06 12:00:00"]
+    assert audio["x"] == ["2026-01-07 12:00:00"]
+    per_session = data.multisession_metrics("subject-a", sessions_back=3)
+    assert len(per_session["water"]) == 3

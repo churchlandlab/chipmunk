@@ -57,14 +57,19 @@ def session_metrics(subject: str, session_name: str) -> dict:
     )
 
 
+def get_subject_modalities(subject: str) -> list[str]:
+    return ["visual"]
+
+
 def multisession_metrics(
     subject: str,
     sessions_back: int = 10,
     start_date: str | None = None,
     smooth: bool = False,
     smooth_window: int = 3,
+    modality: str | None = None,
 ) -> dict:
-    del start_date, smooth, smooth_window
+    del start_date, smooth, smooth_window, modality
     count = max(1, int(sessions_back or 10))
     offset = _subject_offset(subject)
     metrics = make_multisession_metrics(n=count, seed=42 + offset)

@@ -55,10 +55,11 @@ def get_subjects_with_recent_sessions(days: int = 7) -> set[str]:
 
 @_ttl_lru_cache(maxsize=64)
 def get_subject_data(subject: str) -> pd.DataFrame:
-    """Trial-set rows for one subject, ordered by ``session_name``."""
+    """Trial-set rows for one subject (one per session and modality), ordered by ``session_name``."""
     fields = [
         "subject_name",
         "session_name",
+        "trialset_description",
         "performance_easy",
         "n_with_choice",
         "response_values",
@@ -189,7 +190,7 @@ def get_sessions(subject: str) -> list[str]:
         sessions = (DecisionTask.TrialSet() & f"subject_name = '{subject}'").fetch(
             "session_name", order_by="session_name"
         )
-    return list(sessions)
+    return sorted(set(sessions))  # one TrialSet row per modality
 
 
 def _compute_intensity(trials: pd.DataFrame) -> np.ndarray:
@@ -742,6 +743,14 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     return out
 
 
+def get_subject_modalities(subject: str) -> list[str]:
+    """Trial-set modalities the subject has, e.g. ``['visual', 'visual+audio']``."""
+    df = get_subject_data(subject)
+    if "trialset_description" not in df:
+        return [None]
+    return sorted(df["trialset_description"].dropna().unique())
+
+
 @_ttl_lru_cache(maxsize=256)
 def multisession_metrics(
     subject: str,
@@ -749,8 +758,12 @@ def multisession_metrics(
     start_date: str | None = None,
     smooth: bool = False,
     smooth_window: int = 3,
+    modality: str | None = None,
 ) -> dict | None:
-    """Cross-session trend series, or ``None`` if the subject has no data."""
+    """Cross-session trend series for one modality, or ``None`` if there is no data.
+
+    With no modality, each session is one row (its first trial set).
+    """
     df = get_subject_data(subject).copy()
     if df.empty:
         return None
@@ -782,9 +795,15 @@ def multisession_metrics(
         else:  # pragma: no cover — df can't be empty here (already checked above)
             return None
 
-    # Take the last N sessions
-    n = min(sessions_back, len(df))
-    d = df.tail(n).copy()
+    # Take the last N sessions, then this modality's trial sets within them
+    last = df["session_name"].drop_duplicates().tail(sessions_back)
+    d = df[df["session_name"].isin(last)].copy()
+    if modality is not None and "trialset_description" in d:
+        d = d[d["trialset_description"] == modality]
+    else:  # one row per session; only the per-session series (water, time) are meaningful
+        d = d.drop_duplicates("session_name")
+    if d.empty:
+        return None
     d_session_names = tuple(d["session_name"].tolist())
 
     wait_medians = get_wait_medians_for_sessions(subject, d_session_names)

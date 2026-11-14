@@ -43,18 +43,9 @@ def _session_date(session_name: str) -> str | None:
 
 def _clear_data_caches(data: Any) -> None:
     """Clear cache-aware data functions after an explicit refresh."""
-    for name in (
-        "get_all_subjects",
-        "get_subjects_with_recent_sessions",
-        "get_sessions",
-        "get_subjects_for_date",
-        "session_metrics",
-        "multisession_metrics",
-    ):
-        func = getattr(data, name, None)
-        cache_clear = getattr(func, "cache_clear", None)
-        if callable(cache_clear):
-            cache_clear()
+    clear = getattr(data, "clear_data_cache", None)  # debug data has no caches
+    if callable(clear):
+        clear()
 
 
 def _figure_map(
