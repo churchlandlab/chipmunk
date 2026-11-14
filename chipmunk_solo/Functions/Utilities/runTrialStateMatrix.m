@@ -9,11 +9,7 @@ events = RunStateMatrix;
 end
 
 function restartTimers(traces)
-if isempty(traces)
-    return
-end
-traces = traces(isvalid(traces)); % shutdown may have deleted it
 if ~isempty(traces)
-    start(traces);
+    start(traces(isvalid(traces))); % shutdown may have deleted it
 end
 end

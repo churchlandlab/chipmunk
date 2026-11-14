@@ -60,6 +60,7 @@ def sessions(names, **columns):
     frame = pd.DataFrame(
         {
             "session_name": names,
+            "trialset_description": ["visual"] * n,
             "performance_easy": [0.7] * n,
             "n_with_choice": [60] * n,
             "response_values": [[-1, 1]] * n,

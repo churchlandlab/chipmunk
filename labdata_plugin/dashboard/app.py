@@ -2197,7 +2197,6 @@ def create_app() -> Dash:
 
         for i, subj in enumerate(subjects):
             c = COLORS[i % len(COLORS)]
-            grp = subj
 
             # Anchor Handling:
             # - We use 'session_date' (YYYY-MM-DD string) as the upper-date filter
@@ -2207,11 +2206,29 @@ def create_app() -> Dash:
             # - If date is None (startup), session_date usually defaults to latest,
             #   but we handle None.
 
+            def add(fig, ms, y, hover, name, dash="solid", legend=False, width=None, text=None):
+                line = {"color": c, "dash": dash, **({"width": width} if width else {})}
+                fig.add_trace(
+                    go.Scatter(
+                        x=ms["x"],
+                        customdata=ms.get("session_dates", []),
+                        y=y,
+                        text=text,
+                        mode="lines+markers",
+                        name=name,
+                        legendgroup=name,
+                        showlegend=legend,
+                        line=line,
+                        marker={"color": c, "size": 7},
+                        hovertemplate=hover + "<extra>" + name + "</extra>",
+                    )
+                )
+
+            date = "<br>session date: %{customdata}"
             modalities = get_subject_modalities(subj)
             for j, mod in enumerate(modalities):
                 # One trace per modality; one-modality subjects keep the plain name
                 label = subj if len(modalities) == 1 else f"{subj} {mod}"
-                grp = label
                 dash = ("solid", "dash", "dot")[j % 3]
                 ms = multisession_metrics(
                     subj,
@@ -2223,117 +2240,16 @@ def create_app() -> Dash:
                 )
                 if not ms:
                     continue
-                session_dates = ms.get("session_dates", [])
-                ht = "%{y:.2f}<br>session date: %{customdata}<extra>" + label + "</extra>"
-                mk = {"color": c, "size": 7}
-                ln = {"color": c, "width": 2, "dash": dash}
-
-                fig_perf.add_trace(
-                    go.Scatter(
-                        x=ms["x"],
-                        customdata=session_dates,
-                        y=ms["perf_easy"],
-                        mode="lines+markers",
-                        name=label,
-                        legendgroup=grp,
-                        showlegend=True,
-                        line=ln,
-                        marker=mk,
-                        hovertemplate=ht,
-                    )
-                )
-                fig_ew.add_trace(
-                    go.Scatter(
-                        x=ms["x"],
-                        customdata=session_dates,
-                        y=ms["ew_rate"],
-                        mode="lines+markers",
-                        name=label,
-                        legendgroup=grp,
-                        showlegend=False,
-                        marker=mk,
-                        line={"color": c, "dash": dash},
-                        hovertemplate=ht,
-                    )
-                )
-                fig_sb.add_trace(
-                    go.Scatter(
-                        x=ms["x"],
-                        customdata=session_dates,
-                        y=ms["side_bias"],
-                        mode="lines+markers",
-                        name=label,
-                        legendgroup=grp,
-                        showlegend=False,
-                        marker=mk,
-                        line={"color": c, "dash": dash},
-                        hovertemplate=ht,
-                    )
-                )
-                fig_it.add_trace(
-                    go.Scatter(
-                        x=ms["x"],
-                        customdata=session_dates,
-                        y=ms["median_init"],
-                        mode="lines+markers",
-                        name=label,
-                        legendgroup=grp,
-                        showlegend=False,
-                        marker=mk,
-                        line={"color": c, "dash": dash},
-                        hovertemplate="%{y:.3f}s<br>session date: %{customdata}<extra>"
-                        + label
-                        + "</extra>",
-                    )
-                )
-                fig_mrt.add_trace(
-                    go.Scatter(
-                        x=ms["x"],
-                        customdata=session_dates,
-                        y=ms["median_rt"],
-                        mode="lines+markers",
-                        name=label,
-                        legendgroup=grp,
-                        showlegend=False,
-                        marker=mk,
-                        line={"color": c, "dash": dash},
-                        hovertemplate="%{y:.3f}s<br>session date: %{customdata}<extra>"
-                        + label
-                        + "</extra>",
-                    )
-                )
-                fig_mwt.add_trace(
-                    go.Scatter(
-                        x=ms["x"],
-                        customdata=session_dates,
-                        y=ms["median_wait"],
-                        mode="lines+markers",
-                        name=label,
-                        legendgroup=grp,
-                        showlegend=False,
-                        marker=mk,
-                        line={"color": c, "dash": dash},
-                        hovertemplate="%{y:.3f}s<br>session date: %{customdata}<extra>"
-                        + label
-                        + "</extra>",
-                    )
-                )
-                fig_tc.add_trace(
-                    go.Scatter(
-                        x=ms["x"],
-                        customdata=session_dates,
-                        y=ms["n_with_choice"],
-                        mode="lines+markers",
-                        name=label,
-                        legendgroup=grp,
-                        showlegend=False,
-                        line={"color": c, "dash": dash},
-                        marker=mk,
-                        hovertemplate="%{y}<br>session date: %{customdata}<extra>"
-                        + label
-                        + "</extra>",
-                    )
-                )
+                add(fig_perf, ms, ms["perf_easy"], "%{y:.2f}" + date, label, dash, legend=True, width=2)
+                for fig, key, hover in (
+                    (fig_ew, "ew_rate", "%{y:.2f}"),
+                    (fig_sb, "side_bias", "%{y:.2f}"),
+                    (fig_it, "median_init", "%{y:.3f}s"),
+                    (fig_mrt, "median_rt", "%{y:.3f}s"),
+                    (fig_mwt, "median_wait", "%{y:.3f}s"),
+                    (fig_tc, "n_with_choice", "%{y}"),
+                ):
+                    add(fig, ms, ms[key], hover + date, label, dash)
 
             # Water and training time are per session: one trace per subject.
             ms = multisession_metrics(
@@ -2345,47 +2261,10 @@ def create_app() -> Dash:
             )
             if not ms:
                 continue
-            session_dates = ms.get("session_dates", [])
-            mk = {"color": c, "size": 7}
-            fig_wa.add_trace(
-                go.Scatter(
-                    x=ms["x"],
-                    customdata=session_dates,
-                    y=ms["water"],
-                    mode="lines+markers",
-                    name=subj,
-                    legendgroup=subj,
-                    showlegend=False,
-                    marker=mk,
-                    line={"color": c},
-                    hovertemplate="%{y:.2f} mL<br>session date: %{customdata}<extra>"
-                    + subj
-                    + "</extra>",
-                )
-            )
-            training_time_hours = ms.get("training_time_hours", [])
-            training_time_labels = [
-                _clock_label(float(val)) if val is not None else "unknown"
-                for val in training_time_hours
-            ]
-            fig_tt.add_trace(
-                go.Scatter(
-                    x=ms["x"],
-                    customdata=session_dates,
-                    text=training_time_labels,
-                    y=training_time_hours,
-                    mode="lines+markers",
-                    name=subj,
-                    legendgroup=subj,
-                    showlegend=False,
-                    marker=mk,
-                    line={"color": c},
-                    hovertemplate="session date: %{customdata}<br>"
-                    + "training time: %{text}<extra>"
-                    + subj
-                    + "</extra>",
-                )
-            )
+            add(fig_wa, ms, ms["water"], "%{y:.2f} mL" + date, subj)
+            hours = ms.get("training_time_hours", [])
+            labels = [_clock_label(float(v)) if v is not None else "unknown" for v in hours]
+            add(fig_tt, ms, hours, "session date: %{customdata}<br>training time: %{text}", subj, text=labels)
 
         _ref_line = {"line_dash": "dash", "line_color": "grey", "line_width": 1}
 

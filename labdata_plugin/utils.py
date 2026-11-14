@@ -35,13 +35,13 @@ def _stimulus_trains(intervals, pulse_duration, extra_duration):
     return trains, total / fs
 
 
-def _first_recorded_stim(stims, target, max_delay=0.5):
+def _first_recorded_stim(stims, target):
     """First recorded flash at or after the Bpod-predicted onset, or None.
 
     Soft-code delays only make onsets late, so earlier flashes are ignored.
     """
     later = stims[stims >= target - 0.02]
-    if later.size == 0 or later[0] - target > max_delay:
+    if later.size == 0 or later[0] - target > 0.5:
         return None
     return float(later[0])
 

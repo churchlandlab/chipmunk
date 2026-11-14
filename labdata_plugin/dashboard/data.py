@@ -798,7 +798,7 @@ def multisession_metrics(
     # Take the last N sessions, then this modality's trial sets within them
     last = df["session_name"].drop_duplicates().tail(sessions_back)
     d = df[df["session_name"].isin(last)].copy()
-    if modality is not None and "trialset_description" in d:
+    if modality is not None:
         d = d[d["trialset_description"] == modality]
     else:  # one row per session; only the per-session series (water, time) are meaningful
         d = d.drop_duplicates("session_name")
