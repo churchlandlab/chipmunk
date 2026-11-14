@@ -281,8 +281,10 @@ class Chipmunk(dj.Imported):
                      observation_window='center_exit', **key):
         """Return visual trials with Bpod or NIDQ event times.
 
-        NIDQ trials carry stim_onset_delay: recorded first flash minus the
-        Bpod-predicted onset (~14 ms normally; more when soft codes were late).
+        NIDQ trials carry stim_onset_delay [s]: recorded first flash minus the
+        Bpod PlayStimulus time. Expected ~0.014 (soft code plus sound card
+        latency, 0.012-0.019 across 2026 ephys sessions). Above ~0.025 the
+        soft code was held up and the mouse saw the stimulus late.
         """
         if observation_window not in ('center_exit', 'response'):
             raise ValueError(
