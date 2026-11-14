@@ -554,7 +554,7 @@ def process_chipmunk_file(filepath):
         'DemonstratorFixationTrainingSMA', 'FreelyMovingObsDemonstratorTaskSMA',
         'ObserverTaskSMA', 'NonSocialObserverTaskSMA',
         'FreelyMovingNonSocialObserverTaskSMA', 'ObserverFixationTrainingSMA',
-        'MultipleModalitiesTaskSMA')
+        'MultipleModalitiesTaskSMA', 'VisualTaskSMA')
 
     passive = assembler == 'PassiveVisualStimSMA'
     # Legacy files without an assembler retain task inference; passive identity is unverified.

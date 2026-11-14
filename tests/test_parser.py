@@ -135,10 +135,12 @@ class DidNotChooseTest(unittest.TestCase):
         frame = example_session()[0]
         frame['Reward'] = [np.array([np.nan, np.nan])]
         frame['DemonDidNotChoose'] = [np.array([.5, .51])]
-        trial = self.process(frame)
-        self.assertAlmostEqual(trial['stim_duration'], .3)  # PlayStimulus at .2, DidNotChoose at .5
-        self.assertIsNone(trial['t_response'])
-        self.assertEqual((trial['with_choice'], trial['rewarded']), (0, 0))
+        for assembler in ('DemonstratorTaskSMA', 'MultipleModalitiesTaskSMA', 'VisualTaskSMA'):
+            with self.subTest(assembler=assembler):
+                trial = self.process(frame, assembler)
+                self.assertAlmostEqual(trial['stim_duration'], .3)  # PlayStimulus at .2, DidNotChoose at .5
+                self.assertIsNone(trial['t_response'])
+                self.assertEqual((trial['with_choice'], trial['rewarded']), (0, 0))
 
     def test_paced_task_does_not_stop_the_stimulus_on_no_choice(self):
         # DemonstratorPaced*SMA send SoftCode 255 on reward and wrong choice, not on DemonDidNotChoose.
