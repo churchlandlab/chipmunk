@@ -97,7 +97,7 @@ try
         assertChipmunkRecording();
         logReplay(sprintf('passive_replay_start:%d<-%d', r, source));
         replay.trialStatus{r} = 'running';
-        events = RunStateMatrix;
+        events = runTrialStateMatrix;
         replay.stateNames = BpodSystem.StateMatrix.StateNames;
         replay.rawEvents{r} = events;
         logReplay(sprintf('passive_replay_end:%d<-%d', r, source));

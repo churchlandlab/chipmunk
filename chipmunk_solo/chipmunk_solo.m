@@ -385,7 +385,7 @@ for currentTrial = 1:maxTrialNum
         end
 
         assertChipmunkRecording();
-        RawEvents = RunStateMatrix; %Finally run the state matrix
+        RawEvents = runTrialStateMatrix; %Finally run the state matrix
         %% Retrieve the trial information to save it
 
         preparationTime = tic; %Start measuring the time to extract, save and prepare
