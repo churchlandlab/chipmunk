@@ -75,6 +75,16 @@ class LoaderCompatibilityTest(unittest.TestCase):
         np.testing.assert_array_equal([p['min_isi'] for p in parameters], [.05] * 3)
 
 
+class RecordedOnsetTest(unittest.TestCase):
+    def test_late_onsets_match_and_earlier_flashes_are_ignored(self):
+        fn = parser_namespace()['_first_recorded_stim']
+        stims = np.array([1.0, 2.3, 2.4])
+        self.assertEqual(fn(stims, 2.014), 2.3)   # 286 ms late
+        self.assertEqual(fn(stims, 2.31), 2.3)    # small clock jitter
+        self.assertIsNone(fn(stims, 1.5))         # 800 ms is too late
+        self.assertIsNone(fn(stims, 2.5))
+
+
 class StimulusTrainTest(unittest.TestCase):
     parse = staticmethod(parse)
 

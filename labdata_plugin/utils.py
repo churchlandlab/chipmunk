@@ -35,6 +35,17 @@ def _stimulus_trains(intervals, pulse_duration, extra_duration):
     return trains, total / fs
 
 
+def _first_recorded_stim(stims, target, max_delay=0.5):
+    """First recorded flash at or after the Bpod-predicted onset, or None.
+
+    Soft-code delays only make onsets late, so earlier flashes are ignored.
+    """
+    later = stims[stims >= target - 0.02]
+    if later.size == 0 or later[0] - target > max_delay:
+        return None
+    return float(later[0])
+
+
 def _passive_replay(replay, trialdata=None):
     """Replay observations on the active session clock, with zero-based source keys.
 

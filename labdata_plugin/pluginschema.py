@@ -279,7 +279,11 @@ class Chipmunk(dj.Imported):
     @classmethod
     def trial_events(cls, is_nidq=False,
                      observation_window='center_exit', **key):
-        """Return visual trials with Bpod or NIDQ event times."""
+        """Return visual trials with Bpod or NIDQ event times.
+
+        NIDQ trials carry stim_onset_delay: recorded first flash minus the
+        Bpod-predicted onset (~14 ms normally; more when soft codes were late).
+        """
         if observation_window not in ('center_exit', 'response'):
             raise ValueError(
                 "observation_window must be 'center_exit' or 'response'."
@@ -295,6 +299,7 @@ class Chipmunk(dj.Imported):
         trials = []
 
         if is_nidq:
+            from .utils import _first_recorded_stim
             sessions = sorted({
                 (row['subject_name'], row['session_name']) for row in rows
             })
@@ -477,9 +482,8 @@ class Chipmunk(dj.Imported):
                         & (stim < trial_end)]
                     if trial_stims.size == 0:
                         continue
-                    first_stim = float(trial_stims[
-                        np.argmin(np.abs(trial_stims - first_stim_target))])
-                    if abs(first_stim - first_stim_target) > 0.1:
+                    first_stim = _first_recorded_stim(trial_stims, first_stim_target)
+                    if first_stim is None:
                         continue
                     trial_stims = trial_stims[trial_stims >= first_stim]
                     rate = row['stim_rate_vision']
@@ -496,6 +500,7 @@ class Chipmunk(dj.Imported):
                         'response': int(row['response']),
                         'stim_rate': float(rate),
                         'event_stream': stream_name,
+                        'stim_onset_delay': first_stim - first_stim_target,
                     })
         else:
             end_field = (
