@@ -947,7 +947,7 @@ def extract_chipmunk_camera_data(folder, trial_dict, passive_trials=(), stopped_
     return camera, frames, events
 
 
-def chipmunk_insert_decision_task(d, mintrials = 50):
+def chipmunk_insert_decision_task(d, mintrials = 30):
     '''
     Inserts a chipmunk trialset into the DecisionTask tables
 

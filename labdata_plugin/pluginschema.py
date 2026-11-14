@@ -168,7 +168,8 @@ class Chipmunk(dj.Imported):
                 ses = (Session() & (Dataset & key)).fetch1()
                 if dset['note_datetime'] is None:
                     if user_name is None:
-                        user_name = 'unknown' # this will fail if no unknown user is present
+                        LabMember().insert1(dict(user_name = 'unknown',date_joined = '2001-1-1'),skip_duplicates = True)
+                        user_name = 'unknown'
                     note = dict(note_datetime = ses['session_datetime'],  
                                 notetaker = user_name,
                                 notes = notes)

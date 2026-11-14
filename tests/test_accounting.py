@@ -71,7 +71,7 @@ class AccountingFixture:
                          if any(old[k] != row[k] for k in table.primary_key)]
         table.rows.append(row.copy())
 
-    def run(self, mintrials=50):
+    def run(self, mintrials=30):
         with warnings.catch_warnings(record=True) as messages:
             warnings.simplefilter('always')
             self.insert(self.key, mintrials=mintrials)
@@ -108,12 +108,12 @@ class DecisionAccountingTest(unittest.TestCase):
             self.assertEqual(sum('trial-zero correct-side' in str(m.message) for m in messages), 1)
 
     def test_short_task_and_empty(self):
-        for n in (0, 1, 20, 49, 50):
+        for n in (0, 1, 20, 29, 30):
             f = AccountingFixture(n=n)
             f.run()
             self.assertEqual(len(f.decision.rows), int(n > 0))
             self.assertEqual(len(f.water.rows), int(n > 0))
-            self.assertEqual(len(f.decision.TrialSet.rows), int(n >= 50))
+            self.assertEqual(len(f.decision.TrialSet.rows), int(n >= 30))
             if n:
                 self.assertEqual(f.decision.rows[0]['n_total_trials'], n)
                 self.assertAlmostEqual(f.water.rows[0]['water_volume'], n * .002)
