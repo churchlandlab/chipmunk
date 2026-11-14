@@ -34,6 +34,7 @@ Each runs after `startBpodEmulator` and takes an output folder.
 | `check_chipmunk_manipulation_session` | All four presets, then replay |
 | `check_chipmunk_replay_session` | Full sessions with and without replay, Stop during a trial |
 | `check_passive_replay_emulator` | Replay through the state machine, Stop during replay |
+| `check_passive_visual_stim` | PassiveVisualStim session |
 | `check_chipmunk_endurance` | 1,000 trials |
 
 ## Real Bpod

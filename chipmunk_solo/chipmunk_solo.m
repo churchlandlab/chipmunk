@@ -252,7 +252,9 @@ for currentTrial = 1:maxTrialNum
         %Check the biases the animal has for choice and outcome history, and modality and
         %change the proportion of left trials according to these biases and the
         %antiBiasStrength factor.
-        if S.antiBiasStrength > 1
+        if strcmp(S.smaAssembler, 'PassiveVisualStimSMA') % no choices to correct for
+            S.antiBiasStrength = 0;
+        elseif S.antiBiasStrength > 1
             S.antiBiasStrength = 1;
         elseif S.antiBiasStrength < 0
             S.antiBiasStrength = 0;
