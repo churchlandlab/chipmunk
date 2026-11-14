@@ -94,9 +94,9 @@ try
             replay.status = 'aborted';
             break
         end
+        assertChipmunkRecording();
         logReplay(sprintf('passive_replay_start:%d<-%d', r, source));
         replay.trialStatus{r} = 'running';
-        assertChipmunkRecording();
         events = RunStateMatrix;
         replay.stateNames = BpodSystem.StateMatrix.StateNames;
         replay.rawEvents{r} = events;
@@ -124,7 +124,12 @@ catch ME
     replay.errorIdentifier = ME.identifier;
     replay.errorMessage = ME.message;
     if exist('r', 'var')
-        replay.trialStatus{r} = 'failed';
+        % Only an attempt that reached RunStateMatrix can have sent a Sync pulse.
+        if strcmp(replay.trialStatus{r}, 'running')
+            replay.trialStatus{r} = 'failed';
+        else
+            replay.trialStatus{r} = 'not_started';
+        end
     end
     warning('PassiveReplay:Failed', 'Passive replay ended early: %s', ME.message);
 end

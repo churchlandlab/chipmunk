@@ -129,6 +129,12 @@ assert(BpodSystem.Data.PassiveReplay.nCompleted == 1);
 BpodSystem.Data = struct();
 runPassiveReplaySession(fs,[]);
 assert(strcmp(BpodSystem.Data.PassiveReplay.status,'skipped'));
+% A failure before RunStateMatrix sent no Sync pulse, so the attempt stays not_started.
+BpodSystem.Data = data;
+BpodSystem.Data.TrialSettings = rmfield(data.TrialSettings,'stimBrightness');
+runPassiveReplaySession(fs,[]);
+assert(strcmp(BpodSystem.Data.PassiveReplay.status,'failed'));
+assert(all(strcmp(BpodSystem.Data.PassiveReplay.trialStatus,'not_started')));
 % Bad replay edits at natural completion must not prevent the active-data save.
 for text = {'', '2', 'NaN'}
     BpodSystem.Data = data;

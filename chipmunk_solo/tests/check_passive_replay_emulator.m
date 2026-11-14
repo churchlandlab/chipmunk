@@ -66,6 +66,7 @@ BpodSystem.Data = data;
 BpodSystem.Data.TrialSettings = rmfield(data.TrialSettings,'stimBrightness');
 runPassiveReplaySession(192000,[]);
 assert(strcmp(BpodSystem.Data.PassiveReplay.status,'failed'));
+assert(strcmp(BpodSystem.Data.PassiveReplay.trialStatus{1},'not_started'));
 saveCase('failed');
 for fraction = [0 .5 1]
     BpodSystem.Data = data;
