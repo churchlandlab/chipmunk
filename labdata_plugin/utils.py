@@ -292,7 +292,14 @@ def load_chipmunk_trialdata(file_name):
                 intervals = [sesdata['visualIsis' if c == 0 else 'auditoryIsis'].tolist()[t] for c in channels]
             trains, duration = _stimulus_trains(intervals, event_duration[t], extra_durations[t])
             start = trialdata['PlayStimulus'][t][0]
-            event_times.append(trains[0] + start)
+            # Row 0 visual, row 1 audio. An inactive channel and padding are NaN.
+            rows = [np.array([]), np.array([])]
+            for c, train in zip(channels, trains):
+                rows[c] = train + start
+            events = np.full((2, max(len(r) for r in rows)), np.nan)
+            for c, r in enumerate(rows):
+                events[c, :len(r)] = r
+            event_times.append(events)
             train_durations.append(duration)
         trialdata.insert(trialdata.shape[1], 'stimulus_event_timestamps', event_times)
         trialdata['stimulus_train_duration'] = train_durations
@@ -654,7 +661,7 @@ def process_chipmunk_file(filepath):
                                         stim_rate_vision = trial.stimulus_rate_visual if np.isfinite(trial.stimulus_rate_visual) else None,
                                         category_boundary = trial.category_boundary,
                                         rewarded_position = 'right' if trial.correct_side == 1 else 'left',
-                                        stim_events = [f for f in trial.stimulus_event_timestamps],
+                                        stim_events = trial.stimulus_event_timestamps,
                                         stim_event_duration = trial.stimulus_event_duration,
                                         min_isi = trial.min_isi,
                                         is_poisson = trial.is_poisson,

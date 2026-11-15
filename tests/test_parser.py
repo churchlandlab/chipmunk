@@ -27,7 +27,8 @@ class ParserFieldsTest(unittest.TestCase):
         self.assertEqual(parameters[0]['stim_brightness'], .5)
         self.assertEqual(parameters[0]['stim_loudness'], .7)
         self.assertEqual(parameters[0]['required_wait_time'], .8)
-        np.testing.assert_array_equal(parameters[0]['stim_events'], [.2, .4])
+        np.testing.assert_array_equal(parameters[0]['stim_events'][0], [.2, .4])
+        self.assertTrue(np.isnan(parameters[0]['stim_events'][1]).all())  # visual trial: no audio
         self.assertEqual(trials[0]['response'], 1)
 
 
@@ -114,8 +115,18 @@ class StimulusTrainTest(unittest.TestCase):
         data['Modality'][:]=3
         for t in range(3): data['InterStimulusIntervalList'][t,1]=data['InterStimulusIntervalList'][t,0]
         (_,params,_),_=self.parse(data)
-        self.assertTrue(all('stim_events_audio' not in p for p in params))
-        np.testing.assert_allclose(params[0]['stim_events'],[.2,.415,.63,.845])
+        np.testing.assert_allclose(params[0]['stim_events'],[[.2,.415,.63,.845]]*2)
+
+    def test_asynchronous_channels_keep_their_own_onsets(self):
+        data=session_data()
+        data['Modality'][:]=3
+        for t in range(3):
+            visual=np.asarray(data['InterStimulusIntervalList'][t,0],float)
+            data['InterStimulusIntervalList'][t,1]=visual[::-1].copy()
+        (_,params,_),_=self.parse(data)
+        events=params[0]['stim_events']
+        self.assertEqual(events.shape[0],2)
+        self.assertFalse(np.allclose(events[0][np.isfinite(events[0])],events[1][np.isfinite(events[1])]))
 
 
 class DidNotChooseTest(unittest.TestCase):

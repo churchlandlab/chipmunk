@@ -48,7 +48,7 @@ def example_session():
     row = dict(trial_start_time=0., response_side=1, correct_side=1,
                stimulus_modality='visual', stimulus_rate_auditory=np.nan,
                stimulus_rate_visual=8., category_boundary=12.,
-               stimulus_event_timestamps=np.array([.2, .4]),
+               stimulus_event_timestamps=np.array([[.2, .4], [np.nan, np.nan]]),
                stimulus_event_duration=.03, stimulus_brightness=.5,
                stimulus_loudness=.7, min_isi=.025, is_poisson=1,
                ExtraStimulusDuration=.5, proportion_left=.5,

@@ -41,7 +41,7 @@ class Chipmunk(dj.Imported):
         category_boundary                   : float
         rewarded_position                   : enum('left','right')
         configured_reward_volume = NULL     : float  # reward volume set for the correct side on this trial [uL]
-        stim_events = NULL                  : longblob   # Intended onsets relative to trial start: visual for multisensory, otherwise the active channel
+        stim_events = NULL                  : longblob   # Intended onsets relative to trial start: row 0 visual, row 1 audio, NaN-padded
         stim_event_duration = NULL          : double     # Duration of individual flashes or clicks
         min_isi = NULL                      : double     # The shortest allowed interval between flashes or clicks
         is_poisson = NULL                   : tinyint    # 1 if intervals between flashes / clicks are random, 0 if there are only two intervals
@@ -435,7 +435,7 @@ class Chipmunk(dj.Imported):
                             or row['t_react'] is None
                             or not np.isfinite(row['t_react'])):
                         continue
-                    bpod_stims = np.asarray(row['stim_events'], dtype=float)
+                    bpod_stims = np.atleast_2d(np.asarray(row['stim_events'], dtype=float))[0]
                     bpod_stims = bpod_stims[np.isfinite(bpod_stims)]
                     trial_num = int(row['trial_num'])
                     if bpod_stims.size == 0 or trial_num >= trial_starts.size:
@@ -509,7 +509,7 @@ class Chipmunk(dj.Imported):
                 't_react' if observation_window == 'center_exit'
                 else 't_response')
             for row in rows:
-                stims = np.asarray(row['stim_events'], dtype=float)
+                stims = np.atleast_2d(np.asarray(row['stim_events'], dtype=float))[0]
                 stims = stims[np.isfinite(stims)]
                 observation_end = row[end_field]
                 trial_sync = row['t_sync']
