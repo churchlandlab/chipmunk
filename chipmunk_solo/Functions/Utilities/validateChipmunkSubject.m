@@ -1,0 +1,9 @@
+function name = validateChipmunkSubject(name)
+% FakeSubject is the supported test subject and follows the normal save path.
+name = strtrim(char(name));
+assert(~isempty(name) && ~any(ismember(name, ['/','\'])) && ...
+    ~any(strcmp(name,{'.','..'})), 'chipmunk_solo:SubjectName', ...
+    'Enter a subject name without path separators.');
+assert(~any(strcmpi(name,{'Virtual','Dummy'})), 'chipmunk_solo:ReservedSubject', ...
+    'Virtual and Dummy are unsupported. Use FakeSubject with Bpod emulator mode.');
+end
