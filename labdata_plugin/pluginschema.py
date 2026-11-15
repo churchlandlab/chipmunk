@@ -124,10 +124,16 @@ class Chipmunk(dj.Imported):
             passive_trials = metadata.pop('passive_trials', [])  # rows go to ChipmunkPassive; pulses stay in this sync stream
             passive_replay = metadata.pop('passive_replay', None)
             computer_name = None
+            # MySQL keys ignore case, so match rigs case-insensitively and reuse the stored spelling
+            existing = {name.lower(): name for name in Setup().fetch('setup_name')}
+            rig, who = metadata['setup_name'], metadata['experimenter']
+            if who is not None and str(who).lower() in existing and (
+                    rig is None or str(rig).lower() not in existing):
+                # rig and researcher typed into each other's fields
+                metadata['setup_name'], metadata['experimenter'] = who, rig
             if not metadata['setup_name'] is None:
-                # add if not there; MySQL keys ignore case, so reuse the stored spelling
+                # add if not there
                 computer_name = str(metadata['setup_name'])
-                existing = {name.lower(): name for name in Setup().fetch('setup_name')}
                 computer_name = existing.get(computer_name.lower(), computer_name)
                 if not computer_name in existing.values():
                     locations = SetupLocation().fetch(as_dict = True)

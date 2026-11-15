@@ -422,10 +422,15 @@ class SessionMetadataTest(unittest.TestCase):
         self.assertIsNone(metadata['experimenter'])
         self.assertTrue(np.isnan(metadata['weight']))
 
-    def test_multi_valued_weight_is_dropped_with_a_warning(self):
-        metadata, caught = self.metadata(demonWeight=np.array([14, 8], dtype=np.uint8))
+    def test_comma_decimal_weight_is_read_as_grams(self):
+        for parts, grams in (([14, 46], 14.46), ([14, 8], 14.8)):
+            metadata, _ = self.metadata(demonWeight=np.array(parts, dtype=np.uint8))
+            self.assertEqual(metadata['weight'], grams)
+
+    def test_other_multi_valued_weight_is_dropped_with_a_warning(self):
+        metadata, caught = self.metadata(demonWeight=np.array([14, 8, 2], dtype=np.uint8))
         self.assertTrue(np.isnan(metadata['weight']))
-        self.assertTrue(any('[14, 8]' in message for message in caught))
+        self.assertTrue(any('[14, 8, 2]' in message for message in caught))
 
 
 if __name__ == '__main__':
