@@ -804,6 +804,7 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
     idx = np.argsort(t)
     t = t[idx]
     frame_num = frame_num[idx]
+    logged = frame_num  # camlog frame ids; the network-log fallback below reuses frame_num
     x = camlog[camlog.columns[-1]].values[idx] 
     
     # unpack the camera bits
@@ -862,13 +863,12 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
         print(f'Using the frametimes from the network log. This will be approximate [cam{icam}].')
         frametimes = extrapolate_time_from_clock(trialtimes, frame_nums, np.arange(len(vid)))
     events = []
+    # One timestamp per logged frame: the camlog can stop a few frames before the video ends.
+    keep = (logged >= 0) & (logged < len(frametimes))
     for iin,g in zip(channel_selection,gpio):
-        if not len(frametimes) == len(g):
-            print('The number of frames does not match the size of the gpio. there is probably an error on the camlog.')
-            #assert len(frametimes) == len(g), ValueError('The size of the gpio is not the same as the number of frames, fix it.')
         events.append(dict(stream_name = f'cam{icam}',event_name=f'gpio{iin}',
-                          event_timestamps = frametimes,
-                          event_values = g))
+                          event_timestamps = np.asarray(frametimes)[logged[keep]],
+                          event_values = g[keep]))
     return frametimes, events
 
 def extract_chipmunk_camera_data(folder, trial_dict, passive_trials=(), stopped_trial_pulse=None, passive_replay=None):

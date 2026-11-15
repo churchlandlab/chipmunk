@@ -49,6 +49,17 @@ class ReplaySyncTest(unittest.TestCase):
         times, _ = self.ns['_handle_chipmunk_camera_sync'](0, log, comm, range(400), trials)
         np.testing.assert_allclose(times, 56 + np.arange(400) * .0125, atol=1e-9)
 
+    def test_gpio_events_have_one_time_per_logged_frame(self):
+        # GRB001 20230510 BottomView: the camlog ends 54 frames before the video.
+        gpio = np.zeros(350, dtype=int)
+        for start in (50, 150, 250): gpio[start:start + 5] = 1
+        log = pd.DataFrame({0: np.arange(350), 1: np.arange(350) * .01, 2: gpio})
+        trials = [dict(trial_num=k, t_sync=10 + s * .01) for k, s in enumerate((50, 150, 250))]
+        times, events = self.ns['_handle_chipmunk_camera_sync'](0, log, [], range(400), trials)
+        self.assertEqual(len(times), 400)
+        self.assertEqual(len(events[0]['event_timestamps']), len(events[0]['event_values']))
+        np.testing.assert_allclose(events[0]['event_timestamps'], times[:350])
+
     def test_invalid_sync_cannot_silently_drop_a_pulse(self):
         for stamp in (None,float('nan'),2.):
             with self.assertRaises(ValueError):
