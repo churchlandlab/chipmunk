@@ -141,6 +141,57 @@ def _modality_codes(values):
     return np.array(codes, dtype=int)
 
 
+def _rebuild_reset_outcomes(sesdata, file_name):
+    """Rebuild outcome vectors that were saved as their start-of-session values.
+
+    GRB061 20261111_133510 has 168 trials of raw events, rates and settings, but
+    OutcomeRecord, ResponseSide, Modality, CorrectSide and the other outcome
+    vectors are single values. Rebuild them the way retrieveTrialData does.
+    The correct side comes from the choice port, or from the rate when no choice
+    was made; a no-choice trial at the category boundary stays NaN.
+    """
+    from scipy.io import loadmat
+    raw = loadmat(file_name, simplify_cells=True)['SessionData']
+    trials = np.atleast_1d(raw['RawEvents']['Trial'])
+    rates = np.atleast_2d(np.asarray(raw['StimulusRate'], dtype=float))
+    high = 1. if raw['SettingsFile']['highRateSide'] == 'R' else 0.
+    n = len(trials)
+    boundary = np.broadcast_to(np.asarray(raw['CategoryBoundary'], dtype=float).ravel(), (n,))  # scalar in some files
+    out = {k: np.zeros(n) for k in ('Rewarded', 'EarlyWithdrawal', 'DidNotChoose', 'DidNotInitiate',
+                                     'ValidTrials', 'CorrectResponse', 'OutcomeRecord')}
+    out.update({k: np.full(n, np.nan) for k in ('ResponseSide', 'CorrectSide', 'Modality')})
+
+    def visited(states, name):
+        return name in states and np.isfinite(np.asarray(states[name], dtype=float).ravel()[0])
+
+    for t, trial in enumerate(trials):
+        states, events = trial['States'], trial['Events']
+        rewarded, wrong = visited(states, 'DemonReward'), visited(states, 'DemonWrongChoice')
+        out['Rewarded'][t] = rewarded
+        out['EarlyWithdrawal'][t] = visited(states, 'DemonEarlyWithdrawal')
+        out['DidNotChoose'][t] = visited(states, 'DemonDidNotChoose')
+        visual, audio = np.isfinite(rates[t])
+        out['Modality'][t] = 3 if visual and audio else (1 if visual else 2)
+        rate = rates[t, 0] if visual else rates[t, 1]
+        correct = np.nan if rate == boundary[t] else (high if rate > boundary[t] else 1 - high)
+        if rewarded or wrong:  # the port entered at the outcome state is the choice
+            choice_time = np.asarray(states['DemonReward' if rewarded else 'DemonWrongChoice'], float).ravel()[0]
+            entries = {side: np.atleast_1d(events.get(port, [])) for side, port in ((0., 'Port1In'), (1., 'Port3In'))}
+            port = min(entries, key=lambda s: np.min(np.abs(entries[s] - choice_time)) if entries[s].size else np.inf)
+            correct = port if rewarded else 1 - port
+        out['CorrectSide'][t] = correct
+        if visited(states, 'DemonWaitForResponse') and not out['EarlyWithdrawal'][t] and not out['DidNotChoose'][t]:
+            out['ResponseSide'][t] = correct if rewarded else 1 - correct
+        out['ValidTrials'][t] = np.isfinite(out['ResponseSide'][t])
+        out['CorrectResponse'][t] = out['ValidTrials'][t] and out['ResponseSide'][t] == correct
+        out['OutcomeRecord'][t] = (-1 if out['EarlyWithdrawal'][t] else 2 if out['DidNotChoose'][t]
+                                   else 1 if out['CorrectResponse'][t] else 0)
+    warnings.warn(f'[chipmunk]: Rebuilt outcome vectors saved as single values in {file_name}.')
+    for field, values in out.items():
+        if field in sesdata.dtype.names:
+            sesdata[field][()] = values
+
+
 def load_chipmunk_trialdata(file_name):
     '''Read the behavioral data from .mat or .obsmat and return a
     pandas data frame with the respective data for each trial
@@ -166,6 +217,8 @@ def load_chipmunk_trialdata(file_name):
     try:
         sesdata = loadmat(file_name, squeeze_me=True,
                               struct_as_record=True)['SessionData']
+        if int(sesdata['nTrials'].tolist()) > 1 and np.size(sesdata['Modality'].tolist()) == 1:
+            _rebuild_reset_outcomes(sesdata, file_name)
         # scipy squeezes a one-trial session's vectors and struct arrays to scalars.
         if np.size(sesdata['Modality'].tolist()) == 1:
             for field in ('TrialSettings', 'TrialDelays', 'ResponseSide', 'CorrectSide',

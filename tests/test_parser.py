@@ -76,6 +76,23 @@ class LoaderCompatibilityTest(unittest.TestCase):
         np.testing.assert_array_equal([p['min_isi'] for p in parameters], [.05] * 3)
 
 
+class ResetOutcomesTest(unittest.TestCase):
+    def test_outcome_vectors_saved_as_single_values_are_rebuilt(self):
+        # GRB061 20261111_133510 saved these as their start-of-session values.
+        keys = ('rewarded', 'punished', 'early_withdrawal', 'with_choice', 'response')
+        (intact, iparams, _), _ = parse(session_data())
+        data = session_data()
+        for field, value in dict(OutcomeRecord=np.nan, ResponseSide=np.nan, Modality=np.nan,
+                                 CorrectSide=np.nan, EarlyWithdrawal=0, DidNotChoose=0).items():
+            data[field] = value
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            (rebuilt, rparams, _), _ = parse(data)
+        self.assertTrue(any('Rebuilt outcome vectors' in str(w.message) for w in caught))
+        self.assertEqual([[t[k] for k in keys] for t in rebuilt], [[t[k] for k in keys] for t in intact])
+        self.assertEqual([q['rewarded_position'] for q in rparams], [q['rewarded_position'] for q in iparams])
+
+
 class RecordedOnsetTest(unittest.TestCase):
     def test_late_onsets_match_and_earlier_flashes_are_ignored(self):
         fn = parser_namespace()['_first_recorded_stim']
