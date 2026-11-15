@@ -125,9 +125,11 @@ class Chipmunk(dj.Imported):
             passive_replay = metadata.pop('passive_replay', None)
             computer_name = None
             if not metadata['setup_name'] is None:
-                # add if not there
+                # add if not there; MySQL keys ignore case, so reuse the stored spelling
                 computer_name = str(metadata['setup_name'])
-                if not computer_name in Setup().fetch('setup_name'):
+                existing = {name.lower(): name for name in Setup().fetch('setup_name')}
+                computer_name = existing.get(computer_name.lower(), computer_name)
+                if not computer_name in existing.values():
                     locations = SetupLocation().fetch(as_dict = True)
                     if len(locations):
                         Setup.insert1(dict(locations[0],setup_name = computer_name,setup_description = 'Added automatically.'))

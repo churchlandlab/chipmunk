@@ -124,6 +124,19 @@ def _upsert_generated_row(table, row):
         table.insert1(row, allow_direct_insert=True)
 
 
+def _metadata_value(value):
+    """A single setting from TrialSettings; None when MATLAB saved it empty or as several values."""
+    value = np.asarray(value)
+    if value.size != 1:
+        if value.size:
+            warnings.warn(f'[chipmunk]: Ignoring multi-valued setting {value.tolist()!r}.')
+        return None
+    value = value.item()
+    if isinstance(value, str):
+        return value.strip() or None
+    return value
+
+
 def _modality_codes(values):
     """Integer modality codes (1 visual, 2 auditory, 3 audio+visual), as a new array.
 
@@ -236,17 +249,15 @@ def load_chipmunk_trialdata(file_name):
         else:
             notes = ''
         tset = sesdata['TrialSettings'].tolist()
-        if 'rigNo' in  tset.dtype.fields:
-            setup_name = tset['rigNo'][0]
-        else:
-            setup_name = None
-        if 'researcher' in  tset.dtype.fields:
-            experimenter = tset['researcher'][0]
-        else:
-            experimenter = None
-        if 'demonWeight' in tset.dtype.fields:
-            weight = tset['demonWeight'][0]
-        else:
+        fields = tset.dtype.fields
+        setup_name = _metadata_value(tset['rigNo'][0]) if 'rigNo' in fields else None
+        experimenter = _metadata_value(tset['researcher'][0]) if 'researcher' in fields else None
+        weight = _metadata_value(tset['demonWeight'][0]) if 'demonWeight' in fields else None
+        try:
+            weight = float(weight)
+        except (TypeError, ValueError):
+            if weight is not None:
+                warnings.warn(f'[chipmunk]: Ignoring unreadable weight {weight!r} in {file_name}.')
             weight = np.nan
 
         metadata = dict(notes = notes,

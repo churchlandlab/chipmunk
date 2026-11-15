@@ -395,5 +395,38 @@ class RewardAndOutcomeTest(unittest.TestCase):
                 parse(data)
 
 
+class SessionMetadataTest(unittest.TestCase):
+    def metadata(self, **values):
+        data = session_data()
+        fields = data['TrialSettings'].dtype.descr + [(k, object) for k in values]
+        settings = np.empty(data['TrialSettings'].shape, dtype=fields)
+        for name in data['TrialSettings'].dtype.names:
+            settings[name] = data['TrialSettings'][name]
+        for name, value in values.items():
+            for i in range(settings.shape[1]):
+                settings[name][0, i] = value
+        data['TrialSettings'] = settings
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            _, metadata = parse(data)
+        return metadata, [str(w.message) for w in caught]
+
+    def test_named_rig_researcher_and_weight(self):
+        metadata, _ = self.metadata(rigNo='venus ', researcher='GRB', demonWeight=23.5)
+        self.assertEqual((metadata['setup_name'], metadata['experimenter'], metadata['weight']),
+                         ('venus', 'GRB', 23.5))
+
+    def test_empty_settings_are_none(self):
+        metadata, _ = self.metadata(rigNo=np.array([]), researcher='', demonWeight=np.array([]))
+        self.assertIsNone(metadata['setup_name'])
+        self.assertIsNone(metadata['experimenter'])
+        self.assertTrue(np.isnan(metadata['weight']))
+
+    def test_multi_valued_weight_is_dropped_with_a_warning(self):
+        metadata, caught = self.metadata(demonWeight=np.array([14, 8], dtype=np.uint8))
+        self.assertTrue(np.isnan(metadata['weight']))
+        self.assertTrue(any('[14, 8]' in message for message in caught))
+
+
 if __name__ == '__main__':
     unittest.main()
