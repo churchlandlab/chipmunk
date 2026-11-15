@@ -252,7 +252,13 @@ def load_chipmunk_trialdata(file_name):
         fields = tset.dtype.fields
         setup_name = _metadata_value(tset['rigNo'][0]) if 'rigNo' in fields else None
         experimenter = _metadata_value(tset['researcher'][0]) if 'researcher' in fields else None
-        weight = _metadata_value(tset['demonWeight'][0]) if 'demonWeight' in fields else None
+        weight = tset['demonWeight'][0] if 'demonWeight' in fields else None
+        parts = np.asarray(weight)
+        if parts.size == 2 and np.issubdtype(parts.dtype, np.integer):
+            # The GUI saves the typed text; MATLAB turns a comma decimal ("14,46") into [14 46].
+            weight = f'{parts.flat[0]}.{parts.flat[1]}'
+        else:
+            weight = _metadata_value(weight)
         try:
             weight = float(weight)
         except (TypeError, ValueError):
