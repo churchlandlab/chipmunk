@@ -727,7 +727,10 @@ class ChipmunkPassive(dj.Imported):
         if not len(filekey):
             warnings.warn(f'[chipmunk]: Passive dataset has no MAT file {key}')
             return
-        replay = loadmat((File() & filekey).get()[0], simplify_cells=True)['PassiveReplay']
+        filename = (File() & filekey).local_path()
+        if filename is None:
+            raise FileNotFoundError(f'[chipmunk]: Passive MAT is not local: {key}')
+        replay = loadmat(filename, simplify_cells=True)['PassiveReplay']
         rows = _passive_replay(replay)
         stopped = np.atleast_1d(replay.get('stoppedPulseAfter', []))
         self.insert1(dict(key, replay_order=replay['order'], replay_status=replay['status'],

@@ -42,3 +42,15 @@ chipmunk.ChipmunkPassive.populate()  # after Chipmunk
 ```
 
 `make_kwargs=dict(download_videos=False)` skips downloading the camera videos.
+
+Schedule `ChipmunkPassive` as well as `Chipmunk`: populating the task table does
+not populate replay rows. The passive key source waits for the corresponding
+task session, so pending replays can be retried independently:
+
+```sh
+labdata run populate --delete-on-complete -t local --force-submit -- chipmunk.ChipmunkPassive -i labdata
+```
+
+Passive ingestion requires its registered MAT file to be local and never
+downloads it. Avoid a session-date restriction on retries, since task ingestion
+may finish after the passive upload.
