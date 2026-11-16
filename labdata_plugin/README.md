@@ -43,16 +43,12 @@ chipmunk.ChipmunkPassive.populate()  # after Chipmunk
 
 `make_kwargs=dict(download_videos=False)` skips downloading the camera videos.
 
-Schedule `ChipmunkPassive` as well as `Chipmunk`: populating the task table does
-not populate replay rows. The passive key source waits for the corresponding
-task session, so pending replays can be retried independently:
+`ChipmunkPassive` is populated separately from `Chipmunk`, so if you schedule
+ingestion, schedule both. A replay is only picked up once its task session is in
+`Chipmunk`. Don't restrict retries to a session date, because the task session
+may be ingested after the replay was uploaded.
 
-```sh
-labdata run populate --delete-on-complete -t local --force-submit -- chipmunk.ChipmunkPassive -i labdata
-```
-
-Passive ingestion reuses a local MAT when available. Otherwise it retrieves the
-registered file through labdata only when `allow_s3_download` is enabled in the
-worker's preferences. Disable that preference on Hodgkin for local-only work;
-AWS workers enable it to read uploaded files from S3. Avoid a session-date
-restriction on retries, since task ingestion may finish after the passive upload.
+Passive ingestion uses the replay's MAT file if it is already on the machine.
+If it isn't, the file is downloaded only when `allow_s3_download` is `true` in
+that machine's labdata preferences. Otherwise the populate stops with a
+`FileNotFoundError`.
