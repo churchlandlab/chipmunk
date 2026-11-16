@@ -51,6 +51,8 @@ task session, so pending replays can be retried independently:
 labdata run populate --delete-on-complete -t local --force-submit -- chipmunk.ChipmunkPassive -i labdata
 ```
 
-Passive ingestion requires its registered MAT file to be local and never
-downloads it. Avoid a session-date restriction on retries, since task ingestion
-may finish after the passive upload.
+Passive ingestion reuses a local MAT when available. Otherwise it retrieves the
+registered file through labdata only when `allow_s3_download` is enabled in the
+worker's preferences. Disable that preference on Hodgkin for local-only work;
+AWS workers enable it to read uploaded files from S3. Avoid a session-date
+restriction on retries, since task ingestion may finish after the passive upload.
