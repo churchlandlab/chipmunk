@@ -757,16 +757,10 @@ def create_app() -> Dash:
         wdl_split_idx: list[int] = []
         wdh_combined_idx: list[int] = []
         wdh_split_idx: list[int] = []
-        wfl_combined_idx: list[int] = []
-        wfl_split_idx: list[int] = []
-        wfh_combined_idx: list[int] = []
-        wfh_split_idx: list[int] = []
         itid_combined_idx: list[int] = []
         itid_split_idx: list[int] = []
         wdl_trace_count = 0
         wdh_trace_count = 0
-        wfl_trace_count = 0
-        wfh_trace_count = 0
         itid_trace_count = 0
         itir_combined_idx: list[int] = []
         itir_split_idx: list[int] = []
@@ -958,7 +952,7 @@ def create_app() -> Dash:
                         hover_label=subj,
                     )
 
-            # --- Row 3: Post-Go Center Dwell ---
+            # --- Row 3: Actual minus required wait ---
 
             if sm["wait_delta_times"]:
                 # Line (Delta vs trial num)
@@ -1154,161 +1148,37 @@ def create_app() -> Dash:
                         wdh_split_idx.append(wdh_trace_count)
                         wdh_trace_count += 1
 
-            # --- Row 3 (cont.): Wait Floor ---
-
-            if sm["wait_times"] and sm["wait_trial_nums"]:
+            # Configured requirements include trials without a measured withdrawal.
+            if sm["required_wait_times"]:
                 fig_wfl.add_trace(
-                    go.Scattergl(
-                        x=sm["wait_trial_nums"],
-                        y=sm["wait_times"],
-                        mode="markers",
+                    go.Scatter(
+                        x=sm["required_wait_trial_nums"],
+                        y=sm["required_wait_times"],
+                        mode="lines+markers",
                         name=subj,
                         showlegend=False,
                         legendgroup=grp,
-                        marker={"color": c, "size": 3, "opacity": 0.4},
-                        hovertemplate="%{y:.3f}s" + ht_subj,
-                        visible=True,
+                        line={"color": c, "shape": "hv"},
+                        marker={"color": c, "size": 3},
+                        hovertemplate="trial %{x}: %{y:.3f}s" + ht_subj,
                     )
                 )
-                wfl_combined_idx.append(wfl_trace_count)
-                wfl_trace_count += 1
-                if sm["wait_roll_x"] and sm["wait_roll_y"]:
-                    fig_wfl.add_trace(
-                        go.Scatter(
-                            x=sm["wait_roll_x"],
-                            y=sm["wait_roll_y"],
-                            mode="lines",
-                            name=subj + " roll",
-                            showlegend=False,
-                            legendgroup=grp,
-                            line={"color": c, "width": 2},
-                            hovertemplate="%{y:.3f}s (roll)" + ht_subj,
-                            visible=True,
-                        )
-                    )
-                    wfl_combined_idx.append(wfl_trace_count)
-                    wfl_trace_count += 1
-                wait_left_times = sm.get("wait_times_left", [])
-                wait_right_times = sm.get("wait_times_right", [])
-                if wait_left_times and sm.get("wait_trial_nums_left", []):
-                    fig_wfl.add_trace(
-                        go.Scattergl(
-                            x=sm["wait_trial_nums_left"],
-                            y=wait_left_times,
-                            mode="markers",
-                            name="Left",
-                            showlegend=i == 0,
-                            legendgroup="choice-left",
-                            marker={"color": "royalblue", "size": 3, "opacity": 0.4},
-                            hovertemplate="%{y:.3f}s<extra>left</extra>",
-                            visible=False,
-                        )
-                    )
-                    wfl_split_idx.append(wfl_trace_count)
-                    wfl_trace_count += 1
-                if sm.get("wait_left_x", []) and sm.get("wait_left_y", []):
-                    fig_wfl.add_trace(
-                        go.Scatter(
-                            x=sm["wait_left_x"],
-                            y=sm["wait_left_y"],
-                            mode="lines",
-                            name="Left roll",
-                            showlegend=i == 0,
-                            legendgroup="choice-left",
-                            line={"color": "royalblue", "width": 2},
-                            hovertemplate="%{y:.3f}s<extra>left rolling</extra>",
-                            visible=False,
-                        )
-                    )
-                    wfl_split_idx.append(wfl_trace_count)
-                    wfl_trace_count += 1
-                if wait_right_times and sm.get("wait_trial_nums_right", []):
-                    fig_wfl.add_trace(
-                        go.Scattergl(
-                            x=sm["wait_trial_nums_right"],
-                            y=wait_right_times,
-                            mode="markers",
-                            name="Right",
-                            showlegend=i == 0,
-                            legendgroup="choice-right",
-                            marker={"color": "darkorange", "size": 3, "opacity": 0.4},
-                            hovertemplate="%{y:.3f}s<extra>right</extra>",
-                            visible=False,
-                        )
-                    )
-                    wfl_split_idx.append(wfl_trace_count)
-                    wfl_trace_count += 1
-                if sm.get("wait_right_x", []) and sm.get("wait_right_y", []):
-                    fig_wfl.add_trace(
-                        go.Scatter(
-                            x=sm["wait_right_x"],
-                            y=sm["wait_right_y"],
-                            mode="lines",
-                            name="Right roll",
-                            showlegend=i == 0,
-                            legendgroup="choice-right",
-                            line={"color": "darkorange", "width": 2},
-                            hovertemplate="%{y:.3f}s<extra>right rolling</extra>",
-                            visible=False,
-                        )
-                    )
-                    wfl_split_idx.append(wfl_trace_count)
-                    wfl_trace_count += 1
-                wait_floor_y_vals.extend(sm["wait_times"])
-                wait_floor_y_vals.extend(sm["wait_roll_y"])
-                wait_floor_y_vals.extend(sm.get("wait_left_y", []))
-                wait_floor_y_vals.extend(sm.get("wait_right_y", []))
-
+                wait_floor_y_vals.extend(sm["required_wait_times"])
                 if multi:
                     fig_wfh.add_trace(
                         go.Box(
-                            y=sm["wait_times"],
+                            y=sm["required_wait_times"],
                             name=subj,
                             marker_color=c,
                             legendgroup=grp,
                             showlegend=False,
                             boxmean=True,
-                            visible=True,
                         )
                     )
-                    wfh_combined_idx.append(wfh_trace_count)
-                    wfh_trace_count += 1
-                    if wait_left_times:
-                        fig_wfh.add_trace(
-                            go.Box(
-                                x=[subj] * len(wait_left_times),
-                                y=wait_left_times,
-                                name="Left",
-                                marker_color="royalblue",
-                                legendgroup="choice-left",
-                                showlegend=i == 0,
-                                boxmean=True,
-                                offsetgroup="left",
-                                visible=False,
-                            )
-                        )
-                        wfh_split_idx.append(wfh_trace_count)
-                        wfh_trace_count += 1
-                    if wait_right_times:
-                        fig_wfh.add_trace(
-                            go.Box(
-                                x=[subj] * len(wait_right_times),
-                                y=wait_right_times,
-                                name="Right",
-                                marker_color="darkorange",
-                                legendgroup="choice-right",
-                                showlegend=i == 0,
-                                boxmean=True,
-                                offsetgroup="right",
-                                visible=False,
-                            )
-                        )
-                        wfh_split_idx.append(wfh_trace_count)
-                        wfh_trace_count += 1
                 else:
                     _add_density_hist(
                         fig_wfh,
-                        sm["wait_times"],
+                        sm["required_wait_times"],
                         name=subj,
                         color=c,
                         legendgroup=grp,
@@ -1316,34 +1186,6 @@ def create_app() -> Dash:
                         visible=True,
                         hover_label=subj,
                     )
-                    wfh_combined_idx.append(wfh_trace_count)
-                    wfh_trace_count += 1
-                    if wait_left_times:
-                        _add_density_hist(
-                            fig_wfh,
-                            wait_left_times,
-                            name="Left",
-                            color="royalblue",
-                            legendgroup="choice-left",
-                            showlegend=True,
-                            visible=False,
-                            hover_label="left",
-                        )
-                        wfh_split_idx.append(wfh_trace_count)
-                        wfh_trace_count += 1
-                    if wait_right_times:
-                        _add_density_hist(
-                            fig_wfh,
-                            wait_right_times,
-                            name="Right",
-                            color="darkorange",
-                            legendgroup="choice-right",
-                            showlegend=True,
-                            visible=False,
-                            hover_label="right",
-                        )
-                        wfh_split_idx.append(wfh_trace_count)
-                        wfh_trace_count += 1
 
             # --- Row 4: Response Time ---
             response_times = sm.get("response_times", [])
@@ -1823,9 +1665,9 @@ def create_app() -> Dash:
         init_y_range = _robust_y_range(
             init_y_vals, pct=_TIMING_Y_CLIP_PCT, lower_bound=0
         )
-        wait_delta_y_range = _robust_y_range(wait_delta_y_vals, pct=_TIMING_Y_CLIP_PCT)
+        wait_delta_y_range = _robust_y_range(wait_delta_y_vals, pct=100)
         wait_floor_y_range = _robust_y_range(
-            wait_floor_y_vals, pct=_TIMING_Y_CLIP_PCT, lower_bound=0
+            wait_floor_y_vals, pct=100, lower_bound=0
         )
         response_line_y_range = _robust_y_range(
             response_line_y_vals, pct=_TIMING_Y_CLIP_PCT, lower_bound=0
@@ -1942,25 +1784,26 @@ def create_app() -> Dash:
         # Row 3
         _layout(
             fig_wdl,
-            title="Center Dwell (Post-Go)",
+            title="Actual − Required Wait",
             xaxis_title="trial number",
             yaxis_title="time (s)",
             yaxis_range=wait_delta_y_range,
         )
+        fig_wdl.add_hline(y=0, **_ref_line)
         _apply_split_toggle(
             fig_wdl, wdl_combined_idx, wdl_split_idx, wdl_trace_count, "Choice"
         )
         if multi:
             _layout(
                 fig_wdh,
-                title="Center Dwell Dist",
+                title="Wait Delta Dist",
                 yaxis_title="time (s)",
                 boxmode="group",
             )
         else:
             _layout(
                 fig_wdh,
-                title="Center Dwell Dist",
+                title="Wait Delta Dist",
                 xaxis_title="time (s)",
                 yaxis_title="density",
                 barmode="overlay",
@@ -1970,32 +1813,26 @@ def create_app() -> Dash:
         )
         _layout(
             fig_wfl,
-            title="Minimum Wait (Floor)",
+            title="Required Wait",
             xaxis_title="trial number",
             yaxis_title="time (s)",
             yaxis_range=wait_floor_y_range,
         )
-        _apply_split_toggle(
-            fig_wfl, wfl_combined_idx, wfl_split_idx, wfl_trace_count, "Choice"
-        )
         if multi:
             _layout(
                 fig_wfh,
-                title="Minimum Wait Dist",
+                title="Required Wait Dist",
                 yaxis_title="time (s)",
                 boxmode="group",
             )
         else:
             _layout(
                 fig_wfh,
-                title="Minimum Wait Dist",
+                title="Required Wait Dist",
                 xaxis_title="time (s)",
                 yaxis_title="density",
                 barmode="overlay",
             )
-        _apply_split_toggle(
-            fig_wfh, wfh_combined_idx, wfh_split_idx, wfh_trace_count, "Choice"
-        )
 
         # Row 4
         _layout(

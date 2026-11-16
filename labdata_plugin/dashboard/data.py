@@ -311,23 +311,23 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
 
     init_roll_x, init_roll_y = _rolling_stat(init_trial_nums, init_vals, win)
 
-    # Wait times: actual vs minimum
-    wait_actual = trials["t_react"].to_numpy() - trials["t_stim"].to_numpy()
-    wait_min = trials["t_gocue"].to_numpy() - trials["t_stim"].to_numpy()
-    wait_mask = (
-        np.isfinite(wait_actual)
-        & np.isfinite(wait_min)
-        & (wait_actual > 0)
-        & (wait_actual < 30)
-        & (wait_min > 0)
-        & (wait_min < 30)
+    # SetWaitTime starts at stimulus onset and already includes the post-stim delay.
+    wait_min_all = pd.to_numeric(
+        trials.get("required_wait_time", pd.Series(np.nan, index=trials.index)),
+        errors="coerce",
+    ).to_numpy(dtype=float)
+    required_mask = np.isfinite(wait_min_all) & (wait_min_all >= 0)
+    required_wait = wait_min_all[required_mask]
+    required_wait_trial_nums = trial_nums[required_mask]
+    withdrawal = np.where(
+        trials.early_withdrawal.to_numpy() == 1,
+        trials["t_earlywithdraw"].to_numpy(),
+        trials["t_react"].to_numpy(),
     )
-    wait_actual = wait_actual[wait_mask]
-    wait_min = wait_min[wait_mask]
-    wait_delta = wait_actual - wait_min
-
-    # Wait delta filtered for histogram/lines
-    wait_trial_nums = trials["trial_num"].to_numpy()[wait_mask]
+    wait_actual = withdrawal - trials["t_stim"].to_numpy()
+    wait_mask = required_mask & np.isfinite(wait_actual) & (wait_actual >= 0)
+    wait_delta = wait_actual[wait_mask] - wait_min_all[wait_mask]
+    wait_trial_nums = trial_nums[wait_mask]
 
     # Reaction times (Trial vs RT)
     rt_full_mask = np.isfinite(rts) & (rts < 2) & (trials.response != 0)
@@ -368,14 +368,12 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     response_trial_nums_left = response_trial_nums[response_left_mask]
     response_trial_nums_right = response_trial_nums[response_right_mask]
 
-    # Left/right choice splits for post-go center dwell and wait floor.
+    # Choice splits exclude withdrawals without a choice; the combined delta keeps them.
     wait_choice = response_vals[wait_mask]
     left_choice_mask = wait_choice == -1
     right_choice_mask = wait_choice == 1
     wait_delta_left = wait_delta[left_choice_mask]
     wait_delta_right = wait_delta[right_choice_mask]
-    wait_left = wait_actual[left_choice_mask]
-    wait_right = wait_actual[right_choice_mask]
     wait_trial_nums_left = wait_trial_nums[left_choice_mask]
     wait_trial_nums_right = wait_trial_nums[right_choice_mask]
 
@@ -384,12 +382,6 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     )
     wait_delta_right_roll_x, wait_delta_right_roll_y = _rolling_stat(
         wait_trial_nums_right, wait_delta_right, win
-    )
-    wait_left_roll_x, wait_left_roll_y = _rolling_stat(
-        wait_trial_nums_left, wait_left, win
-    )
-    wait_right_roll_x, wait_right_roll_y = _rolling_stat(
-        wait_trial_nums_right, wait_right, win
     )
     response_roll_x, response_roll_y = _rolling_stat(
         response_trial_nums, response_times, win
@@ -498,7 +490,6 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
         trial_count_trial_nums = []
 
     wait_delta_x, wait_delta_y = _rolling_stat(wait_trial_nums, wait_delta, win)
-    wait_roll_x, wait_roll_y = _rolling_stat(wait_trial_nums, wait_actual, win)
     ew_raw = trials.early_withdrawal.to_numpy()
     trial_nums_all = trials.trial_num.to_numpy()
     ew_roll_x, ew_roll_y = _rolling_stat(trial_nums_all, ew_raw, win, stat=np.mean)
@@ -713,8 +704,8 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
         "init_trial_nums": init_trial_nums.tolist(),
         "init_roll_x": init_roll_x,
         "init_roll_y": init_roll_y,
-        "wait_times": wait_actual.tolist(),
-        "wait_min_times": wait_min.tolist(),
+        "required_wait_times": required_wait.tolist(),
+        "required_wait_trial_nums": required_wait_trial_nums.tolist(),
         "wait_delta_times": wait_delta.tolist(),
         "wait_delta_left_times": wait_delta_left.tolist(),
         "wait_delta_right_times": wait_delta_right.tolist(),
@@ -727,14 +718,6 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
         "wait_delta_left_y": wait_delta_left_roll_y,
         "wait_delta_right_x": wait_delta_right_roll_x,
         "wait_delta_right_y": wait_delta_right_roll_y,
-        "wait_roll_x": wait_roll_x,
-        "wait_roll_y": wait_roll_y,
-        "wait_times_left": wait_left.tolist(),
-        "wait_times_right": wait_right.tolist(),
-        "wait_left_x": wait_left_roll_x,
-        "wait_left_y": wait_left_roll_y,
-        "wait_right_x": wait_right_roll_x,
-        "wait_right_y": wait_right_roll_y,
         "slide_x": slide_x,  # rolling performance x
         "slide_y": slide_y,  # rolling performance y
         "ew_roll_x": ew_roll_x,  # rolling EW x

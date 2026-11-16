@@ -39,6 +39,8 @@ def trials(n=100, **columns):
             "stim_rate_vision": rng.uniform(5.0, 15.0, n),
             "category_boundary": 10.0,
             "t_start": rng.uniform(0.0, 0.5, n),
+            "t_earlywithdraw": np.nan,
+            "required_wait_time": 0.8,
             "t_stim": t_stim,
             "t_gocue": t_stim + rng.uniform(0.5, 1.5, n),
             "t_react": t_stim + rng.uniform(0.5, 2.0, n),
@@ -174,3 +176,59 @@ def test_modalities_stay_separate_and_sessions_back_counts_sessions(data, monkey
     assert audio["x"] == ["2026-01-07 12:00:00"]
     per_session = data.multisession_metrics("subject-a", sessions_back=3)
     assert len(per_session["water"]) == 3
+
+
+def test_wait_delta_uses_saved_requirement_and_keeps_early_withdrawals(
+    data, monkeypatch
+):
+    frame = trials(
+        5,
+        t_stim=[1.0, 11.0, 21.0, 31.0, np.nan],
+        t_react=[2.2, np.nan, 21.8, 32.0, np.nan],
+        t_earlywithdraw=[np.nan, 11.3, np.nan, np.nan, 40.2],
+        # A missing go cue must not remove an otherwise measured withdrawal.
+        t_gocue=np.nan,
+        required_wait_time=[0.8, 0.8, 0.8, None, 0.8],
+        early_withdrawal=[0, 1, 0, 0, 1],
+        response=[1, 0, -1, 1, 0],
+    )
+    result = session_metrics(data, monkeypatch, frame)
+    assert result["wait_trial_nums"] == [1, 2, 3]
+    np.testing.assert_allclose(result["wait_delta_times"], [0.4, -0.5, 0.0], atol=1e-12)
+    np.testing.assert_allclose(result["wait_delta_right_times"], [0.4])
+    np.testing.assert_allclose(result["wait_delta_left_times"], [0.0], atol=1e-12)
+    assert result["required_wait_trial_nums"] == [1, 2, 3, 5]
+    assert result["required_wait_times"] == [0.8] * 4
+
+
+def test_required_wait_preserves_progression_without_completed_trials(
+    data, monkeypatch
+):
+    result = session_metrics(
+        data,
+        monkeypatch,
+        trials(
+            4,
+            required_wait_time=[0.0, 0.4, None, 1.2],
+            t_stim=np.nan,
+            t_react=np.nan,
+        ),
+    )
+    assert result["required_wait_trial_nums"] == [1, 2, 4]
+    assert result["required_wait_times"] == [0.0, 0.4, 1.2]
+    assert result["wait_delta_times"] == []
+
+
+@pytest.mark.parametrize("required", [None, np.nan, -1.0, np.inf])
+def test_unknown_or_invalid_requirement_is_not_inferred(data, monkeypatch, required):
+    result = session_metrics(data, monkeypatch, trials(required_wait_time=required))
+    assert result["required_wait_times"] == []
+    assert result["wait_delta_times"] == []
+
+
+def test_legacy_rows_without_required_wait_leave_wait_plots_empty(data, monkeypatch):
+    result = session_metrics(
+        data, monkeypatch, trials().drop(columns="required_wait_time")
+    )
+    assert result["required_wait_times"] == []
+    assert result["wait_delta_times"] == []
