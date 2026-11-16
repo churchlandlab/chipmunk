@@ -1,4 +1,4 @@
-"""Passive ingestion reads local MATs and preserves replay/source trial links."""
+"""Passive ingestion respects the worker's S3 policy and preserves replay links."""
 import ast
 from pathlib import Path
 import tempfile
@@ -37,13 +37,18 @@ class Relation:
     def local_path(self):
         return self.fetch1('local_path')
 
+    def get(self):
+        return self.fetch1('download')()
+
 
 class PassiveIngestionTest(unittest.TestCase):
-    def run_make(self, filename):
+    def run_make(self, filename, allow_s3=False, downloaded=None):
         key = dict(subject_name='GRB001', session_name='one', dataset_name='chipmunk_passive')
         dataset = Relation([dict(key, dataset_type='passive-stimulation')])
         dataset.DataFiles = Relation([dict(key, file_path='replay.mat')])
-        file_relation = Relation([dict(file_path='replay.mat', local_path=filename)])
+        download = Mock(return_value=[downloaded])
+        file_relation = Relation([dict(file_path='replay.mat', local_path=filename,
+                                       download=download)])
         file_factory = lambda: file_relation
         target = SimpleNamespace(insert1=Mock(), Trial=SimpleNamespace(insert=Mock()))
         cls = next(n for n in ast.parse((ROOT / 'pluginschema.py').read_text()).body
@@ -51,9 +56,15 @@ class PassiveIngestionTest(unittest.TestCase):
         make = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == 'make')
         make.body = [n for n in make.body if not isinstance(n, ast.ImportFrom)]
         ns = dict(Dataset=dataset, File=file_factory, np=np, loadmat=loadmat,
-                  _passive_replay=parser_namespace()['_passive_replay'])
+                  _passive_replay=parser_namespace()['_passive_replay'],
+                  prefs=dict(allow_s3_download=allow_s3))
         exec(compile(ast.Module(body=[make], type_ignores=[]), 'passive_make', 'exec'), ns)
-        ns['make'](target, key)
+        try:
+            ns['make'](target, key)
+        finally:
+            if filename is not None or not allow_s3:
+                download.assert_not_called()
+        target.download = download
         return target
 
     def test_missing_local_mat_fails_without_downloading(self):
@@ -72,3 +83,14 @@ class PassiveIngestionTest(unittest.TestCase):
         self.assertEqual([r['source_trial_num'] for r in rows], [0, 1])
         self.assertTrue(all(r['source_dataset_name'] == 'chipmunk' for r in rows))
         self.assertEqual([r['t_sync'] for r in rows], [100., 102.])
+
+    def test_aws_worker_fetches_missing_mat_when_allowed(self):
+        replay = replay_data(['completed'], 'completed')['PassiveReplay']
+        replay['order'] = 'sequential'
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'replay.mat'
+            savemat(path, {'PassiveReplay': replay}, long_field_names=True)
+            target = self.run_make(None, allow_s3=True, downloaded=str(path))
+        target.download.assert_called_once_with()
+        target.insert1.assert_called_once()
+        self.assertEqual(len(target.Trial.insert.call_args.args[0]), 1)

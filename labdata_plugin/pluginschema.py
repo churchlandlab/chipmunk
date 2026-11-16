@@ -729,7 +729,9 @@ class ChipmunkPassive(dj.Imported):
             return
         filename = (File() & filekey).local_path()
         if filename is None:
-            raise FileNotFoundError(f'[chipmunk]: Passive MAT is not local: {key}')
+            if not prefs.get('allow_s3_download', False):
+                raise FileNotFoundError(f'[chipmunk]: Passive MAT is not local: {key}')
+            filename = (File() & filekey).get()[0]
         replay = loadmat(filename, simplify_cells=True)['PassiveReplay']
         rows = _passive_replay(replay)
         stopped = np.atleast_1d(replay.get('stoppedPulseAfter', []))
