@@ -207,3 +207,9 @@ body {
     height: 26vh;
   }
 }
+
+@media (max-width: 760px) {
+  .dashboard-row {
+    grid-template-columns: 1fr;
+  }
+}
