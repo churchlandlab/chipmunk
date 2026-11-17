@@ -49,7 +49,7 @@ MULTI_ROWS = (
     ("median-wait",),
     ("init-times", "median-rt"),
     ("trial-counts", "water"),
-    ("training-time",),
+    ("training-time", "weight"),
 )
 SINGLE_FIGURE_IDS = (
     "frac-correct",
@@ -79,6 +79,7 @@ MULTI_FIGURE_IDS = (
     "trial-counts",
     "water",
     "training-time",
+    "weight",
 )
 TALL_FIGURE_IDS = frozenset(
     {
@@ -548,10 +549,6 @@ def create_app() -> Dash:
             dcc.Store(id="sidebar-collapsed", data=False),
             html.Div(
                 [
-                    html.H2(
-                        "Chipmunk Dashboard",
-                        style={"margin": 0},
-                    ),
                     html.Button(
                         "⬅️",
                         id="sidebar-toggle-button",
@@ -828,7 +825,6 @@ def create_app() -> Dash:
                     ("incorrect", sm["n_incorrect"], "tomato"),
                     ("EW before stimulus", sm["n_ew_pre"], "slategray"),
                     ("EW during stimulus", sm["n_ew_stim"], "silver"),
-                    ("no initiation recorded", sm["n_not_initiated"], "#b38b59"),
                     ("no choice", sm["n_no_choice"], "#333333"),
                 ]
                 for outcome_name, yvals, base_color in outcome_types:
@@ -1705,7 +1701,6 @@ def create_app() -> Dash:
                 ("incorrect", "incorrect", "tomato"),
                 ("EW before stimulus", "ew_pre", "slategray"),
                 ("EW during stimulus", "ew_stim", "silver"),
-                ("no initiation recorded", "not_initiated", "#b38b59"),
                 ("no choice", "no_choice", "#333333"),
             ]:
                 vals = [d[key] for d in multi_outcome_data]
@@ -2069,7 +2064,12 @@ def create_app() -> Dash:
 
         fig_perf, fig_ew, fig_sb = go.Figure(), go.Figure(), go.Figure()
         fig_it, fig_mrt, fig_mwt = go.Figure(), go.Figure(), go.Figure()
-        fig_tc, fig_wa, fig_tt = go.Figure(), go.Figure(), go.Figure()
+        fig_tc, fig_wa, fig_tt, fig_wt = (
+            go.Figure(),
+            go.Figure(),
+            go.Figure(),
+            go.Figure(),
+        )
 
         for i, subj in enumerate(subjects):
             c = COLORS[i % len(COLORS)]
@@ -2146,7 +2146,6 @@ def create_app() -> Dash:
                 for key, outcome, pattern in (
                     ("ew_pre_rate", "EW before stimulus", "dash"),
                     ("ew_stim_rate", "EW during stimulus", "solid"),
-                    ("not_initiated_rate", "no initiation recorded", "dot"),
                     ("no_choice_rate", "no choice", "dashdot"),
                     ("completion_rate", "wait completed", "longdash"),
                 ):
@@ -2193,6 +2192,20 @@ def create_app() -> Dash:
             if not ms:
                 continue
             add(fig_wa, ms, ms["water"], "%{y:.2f} mL" + date, subj)
+            if ms["weight_x"]:
+                fig_wt.add_trace(
+                    go.Scatter(
+                        x=ms["weight_x"],
+                        y=ms["weight_g"],
+                        mode="lines+markers",
+                        name=subj,
+                        line={"color": c},
+                        marker={"color": c, "size": 7},
+                        hovertemplate="%{y:.2f} g<br>%{x|%Y-%m-%d %H:%M}<extra>"
+                        + subj
+                        + "</extra>",
+                    )
+                )
             hours = ms.get("training_time_hours", [])
             labels = [
                 _clock_label(float(v)) if v is not None else "unknown" for v in hours
@@ -2298,6 +2311,23 @@ def create_app() -> Dash:
             },
         )
 
+        _layout(
+            fig_wt,
+            title="Weight",
+            xaxis_title="Weighing date",
+            yaxis_title="Weight (g)",
+            xaxis=_ms,
+        )
+        if not fig_wt.data:
+            fig_wt.add_annotation(
+                text="No weight records",
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+            )
+
         for figure in (
             fig_perf,
             fig_ew,
@@ -2308,6 +2338,7 @@ def create_app() -> Dash:
             fig_tc,
             fig_wa,
             fig_tt,
+            fig_wt,
         ):
             figure.update_layout(
                 height=400,
@@ -2325,6 +2356,7 @@ def create_app() -> Dash:
                 automargin=True,
             )
             figure.update_yaxes(tickfont_size=12, automargin=True)
+        fig_wt.update_xaxes(title_text="Weighing date")
         for figure in (fig_ew, fig_mwt):
             figure.update_layout(
                 height=460,
@@ -2358,6 +2390,7 @@ def create_app() -> Dash:
             fig_tc,
             fig_wa,
             fig_tt,
+            fig_wt,
         )
 
     cast(Any, app).chipmunk_renderers = {

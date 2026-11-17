@@ -17,13 +17,18 @@ SESSION = "20260101_010101"
 @pytest.fixture
 def data(monkeypatch):
     """dashboard.data imported without labdata or a database."""
-    schema = types.SimpleNamespace(DecisionTask=None, Watering=None)
+    schema = types.SimpleNamespace(DecisionTask=None, Watering=None, Weighing=None)
     monkeypatch.setitem(sys.modules, "labdata", types.SimpleNamespace(schema=schema))
     monkeypatch.setitem(sys.modules, "labdata.schema", schema)
     monkeypatch.setitem(sys.modules, "chipmunk", types.SimpleNamespace(Chipmunk=None))
     monkeypatch.delitem(sys.modules, "dashboard.data", raising=False)
     module = importlib.import_module("dashboard.data")
     monkeypatch.setattr(module, "get_subject_water", lambda *a, **k: {})
+    monkeypatch.setattr(
+        module,
+        "get_subject_weights",
+        lambda *a, **k: pd.DataFrame(columns=["weighing_datetime", "weight"]),
+    )
     monkeypatch.setattr(module, "get_trials_for_sessions", lambda *a, **k: {})
     yield module
     sys.modules.pop("dashboard.data", None)
@@ -390,3 +395,41 @@ def test_initiation_timestamp_overrides_missing_legacy_flag(data):
     masks = data._outcome_masks(frame)
     assert masks["not_initiated"].tolist() == [False, False, True]
     assert masks["no_choice"].tolist() == [True, True, False]
+
+
+def test_weight_history_uses_actual_times_and_selected_dates_without_smoothing(
+    data, monkeypatch
+):
+    names = ["20260105_150000", "20260107_120000"]
+    measurements = pd.DataFrame(
+        {
+            "weighing_datetime": [
+                "2026-01-04 22:00:00",
+                "2026-01-05 08:00:00",
+                "2026-01-05 18:00:00",
+                "2026-01-06 08:00:00",
+                "2026-01-07 23:59:00",
+                "2026-01-08 00:00:00",
+            ],
+            "weight": [99.0, 22.0, 22.5, 23.0, 24.0, 99.0],
+        }
+    )
+    monkeypatch.setattr(data, "get_subject_weights", lambda *a: measurements)
+    result = multisession_metrics(
+        data, monkeypatch, sessions(names), smooth=True, smooth_window=3
+    )
+    assert result["weight_x"] == measurements["weighing_datetime"].tolist()[1:-1]
+    assert result["weight_g"] == [22.0, 22.5, 23.0, 24.0]
+
+
+def test_missing_and_invalid_weights_are_not_filled(data, monkeypatch):
+    frame = pd.DataFrame(
+        {
+            "weighing_datetime": ["2026-01-05 08:00:00"] * 5,
+            "weight": [None, np.nan, -1.0, 0.0, np.inf],
+        }
+    )
+    monkeypatch.setattr(data, "get_subject_weights", lambda *a: frame)
+    result = multisession_metrics(data, monkeypatch, sessions(["20260105_150000"]))
+    assert result["weight_x"] == []
+    assert result["weight_g"] == []
