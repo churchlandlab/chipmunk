@@ -45,9 +45,10 @@ class PassiveIngestionTest(unittest.TestCase):
     def run_make(self, filename, allow_s3=False, downloaded=None):
         key = dict(subject_name='GRB001', session_name='one', dataset_name='chipmunk_passive')
         dataset = Relation([dict(key, dataset_type='passive-stimulation')])
-        dataset.DataFiles = Relation([dict(key, file_path='replay.mat')])
+        file_path = Path(filename or downloaded or 'replay.mat').name
+        dataset.DataFiles = Relation([dict(key, file_path=file_path)])
         download = Mock(return_value=[downloaded])
-        file_relation = Relation([dict(file_path='replay.mat', local_path=filename,
+        file_relation = Relation([dict(file_path=file_path, local_path=filename,
                                        download=download)])
         file_factory = lambda: file_relation
         target = SimpleNamespace(insert1=Mock(), Trial=SimpleNamespace(insert=Mock()))
@@ -74,15 +75,16 @@ class PassiveIngestionTest(unittest.TestCase):
     def test_local_mat_imports_replay_and_source_links(self):
         replay = replay_data(['completed', 'completed'], 'completed')['PassiveReplay']
         replay['order'] = 'sequential'
-        with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / 'replay.mat'
-            savemat(path, {'PassiveReplay': replay}, long_field_names=True)
-            target = self.run_make(str(path))
-        target.insert1.assert_called_once()
-        rows = target.Trial.insert.call_args.args[0]
-        self.assertEqual([r['source_trial_num'] for r in rows], [0, 1])
-        self.assertTrue(all(r['source_dataset_name'] == 'chipmunk' for r in rows))
-        self.assertEqual([r['t_sync'] for r in rows], [100., 102.])
+        for name in ('replay.mat', 'replay_passive.mat'):
+            with self.subTest(filename=name), tempfile.TemporaryDirectory() as folder:
+                path = Path(folder) / name
+                savemat(path, {'PassiveReplay': replay}, long_field_names=True)
+                target = self.run_make(str(path))
+            target.insert1.assert_called_once()
+            rows = target.Trial.insert.call_args.args[0]
+            self.assertEqual([r['source_trial_num'] for r in rows], [0, 1])
+            self.assertTrue(all(r['source_dataset_name'] == 'chipmunk' for r in rows))
+            self.assertEqual([r['t_sync'] for r in rows], [100., 102.])
 
     def test_aws_worker_fetches_missing_mat_when_allowed(self):
         replay = replay_data(['completed'], 'completed')['PassiveReplay']

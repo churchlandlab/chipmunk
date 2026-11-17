@@ -39,7 +39,7 @@ Set `passiveReplayEnable` to `1` before pressing Stop. `passiveReplayFraction` s
 
 Each replayed trial plays the stimulus the mouse saw, cut where the trial ended. Trials without a stimulus or with an early withdrawal are skipped. There are no rewards or punishments.
 
-Replay is saved in `SessionData.PassiveReplay` and in `<subject>/<session>/chipmunk_passive/`, which labdata imports as a separate dataset.
+Replay is saved in `SessionData.PassiveReplay` and in `<subject>/<session>/chipmunk_passive/<task filename>_passive.mat`, which labdata imports as a separate dataset. Existing passive files without the `_passive` suffix remain supported.
 
 ## Ephys (optional)
 

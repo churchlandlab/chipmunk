@@ -15,7 +15,7 @@ if ~isempty(BpodSystem.Path.CurrentDataFile)
         [taskFolder,taskName] = fileparts(BpodSystem.Path.CurrentDataFile{1});
         passiveFolder = fullfile(fileparts(taskFolder),'chipmunk_passive');
         [~,~] = mkdir(passiveFolder);
-        save(fullfile(passiveFolder,[taskName '.mat']),'PassiveReplay');
+        save(fullfile(passiveFolder,[taskName '_passive.mat']),'PassiveReplay');
     end
     trializedNoteIdx = [];
     for noteIdx = 1:length(BpodSystem.Data.Notes)

@@ -57,7 +57,7 @@ for session = 1:numel(experiments)
         assert(strcmp(data.TrialSettings(1).labcamsConfig,cameraConfig));
     end
     [taskFolder,taskName] = fileparts(file);
-    passiveFile = fullfile(fileparts(taskFolder),'chipmunk_passive',[taskName '.mat']);
+    passiveFile = fullfile(fileparts(taskFolder),'chipmunk_passive',[taskName '_passive.mat']);
     if enabled
         assert(data.PassiveReplay.nCompleted == 3 && strcmp(data.PassiveReplay.status,'completed'));
         passive = load(passiveFile);

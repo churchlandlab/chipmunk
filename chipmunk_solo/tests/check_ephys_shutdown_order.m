@@ -1,7 +1,7 @@
 function check_ephys_shutdown_order()
 % closeChipmunkSession with the camera, sound and ephys endpoints replaced by fixtures/shutdown.
 root=fileparts(fileparts(mfilename('fullpath')));
-folder=tempname;mkdir(folder);oldPath=path;
+folder=tempname;mkdir(folder);mkdir(fullfile(folder,'chipmunk'));oldPath=path;
 global BpodSystem ChipmunkShutdownTest
 oldBpod=BpodSystem;oldTest=ChipmunkShutdownTest;
 cleanup=onCleanup(@() restore(folder,oldPath,oldBpod,oldTest));
@@ -9,8 +9,9 @@ addpath(fullfile(root,'Functions'));
 addpath(fullfile(root,'tests','fixtures','shutdown'),'-begin');
 for failure={'none','save','sound'}
     BpodSystem=struct('ProtocolSettings',struct('demonID','FakeSubject'), ...
-        'Data',struct('nTrials',3,'Notes',{{'test note'}}),'GUIHandles',struct());
-    target=fullfile(folder,[failure{1} '.mat']);
+        'Data',struct('nTrials',3,'Notes',{{'test note'}},'PassiveReplay',struct('nCompleted',3)), ...
+        'GUIHandles',struct());
+    target=fullfile(folder,'chipmunk',[failure{1} '.mat']);
     if strcmp(failure{1},'save'),target=fullfile(folder,'missing','session.mat');end
     BpodSystem.Path.CurrentDataFile={target};
     ChipmunkShutdownTest=struct('failure',failure{1},'events',{{}},'recording',true);
@@ -21,6 +22,9 @@ for failure={'none','save','sound'}
     if strcmp(failure{1},'none')
         assert(~threw);saved=load(target);
         assert(saved.SessionData.nTrials==3 && isfield(saved.SessionData,'EphysShutdownError'));
+        passive=load(fullfile(folder,'chipmunk_passive','none_passive.mat'));
+        assert(isequaln(passive.PassiveReplay,saved.SessionData.PassiveReplay));
+        assert(~exist(fullfile(folder,'chipmunk_passive','none.mat'),'file'));
     elseif strcmp(failure{1},'save')
         assert(threw,'Save failure was swallowed');
     end
