@@ -2015,9 +2015,9 @@ def create_app() -> Dash:
 
             recorded = sm["recorded_water_ul"]
             settings_lines.append(
-                f"  recorded Watering total (µL): {recorded:.1f}"
+                f"  recorded water total (µL): {recorded:.1f}"
                 if math.isfinite(recorded)
-                else "  recorded Watering total: unknown"
+                else "  recorded water total: unknown"
             )
 
         if not settings_lines:

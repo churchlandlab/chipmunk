@@ -127,7 +127,7 @@ def test_settings_context_and_unknown_water_are_visible(monkeypatch):
     renderers = dashboard_app.create_app().chipmunk_renderers
     settings = renderers["settings"](["mouse-a"], [], None, 0, None)
     assert "estimated reward (µL): total unknown | L 2.0 | R unknown" in settings
-    assert "recorded Watering total (µL): 8.0" in settings
+    assert "recorded water total (µL): 8.0" in settings
     figures = dict(
         zip(
             dashboard_app.SINGLE_FIGURE_IDS,
