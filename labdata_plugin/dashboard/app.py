@@ -808,10 +808,7 @@ def create_app() -> Dash:
                 multi_outcome_data.append(
                     {
                         "subject": subj,
-                        "correct": sum(sm["n_correct"]),
-                        "incorrect": sum(sm["n_incorrect"]),
-                        "ew": sum(sm["n_ew"]),
-                        "no_choice": sum(sm["n_no_choice"]),
+                        **sm["outcome_counts"],
                     }
                 )
             else:
@@ -819,7 +816,9 @@ def create_app() -> Dash:
                 outcome_types = [
                     ("correct", sm["n_correct"], "mediumseagreen"),
                     ("incorrect", sm["n_incorrect"], "tomato"),
-                    ("ew", sm["n_ew"], "silver"),
+                    ("EW before stimulus", sm["n_ew_pre"], "slategray"),
+                    ("EW during stimulus", sm["n_ew_stim"], "silver"),
+                    ("not initiated", sm["n_not_initiated"], "#b38b59"),
                     ("no choice", sm["n_no_choice"], "#333333"),
                 ]
                 for outcome_name, yvals, base_color in outcome_types:
@@ -870,12 +869,27 @@ def create_app() -> Dash:
                     go.Scatter(
                         x=sm["slide_x"],
                         y=sm["slide_y"],
+                        text=sm["performance_settings"],
                         mode="lines",
                         name=subj,
                         showlegend=False,
                         legendgroup=grp,
                         line={"color": c, "width": 2},
-                        hovertemplate="%{y:.2f}" + ht_subj,
+                        hovertemplate="performance: %{y:.2f}<br>%{text}" + ht_subj,
+                    )
+                )
+
+            if sm["settings_change_trials"]:
+                fig_sp.add_trace(
+                    go.Scattergl(
+                        x=sm["settings_change_trials"],
+                        y=[1.0] * len(sm["settings_change_trials"]),
+                        text=sm["settings_change_text"],
+                        mode="markers",
+                        marker={"color": c, "symbol": "diamond", "size": 7},
+                        name=subj + " settings changed",
+                        showlegend=True,
+                        hovertemplate="trial %{x}<br>%{text}" + ht_subj,
                     )
                 )
 
@@ -1666,9 +1680,7 @@ def create_app() -> Dash:
             init_y_vals, pct=_TIMING_Y_CLIP_PCT, lower_bound=0
         )
         wait_delta_y_range = _robust_y_range(wait_delta_y_vals, pct=100)
-        wait_floor_y_range = _robust_y_range(
-            wait_floor_y_vals, pct=100, lower_bound=0
-        )
+        wait_floor_y_range = _robust_y_range(wait_floor_y_vals, pct=100, lower_bound=0)
         response_line_y_range = _robust_y_range(
             response_line_y_vals, pct=_TIMING_Y_CLIP_PCT, lower_bound=0
         )
@@ -1681,7 +1693,9 @@ def create_app() -> Dash:
             for outcome_name, key, base_color in [
                 ("correct", "correct", "mediumseagreen"),
                 ("incorrect", "incorrect", "tomato"),
-                ("ew", "ew", "silver"),
+                ("EW before stimulus", "ew_pre", "slategray"),
+                ("EW during stimulus", "ew_stim", "silver"),
+                ("not initiated", "not_initiated", "#b38b59"),
                 ("no choice", "no_choice", "#333333"),
             ]:
                 vals = [d[key] for d in multi_outcome_data]
@@ -1745,7 +1759,7 @@ def create_app() -> Dash:
 
         _layout(
             fig_sp,
-            title="Performance (easy)<br><sup>20 trial rolling mean</sup>",
+            title="Performance on Choices<br><sup>20-trial mean · ◆ settings changes</sup>",
             xaxis_title="trial number",
             yaxis_title="correct rate",
             yaxis_range=[0, 1],
@@ -1899,7 +1913,7 @@ def create_app() -> Dash:
                 counts_and_water,
                 "Water",
                 yaxis2={
-                    "title": "water (µL)",
+                    "title": "estimated water (µL)",
                     "overlaying": "y",
                     "side": "right",
                     "rangemode": "tozero",
@@ -1908,7 +1922,7 @@ def create_app() -> Dash:
             )
         _layout(
             fig_wc,
-            title="Cumulative Rewarded Water (µL)",
+            title="Estimated Rewarded Water (µL)",
             xaxis_title="trial number",
             yaxis_title="water (µL)",
         )
@@ -1991,9 +2005,20 @@ def create_app() -> Dash:
                 total = (
                     float(water_totals[2]) if len(water_totals) > 2 else left + right
                 )
+                values = [
+                    f"{v:.1f}" if math.isfinite(v) else "unknown"
+                    for v in (total, left, right)
+                ]
                 settings_lines.append(
-                    f"  water (µL): total {total:.1f} | L {left:.1f} | R {right:.1f}"
+                    f"  estimated reward (µL): total {values[0]} | L {values[1]} | R {values[2]}"
                 )
+
+            recorded = sm["recorded_water_ul"]
+            settings_lines.append(
+                f"  recorded water total (µL): {recorded:.1f}"
+                if math.isfinite(recorded)
+                else "  recorded water total: unknown"
+            )
 
         if not settings_lines:
             return "Settings unavailable for current selection."
@@ -2043,7 +2068,17 @@ def create_app() -> Dash:
             # - If date is None (startup), session_date usually defaults to latest,
             #   but we handle None.
 
-            def add(fig, ms, y, hover, name, dash="solid", legend=False, width=None, text=None):
+            def add(
+                fig,
+                ms,
+                y,
+                hover,
+                name,
+                dash="solid",
+                legend=False,
+                width=None,
+                text=None,
+            ):
                 line = {"color": c, "dash": dash, **({"width": width} if width else {})}
                 fig.add_trace(
                     go.Scatter(
@@ -2077,16 +2112,61 @@ def create_app() -> Dash:
                 )
                 if not ms:
                     continue
-                add(fig_perf, ms, ms["perf_easy"], "%{y:.2f}" + date, label, dash, legend=True, width=2)
+                add(
+                    fig_perf,
+                    ms,
+                    ms["perf_easy"],
+                    "%{y:.2f}" + date,
+                    label,
+                    dash,
+                    legend=True,
+                    width=2,
+                )
                 for fig, key, hover in (
-                    (fig_ew, "ew_rate", "%{y:.2f}"),
                     (fig_sb, "side_bias", "%{y:.2f}"),
                     (fig_it, "median_init", "%{y:.3f}s"),
                     (fig_mrt, "median_rt", "%{y:.3f}s"),
-                    (fig_mwt, "median_wait", "%{y:.3f}s"),
                     (fig_tc, "n_with_choice", "%{y}"),
                 ):
                     add(fig, ms, ms[key], hover + date, label, dash)
+                for key, outcome, pattern in (
+                    ("ew_pre_rate", "EW before stimulus", "dash"),
+                    ("ew_stim_rate", "EW during stimulus", "solid"),
+                    ("not_initiated_rate", "not initiated", "dot"),
+                    ("no_choice_rate", "no choice", "dashdot"),
+                    ("completion_rate", "wait completed", "longdash"),
+                ):
+                    add(
+                        fig_ew,
+                        ms,
+                        ms[key],
+                        "%{y:.1%} of all trials" + date,
+                        label + " · " + outcome,
+                        pattern,
+                        legend=True,
+                    )
+                    fig_ew.data[-1].update(
+                        name=outcome, legendgroup=outcome, showlegend=i == 0 and j == 0
+                    )
+                for key, wait_label, pattern in (
+                    ("required_wait_start", "required start", "dash"),
+                    ("required_wait_end", "required end", "solid"),
+                    ("median_wait", "actual completed median", "dot"),
+                ):
+                    add(
+                        fig_mwt,
+                        ms,
+                        ms[key],
+                        "%{y:.3f}s" + date,
+                        label + " · " + wait_label,
+                        pattern,
+                        legend=True,
+                    )
+                    fig_mwt.data[-1].update(
+                        name=wait_label,
+                        legendgroup=wait_label,
+                        showlegend=i == 0 and j == 0,
+                    )
 
             # Water and training time are per session: one trace per subject.
             ms = multisession_metrics(
@@ -2100,8 +2180,17 @@ def create_app() -> Dash:
                 continue
             add(fig_wa, ms, ms["water"], "%{y:.2f} mL" + date, subj)
             hours = ms.get("training_time_hours", [])
-            labels = [_clock_label(float(v)) if v is not None else "unknown" for v in hours]
-            add(fig_tt, ms, hours, "session date: %{customdata}<br>training time: %{text}", subj, text=labels)
+            labels = [
+                _clock_label(float(v)) if v is not None else "unknown" for v in hours
+            ]
+            add(
+                fig_tt,
+                ms,
+                hours,
+                "session date: %{customdata}<br>training time: %{text}",
+                subj,
+                text=labels,
+            )
 
         _ref_line = {"line_dash": "dash", "line_color": "grey", "line_width": 1}
 
@@ -2118,22 +2207,18 @@ def create_app() -> Dash:
 
         _layout(
             fig_ew,
-            title="E.W. Rate",
+            title="Outcomes and Wait Completion",
+            legend={
+                "visible": True,
+                "orientation": "h",
+                "y": -0.35,
+                "font": {"size": 9},
+            },
             xaxis_title="session datetime",
-            yaxis_title="e.w. rate",
+            yaxis_title="fraction of all trials",
             yaxis_range=[0, 1],
             xaxis=_ms,
         )
-        fig_ew.add_hline(
-            y=0.5, line_dash="dash", line_color="black"
-        )  # Keep black for EW? Spec said "make these new lines ... also make existing lines follow this style". Let's standardize ALL to grey dash.
-        # Overriding EW line to match new style
-        fig_ew.update_yaxes(range=[0, 1])  # Reset if needed, but fig var is ok.
-        # Actually, let's just add the grey line and remove the black one if it was added before.
-        # Since I'm rebuilding the figure, I just add the new one.
-        fig_ew.layout.shapes = []  # Clear existing
-        fig_ew.add_hline(y=0.5, **_ref_line)
-
         _layout(
             fig_sb,
             title="Bias Index",
@@ -2160,7 +2245,13 @@ def create_app() -> Dash:
         )
         _layout(
             fig_mwt,
-            title="Median Wait Time",
+            title="Required and Actual Wait",
+            legend={
+                "visible": True,
+                "orientation": "h",
+                "y": -0.35,
+                "font": {"size": 9},
+            },
             xaxis_title="session datetime",
             yaxis_title="time (s)",
             xaxis=_ms,
@@ -2174,7 +2265,7 @@ def create_app() -> Dash:
         )
         _layout(
             fig_wa,
-            title="Water Earned",
+            title="Recorded Water",
             xaxis_title="session datetime",
             yaxis_title="volume (mL)",
             xaxis=_ms,
