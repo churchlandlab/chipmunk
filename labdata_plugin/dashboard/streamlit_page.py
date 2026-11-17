@@ -114,10 +114,7 @@ def render_dashboard(schema: Any = None) -> None:
     load_renderers = st.cache_resource(_create_renderers)
     renderers = load_renderers()
 
-    title_col, refresh_col = st.columns([6, 1])
-    with title_col:
-        st.title("Chipmunk Dashboard")
-    with refresh_col:
+    with st.container(horizontal=True, horizontal_alignment="right"):
         if st.button("Refresh", icon=":material/refresh:", key="chipmunk-refresh"):
             _clear_data_caches(data)
             st.rerun()
@@ -275,12 +272,6 @@ def render_dashboard(schema: Any = None) -> None:
     with multi_tab:
         st.subheader("Performance and engagement", divider="gray")
         _show_figure_rows(st, multi_figures, MULTI_ROWS[:2], namespace="multi")
-        st.caption(
-            "Rates use all trials in the selected modality. No initiation recorded means "
-            "no initiation flag or timestamp, stimulus, early withdrawal, reward, or choice "
-            "was recorded. It is inferred, not a confirmed initiation timeout. "
-            "No choice means initiation was recorded but no choice, reward, or early withdrawal followed."
-        )
         st.subheader("Wait requirements and timing", divider="gray")
         _show_figure_rows(st, multi_figures, MULTI_ROWS[2:4], namespace="multi")
         st.subheader("Session activity", divider="gray")

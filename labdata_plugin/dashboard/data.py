@@ -10,7 +10,7 @@ from typing import Any, cast
 import labdata  # noqa: F401 — registers prefs plugins (chipmunk) into sys.modules
 import numpy as np
 import pandas as pd
-from labdata.schema import DecisionTask, Watering  # type: ignore
+from labdata.schema import DecisionTask, Watering, Weighing  # type: ignore
 from chipmunk import Chipmunk  # type: ignore
 
 _DB_LOCK = threading.RLock()
@@ -95,6 +95,16 @@ def get_subject_water(subject: str) -> dict[str, float]:
             "session_name", "water_volume", as_dict=True
         )
     return {row["session_name"]: float(row["water_volume"]) for row in rows}
+
+
+@_ttl_lru_cache(maxsize=64)
+def get_subject_weights(subject: str) -> pd.DataFrame:
+    """Recorded weights in grams, at their actual weighing timestamps."""
+    with _DB_LOCK:
+        rows = (Weighing & {"subject_name": subject}).fetch(
+            "weighing_datetime", "weight", order_by="weighing_datetime", as_dict=True
+        )
+    return pd.DataFrame(rows, columns=["weighing_datetime", "weight"])
 
 
 @_ttl_lru_cache(maxsize=64)
@@ -199,6 +209,7 @@ def clear_data_cache() -> None:
     get_subject_data.cache_clear()
     get_session_trials.cache_clear()
     get_subject_water.cache_clear()
+    get_subject_weights.cache_clear()
     get_trials_for_sessions.cache_clear()
     get_sessions.cache_clear()
     get_subjects_for_date.cache_clear()
@@ -543,6 +554,8 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     }
     session_settings_lines = [f"trials: {len(trials)}", "Outcomes (% of all trials)"]
     for key, count in outcome_counts.items():
+        if key == "not_initiated":
+            continue
         label = {
             "ew_pre": "EW before stimulus",
             "ew_stim": "EW during stimulus",
@@ -937,6 +950,21 @@ def multisession_metrics(
         for k, v in res.items():
             out[k] = np.asarray(v).tolist()
 
+    weights = get_subject_weights(subject).copy()
+    weights["weighing_datetime"] = pd.to_datetime(
+        weights["weighing_datetime"], errors="coerce"
+    )
+    weights["weight"] = pd.to_numeric(weights["weight"], errors="coerce")
+    weights = weights[
+        (weights["weighing_datetime"] >= d["date"].min())
+        & (weights["weighing_datetime"] < d["date"].max() + pd.Timedelta(days=1))
+        & np.isfinite(weights["weight"])
+        & (weights["weight"] > 0)
+    ]
+    out["weight_x"] = [
+        timestamp.isoformat(sep=" ") for timestamp in weights["weighing_datetime"]
+    ]
+    out["weight_g"] = weights["weight"].astype(float).tolist()
     out["x"] = x_axis
     out["session_dates"] = session_dates
     return out

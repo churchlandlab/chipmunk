@@ -144,4 +144,6 @@ def make_multisession_metrics(*, n: int = 10, seed: int = 42) -> dict:
         "median_rt": rng.uniform(0.2, 0.5, n).tolist(),
         "median_wait": rng.uniform(0.5, 2.0, n).tolist(),
         "water": rng.uniform(1.0, 3.0, n).tolist(),
+        "weight_x": [f"2026-01-{i + 1:02d} 08:00:00" for i in range(n)],
+        "weight_g": np.linspace(23.0, 24.0, n).tolist(),
     }

@@ -82,4 +82,5 @@ def multisession_metrics(
         f"{day}T{9 + ((idx + offset) % 6):02d}:30:00"
         for idx, day in enumerate(session_dates)
     ]
+    metrics["weight_x"] = [f"{day} 08:00:00" for day in session_dates]
     return metrics

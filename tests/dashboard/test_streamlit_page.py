@@ -25,8 +25,8 @@ def test_streamlit_dashboard_renders_and_filters_recent_mice(monkeypatch):
     app = AppTest.from_string(source).run(timeout=30)
 
     assert not app.exception
-    assert [title.value for title in app.title] == ["Chipmunk Dashboard"]
-    assert len(app.get("plotly_chart")) == 25
+    assert not app.title
+    assert len(app.get("plotly_chart")) == 26
     assert app.toggle[0].label == "Recent mice only"
     assert app.toggle[0].value is True
     recent_options = app.multiselect[0].options
@@ -35,7 +35,7 @@ def test_streamlit_dashboard_renders_and_filters_recent_mice(monkeypatch):
 
     assert not app.exception
     assert len(app.multiselect[0].options) > len(recent_options)
-    assert len(app.get("plotly_chart")) == 25
+    assert len(app.get("plotly_chart")) == 26
 
 
 def test_wait_figures_show_saved_progression_and_rare_negative_delta(monkeypatch):
@@ -96,15 +96,13 @@ def test_history_shows_outcome_rates_and_wait_endpoints_per_modality(monkeypatch
         )
     )
     outcomes = figures["ew-rate"]
-    assert len(outcomes.data) == 10
+    assert len(outcomes.data) == 8
     assert outcomes.layout.legend.visible
-    assert {t.name for t in outcomes.data} >= {
-        "no initiation recorded",
-        "EW before stimulus",
-    }
-    assert sum(t.showlegend for t in outcomes.data) == 5
+    assert "no initiation recorded" not in {t.name for t in outcomes.data}
+    assert "EW before stimulus" in {t.name for t in outcomes.data}
+    assert sum(t.showlegend for t in outcomes.data) == 4
     assert "mouse-a audio" in outcomes.data[0].hovertemplate
-    assert "mouse-a visual" in outcomes.data[5].hovertemplate
+    assert "mouse-a visual" in outcomes.data[4].hovertemplate
     waits = figures["median-wait"]
     assert len(waits.data) == 6
     assert waits.layout.legend.visible
@@ -148,7 +146,7 @@ def test_settings_context_and_unknown_water_are_visible(monkeypatch):
     )
 
 
-def test_history_layout_gives_dense_plots_room_and_explains_inferred_outcome(
+def test_history_layout_gives_dense_plots_room_without_explanatory_copy(
     monkeypatch,
 ):
     from dashboard import app as dashboard_app
@@ -187,4 +185,49 @@ def test_history_layout_gives_dense_plots_room_and_explains_inferred_outcome(
         "from dashboard.streamlit_page import render_dashboard\nrender_dashboard()"
     ).run(timeout=30)
     assert not ui.exception
-    assert any("not a confirmed initiation timeout" in c.value for c in ui.caption)
+    assert not ui.caption
+    assert not ui.title
+
+
+def test_weight_is_per_subject_and_removed_category_stays_out_of_plots(monkeypatch):
+    from dashboard import app as dashboard_app
+    from dashboard.fixture_data import make_multisession_metrics, make_session_metrics
+
+    history = make_multisession_metrics(n=3)
+    single = make_session_metrics()
+    single["n_not_initiated"] = [10] * 5
+    single["outcome_counts"]["not_initiated"] = 50
+    monkeypatch.setattr(
+        dashboard_app, "get_subject_modalities", lambda subject: ["audio", "visual"]
+    )
+    monkeypatch.setattr(dashboard_app, "multisession_metrics", lambda *a, **k: history)
+    monkeypatch.setattr(
+        dashboard_app, "get_sessions", lambda subject: ["20260101_120000"]
+    )
+    monkeypatch.setattr(dashboard_app, "session_metrics", lambda *a: single)
+    renderers = dashboard_app.create_app().chipmunk_renderers
+    multi = dict(
+        zip(
+            dashboard_app.MULTI_FIGURE_IDS,
+            renderers["multi"](["mouse-a", "mouse-b"], [], 3, None, [], 3, 0),
+            strict=True,
+        )
+    )
+    weight = multi["weight"]
+    assert len(weight.data) == 2
+    assert weight.layout.yaxis.title.text == "Weight (g)"
+    assert weight.layout.xaxis.title.text == "Weighing date"
+    assert list(weight.data[0].x) == history["weight_x"]
+    assert list(weight.data[0].y) == history["weight_g"]
+    for subjects in [["mouse-a"], ["mouse-a", "mouse-b"]]:
+        figures = dict(
+            zip(
+                dashboard_app.SINGLE_FIGURE_IDS,
+                renderers["single"](subjects, [], None, 0, None),
+                strict=True,
+            )
+        )
+        assert not any(
+            "initiation" in trace.name for trace in figures["frac-correct"].data
+        )
+    assert not any("initiation" in trace.name for trace in multi["ew-rate"].data)
