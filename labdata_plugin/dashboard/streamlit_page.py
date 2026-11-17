@@ -69,7 +69,11 @@ def _show_figure_rows(
         columns = st.columns(len(row), gap="small")
         for column, figure_id in zip(columns, row, strict=True):
             figure = figures[figure_id]
-            figure.update_layout(height=320 if figure_id in TALL_FIGURE_IDS else 300)
+            if namespace == "multi" or figure_id == "frac-correct":
+                height = figure.layout.height
+            else:
+                height = 320 if figure_id in TALL_FIGURE_IDS else 300
+            figure.update_layout(height=height)
             with column:
                 st.plotly_chart(
                     figure,
@@ -269,9 +273,15 @@ def render_dashboard(schema: Any = None) -> None:
             namespace="single-timing",
         )
     with multi_tab:
-        _show_figure_rows(
-            st,
-            multi_figures,
-            MULTI_ROWS,
-            namespace="multi",
+        st.subheader("Performance and engagement", divider="gray")
+        _show_figure_rows(st, multi_figures, MULTI_ROWS[:2], namespace="multi")
+        st.caption(
+            "Rates use all trials in the selected modality. No initiation recorded means "
+            "no initiation flag or timestamp, stimulus, early withdrawal, reward, or choice "
+            "was recorded. It is inferred, not a confirmed initiation timeout. "
+            "No choice means initiation was recorded but no choice, reward, or early withdrawal followed."
         )
+        st.subheader("Wait requirements and timing", divider="gray")
+        _show_figure_rows(st, multi_figures, MULTI_ROWS[2:4], namespace="multi")
+        st.subheader("Session activity", divider="gray")
+        _show_figure_rows(st, multi_figures, MULTI_ROWS[4:], namespace="multi")
