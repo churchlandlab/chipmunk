@@ -32,7 +32,8 @@ _CLEAN: dict[str, Any] = {
 _AXIS_CLEAN = {"showgrid": False, "zeroline": False, "tickfont": {"color": "#56606b"}}
 _LEGEND: dict[str, Any] = {"visible": False}
 OVERVIEW_ROWS = (
-    ("frac-correct", "p-right", "chrono", "session-perf"),
+    ("frac-correct", "session-perf"),
+    ("p-right", "chrono"),
     ("trial-count-time", "water-cumulative"),
 )
 TIMING_ROWS = (
@@ -43,8 +44,12 @@ TIMING_ROWS = (
     ("iti-rolling", "iti-dist"),
 )
 MULTI_ROWS = (
-    ("performance", "ew-rate", "side-bias", "trial-counts"),
-    ("init-times", "median-wait", "median-rt", "water", "training-time"),
+    ("performance", "side-bias"),
+    ("ew-rate",),
+    ("median-wait",),
+    ("init-times", "median-rt"),
+    ("trial-counts", "water"),
+    ("training-time",),
 )
 SINGLE_FIGURE_IDS = (
     "frac-correct",
@@ -237,6 +242,11 @@ def create_app() -> Dash:
             id=gid,
             className=graph_class,
             config={"displayModeBar": False},
+            style={"height": 460 if gid in {"ew-rate", "median-wait"} else 400}
+            if gid in MULTI_FIGURE_IDS
+            else {"height": 420}
+            if gid == "frac-correct"
+            else {},
         )
 
     def _clock_label(hours_since_midnight: float) -> str:
@@ -818,7 +828,7 @@ def create_app() -> Dash:
                     ("incorrect", sm["n_incorrect"], "tomato"),
                     ("EW before stimulus", sm["n_ew_pre"], "slategray"),
                     ("EW during stimulus", sm["n_ew_stim"], "silver"),
-                    ("not initiated", sm["n_not_initiated"], "#b38b59"),
+                    ("no initiation recorded", sm["n_not_initiated"], "#b38b59"),
                     ("no choice", sm["n_no_choice"], "#333333"),
                 ]
                 for outcome_name, yvals, base_color in outcome_types:
@@ -1695,7 +1705,7 @@ def create_app() -> Dash:
                 ("incorrect", "incorrect", "tomato"),
                 ("EW before stimulus", "ew_pre", "slategray"),
                 ("EW during stimulus", "ew_stim", "silver"),
-                ("not initiated", "not_initiated", "#b38b59"),
+                ("no initiation recorded", "not_initiated", "#b38b59"),
                 ("no choice", "no_choice", "#333333"),
             ]:
                 vals = [d[key] for d in multi_outcome_data]
@@ -1730,6 +1740,8 @@ def create_app() -> Dash:
                 yaxis_title="",
                 barmode="stack",
                 legend=_fc_legend,
+                height=420,
+                margin={"l": 60, "r": 20, "t": 50, "b": 130},
             )
         else:
             _layout(
@@ -1739,6 +1751,8 @@ def create_app() -> Dash:
                 yaxis_title="count",
                 barmode="stack",
                 legend=_fc_legend,
+                height=420,
+                margin={"l": 60, "r": 20, "t": 50, "b": 130},
             )
 
         _layout(
@@ -2132,7 +2146,7 @@ def create_app() -> Dash:
                 for key, outcome, pattern in (
                     ("ew_pre_rate", "EW before stimulus", "dash"),
                     ("ew_stim_rate", "EW during stimulus", "solid"),
-                    ("not_initiated_rate", "not initiated", "dot"),
+                    ("not_initiated_rate", "no initiation recorded", "dot"),
                     ("no_choice_rate", "no choice", "dashdot"),
                     ("completion_rate", "wait completed", "longdash"),
                 ):
@@ -2281,6 +2295,56 @@ def create_app() -> Dash:
                 "tickmode": "array",
                 "tickvals": list(range(0, 25, 3)),
                 "ticktext": [f"{hour:02d}:00" for hour in range(0, 25, 3)],
+            },
+        )
+
+        for figure in (
+            fig_perf,
+            fig_ew,
+            fig_sb,
+            fig_it,
+            fig_mrt,
+            fig_mwt,
+            fig_tc,
+            fig_wa,
+            fig_tt,
+        ):
+            figure.update_layout(
+                height=400,
+                margin={"l": 70, "r": 30, "t": 55, "b": 90},
+                font={"size": 13},
+                title_font_size=16,
+                hoverlabel={"bgcolor": "white", "font_size": 13},
+            )
+            figure.update_xaxes(
+                title_text="Session date",
+                tickformat="%b %d\n%Y",
+                tickangle=0,
+                nticks=5,
+                tickfont_size=12,
+                automargin=True,
+            )
+            figure.update_yaxes(tickfont_size=12, automargin=True)
+        for figure in (fig_ew, fig_mwt):
+            figure.update_layout(
+                height=460,
+                margin_b=140,
+                hovermode="closest",
+                legend={
+                    "visible": True,
+                    "orientation": "h",
+                    "x": 0,
+                    "y": -0.35,
+                    "font": {"size": 12},
+                },
+            )
+        fig_perf.update_layout(
+            margin_b=110,
+            legend={
+                "visible": True,
+                "orientation": "h",
+                "y": -0.35,
+                "font": {"size": 12},
             },
         )
 

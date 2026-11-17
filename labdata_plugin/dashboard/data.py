@@ -112,6 +112,7 @@ def get_trials_for_sessions(
         "rewarded",
         "with_choice",
         "initiated",
+        "t_initiate",
         "early_withdrawal",
         "t_stim",
         "t_react",
@@ -137,7 +138,12 @@ def _outcome_masks(trials: pd.DataFrame) -> dict[str, np.ndarray]:
     early = (trials.early_withdrawal.to_numpy() == 1) & ~(correct | incorrect)
     presented = trials.t_stim.notna().to_numpy()
     initiated = (
-        (trials.initiated.to_numpy() == 1) | presented | early | correct | incorrect
+        (trials.initiated.to_numpy() == 1)
+        | trials.t_initiate.notna().to_numpy()
+        | presented
+        | early
+        | correct
+        | incorrect
     )
     return {
         "correct": correct,
@@ -540,7 +546,7 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
         label = {
             "ew_pre": "EW before stimulus",
             "ew_stim": "EW during stimulus",
-            "not_initiated": "not initiated",
+            "not_initiated": "no initiation recorded",
             "no_choice": "no choice",
         }.get(key, key)
         session_settings_lines.append(

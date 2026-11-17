@@ -98,7 +98,10 @@ def test_history_shows_outcome_rates_and_wait_endpoints_per_modality(monkeypatch
     outcomes = figures["ew-rate"]
     assert len(outcomes.data) == 10
     assert outcomes.layout.legend.visible
-    assert {t.name for t in outcomes.data} >= {"not initiated", "EW before stimulus"}
+    assert {t.name for t in outcomes.data} >= {
+        "no initiation recorded",
+        "EW before stimulus",
+    }
     assert sum(t.showlegend for t in outcomes.data) == 5
     assert "mouse-a audio" in outcomes.data[0].hovertemplate
     assert "mouse-a visual" in outcomes.data[5].hovertemplate
@@ -143,3 +146,45 @@ def test_settings_context_and_unknown_water_are_visible(monkeypatch):
     assert (
         figures["water-cumulative"].layout.title.text == "Estimated Rewarded Water (µL)"
     )
+
+
+def test_history_layout_gives_dense_plots_room_and_explains_inferred_outcome(
+    monkeypatch,
+):
+    from dashboard import app as dashboard_app
+    from dashboard.fixture_data import make_multisession_metrics
+
+    assert all(len(row) <= 2 for row in dashboard_app.MULTI_ROWS)
+    assert sorted(gid for row in dashboard_app.MULTI_ROWS for gid in row) == sorted(
+        dashboard_app.MULTI_FIGURE_IDS
+    )
+    assert ("ew-rate",) in dashboard_app.MULTI_ROWS
+    assert ("median-wait",) in dashboard_app.MULTI_ROWS
+    monkeypatch.setattr(
+        dashboard_app, "get_subject_modalities", lambda subject: ["visual"]
+    )
+    monkeypatch.setattr(
+        dashboard_app,
+        "multisession_metrics",
+        lambda *a, **k: make_multisession_metrics(),
+    )
+    figures = dict(
+        zip(
+            dashboard_app.MULTI_FIGURE_IDS,
+            dashboard_app.create_app().chipmunk_renderers["multi"](
+                ["mouse-a"], [], 10, None, [], 3, 0
+            ),
+            strict=True,
+        )
+    )
+    for key in ["ew-rate", "median-wait"]:
+        assert figures[key].layout.height == 460
+        assert figures[key].layout.hovermode == "closest"
+        assert figures[key].layout.margin.b >= 140
+        assert figures[key].layout.legend.font.size >= 12
+    assert figures["performance"].layout.legend.visible
+    ui = AppTest.from_string(
+        "from dashboard.streamlit_page import render_dashboard\nrender_dashboard()"
+    ).run(timeout=30)
+    assert not ui.exception
+    assert any("not a confirmed initiation timeout" in c.value for c in ui.caption)

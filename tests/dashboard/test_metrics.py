@@ -42,6 +42,7 @@ def trials(n=100, **columns):
             "t_start": rng.uniform(0.0, 0.5, n),
             "t_earlywithdraw": np.nan,
             "initiated": 1,
+            "t_initiate": np.nan,
             "configured_reward_volume": 2.0,
             "required_wait_time": 0.8,
             "t_stim": t_stim,
@@ -374,3 +375,18 @@ def test_missing_trial_history_has_unknown_outcome_rates(data, monkeypatch):
     result = multisession_metrics(data, monkeypatch, sessions(["20260105_090000"]))
     assert math.isnan(result["ew_rate"][0])
     assert math.isnan(result["required_wait_start"][0])
+
+
+def test_initiation_timestamp_overrides_missing_legacy_flag(data):
+    frame = trials(
+        3,
+        initiated=0,
+        t_initiate=[0.5, np.nan, np.nan],
+        t_stim=[np.nan, 1.0, np.nan],
+        rewarded=0,
+        with_choice=0,
+        early_withdrawal=0,
+    )
+    masks = data._outcome_masks(frame)
+    assert masks["not_initiated"].tolist() == [False, False, True]
+    assert masks["no_choice"].tolist() == [True, True, False]
