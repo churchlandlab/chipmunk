@@ -180,7 +180,7 @@ function result = spikeglx_client(cmd, varargin)
             if isempty(state.dataDir)
                 state.dataDir = char(GetDataDir(hSGL, 0));
             end
-            state = doRefresh(state);
+            state = doRefresh(state,false);
             if state.connected,state.remoteDevices=readDeviceSelection();end
             savePrefs(state);
         catch ME
@@ -401,7 +401,8 @@ function result = spikeglx_client(cmd, varargin)
         end
     end
 
-    function state = doRefresh(state)
+    function state = doRefresh(state,reconnect)
+        if nargin<2,reconnect=true;end
         if ~isValidHandle()
             state.connected = false;
             state.running = false;
@@ -419,7 +420,15 @@ function result = spikeglx_client(cmd, varargin)
             state.running = false;
             state.recording = false;
             state.lastError = ME.message;
-            state = logAction(state,['Connection lost: ' ME.message ...
+            % Trials pause polling; SpikeGLX expires idle TCP connections after 10 s.
+            if reconnect
+                state=doConnect(state);
+                if state.connected
+                    state=logAction(state,'Control connection restored; recording status rechecked.');
+                    return
+                end
+            end
+            state = logAction(state,['Connection lost: ' state.lastError ...
                 '. Check acquisition on the recording host, then reconnect.']);
             return
         end
@@ -442,6 +451,7 @@ function result = spikeglx_client(cmd, varargin)
             if ~contains(ME.message, 'never validated')
                 state = closeHandle(state);
                 state.lastError = ME.message;
+                if reconnect,state=doConnect(state);end
             end
         end
     end
@@ -497,11 +507,12 @@ function result = spikeglx_client(cmd, varargin)
             if ~IsRunning(hSGL)
                 return
             end
-        catch ME
-            state = closeHandle(state);
-            state.lastError = ME.message;
-            result.error = 'disconnected';
-            return
+        catch
+            state = doRefresh(state);
+            if ~state.connected || ~state.running
+                result.error = state.lastError;
+                return
+            end
         end
         try
             result.imec = fetchImec();

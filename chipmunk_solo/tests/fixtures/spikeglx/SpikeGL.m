@@ -24,6 +24,10 @@ classdef SpikeGL < handle
             if isfield(ChipmunkSpikeGLTest,'pollFailure') && ChipmunkSpikeGLTest.pollFailure
                 error('Test:Disconnected','Server connection lost');
             end
+            if isfield(ChipmunkSpikeGLTest,'expired') && ChipmunkSpikeGLTest.expired
+                ChipmunkSpikeGLTest.expired=false;
+                error('Test:Expired','Idle control connection expired');
+            end
             v=ChipmunkSpikeGLTest.running;
         end
         function v=IsSaving(s)
