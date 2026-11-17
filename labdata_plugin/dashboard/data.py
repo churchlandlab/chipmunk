@@ -101,59 +101,77 @@ def get_subject_water(subject: str) -> dict[str, float]:
 def get_trials_for_sessions(
     subject: str, session_names: tuple[str, ...]
 ) -> dict[str, pd.DataFrame]:
-    """Per-trial rows for several sessions, grouped by ``session_name``."""
+    """Fetch only fields needed for history, without stimulus or poke blobs."""
     if not session_names:
         return {}
-
-    quoted = ", ".join(f"'{s}'" for s in session_names)
-    restriction = f"subject_name = '{subject}' AND session_name in ({quoted})"
-
+    fields = (
+        "session_name",
+        "trial_num",
+        "rewarded_modality",
+        "required_wait_time",
+        "rewarded",
+        "with_choice",
+        "initiated",
+        "early_withdrawal",
+        "t_stim",
+        "t_react",
+    )
     with _DB_LOCK:
-        df = pd.DataFrame(
-            (Chipmunk * Chipmunk.Trial * Chipmunk.TrialParameters & restriction).fetch(
-                order_by="session_name, trial_num"
-            )
-        )
-
-    if df.empty:
+        rows = (
+            Chipmunk.Trial * Chipmunk.TrialParameters
+            & {"subject_name": subject}
+            & [{"session_name": name} for name in session_names]
+        ).fetch(*fields, order_by="session_name, trial_num", as_dict=True)
+    frame = pd.DataFrame(rows)
+    if frame.empty:
         return {}
+    return {
+        str(name): group.reset_index(drop=True)
+        for name, group in frame.groupby("session_name", sort=False)
+    }
 
-    grouped: dict[str, pd.DataFrame] = {}
-    for session, session_df in df.groupby("session_name", sort=False):
-        grouped[str(session)] = session_df.reset_index(drop=True)
-    return grouped
+
+def _outcome_masks(trials: pd.DataFrame) -> dict[str, np.ndarray]:
+    correct = trials.rewarded.to_numpy() == 1
+    incorrect = (trials.with_choice.to_numpy() == 1) & ~correct
+    early = (trials.early_withdrawal.to_numpy() == 1) & ~(correct | incorrect)
+    presented = trials.t_stim.notna().to_numpy()
+    initiated = (
+        (trials.initiated.to_numpy() == 1) | presented | early | correct | incorrect
+    )
+    return {
+        "correct": correct,
+        "incorrect": incorrect,
+        "ew_pre": early & ~presented,
+        "ew_stim": early & presented,
+        "not_initiated": ~initiated,
+        "no_choice": initiated & ~(correct | incorrect | early),
+    }
 
 
-@_ttl_lru_cache(maxsize=64)
-def get_wait_medians_for_sessions(
-    subject: str, session_names: tuple[str, ...]
-) -> dict[str, float]:
-    """Median wait time (s) per session."""
-    if not session_names:
+def _trial_summary(trials: pd.DataFrame) -> dict[str, float]:
+    if trials.empty:
         return {}
-
-    quoted = ", ".join(f"'{s}'" for s in session_names)
-    restriction = f"subject_name = '{subject}' AND session_name in ({quoted})"
-
-    with _DB_LOCK:
-        rows = (Chipmunk.Trial & restriction).fetch(
-            "session_name", "t_react", "t_stim", as_dict=True
-        )
-
-    if not rows:
-        return {}
-
-    df = pd.DataFrame(rows)
-    wait = df["t_react"].to_numpy() - df["t_stim"].to_numpy()
-    mask = np.isfinite(wait) & (wait > 0) & (wait < 30)
-    valid = df.loc[mask, ["session_name"]].copy()
-    valid["wait"] = wait[mask]
-
-    if valid.empty:
-        return {}
-
-    grouped = valid.groupby("session_name", sort=False)["wait"].median().to_dict()
-    return {str(k): float(v) for k, v in grouped.items()}
+    masks = _outcome_masks(trials)
+    required = pd.to_numeric(trials.required_wait_time, errors="coerce").to_numpy(float)
+    valid_required = np.isfinite(required) & (required >= 0)
+    actual = (
+        pd.to_numeric(trials.t_react, errors="coerce")
+        - pd.to_numeric(trials.t_stim, errors="coerce")
+    ).to_numpy(float)
+    completed = (
+        np.isfinite(actual) & (actual >= 0) & ~(masks["ew_pre"] | masks["ew_stim"])
+    )
+    return {
+        **{key + "_rate": float(mask.mean()) for key, mask in masks.items()},
+        "ew_rate": float((masks["ew_pre"] | masks["ew_stim"]).mean()),
+        "completion_rate": float(completed.mean()),
+        "required_wait_start": float(required[0]) if valid_required[0] else np.nan,
+        "required_wait_end": float(required[-1]) if valid_required[-1] else np.nan,
+        "median_wait": float(np.median(actual[completed]))
+        if completed.any()
+        else np.nan,
+    }
 
 
 @_ttl_lru_cache(maxsize=256)
@@ -176,7 +194,6 @@ def clear_data_cache() -> None:
     get_session_trials.cache_clear()
     get_subject_water.cache_clear()
     get_trials_for_sessions.cache_clear()
-    get_wait_medians_for_sessions.cache_clear()
     get_sessions.cache_clear()
     get_subjects_for_date.cache_clear()
     session_metrics.cache_clear()
@@ -244,32 +261,17 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     valid_rts = rts[np.isfinite(rts)]
     valid_rts = valid_rts[valid_rts < 2]
 
-    # Per-stimulus outcome counts (4 categories) + chronometric + p(right)
+    # Mutually exclusive outcomes; initiation failures are not early withdrawals.
+    outcomes = _outcome_masks(trials)
+    outcome_counts = {key: int(mask.sum()) for key, mask in outcomes.items()}
     ustims = np.unique(intensity[np.isfinite(intensity)])
-    n_correct, n_incorrect, n_ew, n_no_choice, p_right, median_rt = (
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-    )
+    per_stim = {key: [] for key in outcomes}
+    p_right, median_rt = [], []
     for s in ustims:
         m = intensity == s
         t = trials[m]
-        t_rewarded = t.rewarded.to_numpy() == 1
-        t_incorrect = (t.with_choice.to_numpy() == 1) & ~t_rewarded
-        t_ew_only = (t.early_withdrawal.to_numpy() == 1) & ~t_rewarded & ~t_incorrect
-        t_no_choice = ~(t_rewarded | t_incorrect | t_ew_only)
-
-        nc = int(np.sum(t_rewarded))
-        ni = int(np.sum(t_incorrect))
-        ne = int(np.sum(t_ew_only))
-        nn = int(np.sum(t_no_choice))
-        n_correct.append(nc)
-        n_incorrect.append(ni)
-        n_ew.append(ne)
-        n_no_choice.append(nn)
+        for key, mask in outcomes.items():
+            per_stim[key].append(int(mask[m].sum()))
         with_choice_trials = t[t.with_choice == 1]
         pr = (
             (with_choice_trials.response == 1).sum() / len(with_choice_trials)
@@ -494,113 +496,113 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     trial_nums_all = trials.trial_num.to_numpy()
     ew_roll_x, ew_roll_y = _rolling_stat(trial_nums_all, ew_raw, win, stat=np.mean)
 
-    def _range_text(values: np.ndarray, precision: int = 2) -> str | None:
-        finite_vals = values[np.isfinite(values)]
-        if finite_vals.size == 0:
-            return None
-        lo = float(np.min(finite_vals))
-        hi = float(np.max(finite_vals))
-        if np.isclose(lo, hi):
-            return f"{lo:.{precision}f}"
-        return f"{lo:.{precision}f} to {hi:.{precision}f}"
-
-    session_settings_lines: list[str] = [f"trials: {len(trials)}"]
-    used_setting_cols: set[str] = set()
-
-    def _summarize_setting(col_name: str, label: str, mode: str = "auto") -> str | None:
-        if col_name not in trials.columns:
-            return None
-        series = trials[col_name].dropna()
-        if series.empty:
-            return None
-
-        numeric_vals = pd.to_numeric(series, errors="coerce").to_numpy(dtype=float)
-        finite_numeric = numeric_vals[np.isfinite(numeric_vals)]
-        if finite_numeric.size:
-            rounded = np.round(finite_numeric, 6)
-            unique_vals = np.unique(rounded)
-            if mode == "values":
-                text = ", ".join(f"{val:.3g}" for val in unique_vals.tolist())
-            elif mode == "range" or (
-                mode == "auto" and len(unique_vals) > 3 and "stim" in col_name.lower()
-            ):
-                text = _range_text(finite_numeric)
-                if text is None:
-                    return None
-            elif len(unique_vals) <= 3:
-                text = ", ".join(f"{val:.3g}" for val in unique_vals.tolist())
-            else:
-                text = _range_text(finite_numeric)
-                if text is None:
-                    return None
-            return f"{label}: {text}"
-
-        text_vals = sorted({str(v) for v in series.tolist() if str(v).strip()})
-        if not text_vals or len(text_vals) > 4:
-            return None
-        return f"{label}: {', '.join(text_vals)}"
-
-    preferred_settings = [
-        ("rewarded_modality", "modality", "auto"),
-        ("category_boundary", "boundary", "auto"),
-        ("stim_rate_audio", "audio stim", "values"),
-        ("stim_rate_vision", "visual stim", "values"),
-        ("stim_rate_visual", "visual stim", "values"),
-        ("wait_duration", "wait duration", "auto"),
-        ("delay_duration", "delay duration", "auto"),
-        ("sample_duration", "sample duration", "auto"),
-        ("response_duration", "response duration", "auto"),
-        ("timeout_duration", "timeout duration", "auto"),
-        ("reward_amount", "reward amount", "auto"),
-        ("reward_amount_ul", "reward amount (µL)", "auto"),
-    ]
-    for col_name, label, mode in preferred_settings:
-        line = _summarize_setting(col_name, label, mode)
-        if line and line not in session_settings_lines:
-            session_settings_lines.append(line)
-            used_setting_cols.add(col_name)
-
-    excluded_cols = {
-        "subject_name",
-        "session_name",
-        "trial_num",
-        "response",
-        "rewarded",
-        "punished",
-        "early_withdrawal",
-        "with_choice",
-        "performance_easy",
-        "n_with_choice",
-        "response_values",
-        "initiation_times",
-        "reaction_times",
+    setting_groups = {
+        "Task": [
+            ("setting_task_mode", "mode", "values"),
+            ("setting_free_initiation", "self initiation", "progression"),
+            ("setting_strict_choice", "strict choice", "progression"),
+        ],
+        "Stimulus": [
+            ("rewarded_modality", "modality", "values"),
+            ("category_boundary", "boundary", "values"),
+            ("setting_prob_audio", "audio probability", "values"),
+            ("setting_prob_vision", "visual probability", "values"),
+            ("stim_rate_audio", "audio stim", "values"),
+            ("stim_rate_vision", "visual stim", "values"),
+            ("stim_event_duration", "event duration (s)", "progression"),
+            ("min_isi", "minimum ISI (s)", "progression"),
+            ("is_poisson", "Poisson intervals", "progression"),
+            ("stim_brightness", "brightness", "progression"),
+            ("stim_loudness", "loudness", "progression"),
+            ("extra_stim_duration", "extra stimulus (s)", "progression"),
+        ],
+        "Timing": [
+            ("required_wait_time", "required wait (s)", "progression"),
+            ("pre_stim_delay", "sampled pre-stim delay (s)", "progression"),
+            ("pre_stim_delay_min", "pre-stim minimum (s)", "progression"),
+            ("pre_stim_delay_max", "pre-stim maximum (s)", "progression"),
+            ("pre_stim_delay_lambda", "pre-stim lambda", "progression"),
+            ("incorrect_choice_timeout", "incorrect timeout (s)", "progression"),
+            ("early_withdrawal_timeout", "withdrawal timeout (s)", "progression"),
+        ],
+        "Reward and bias": [
+            ("setting_high_rate_side", "high-rate side", "values"),
+            ("configured_reward_volume", "correct-side reward (µL)", "progression"),
+            ("setting_left_reward_volume", "initial left reward (µL)", "values"),
+            ("setting_right_reward_volume", "initial right reward (µL)", "values"),
+            ("proportion_left", "left-trial probability", "progression"),
+            ("anti_bias_strength", "anti-bias strength", "progression"),
+            ("anti_bias_tau", "anti-bias window", "progression"),
+        ],
     }
-    keyword_fragments = (
-        "stim",
-        "reward",
-        "wait",
-        "delay",
-        "timeout",
-        "sample",
-        "modality",
-        "boundary",
-        "block",
-        "choice",
-    )
-    for col_name in trials.columns:
-        col_l = col_name.lower()
-        if (
-            col_name in used_setting_cols
-            or col_name in excluded_cols
-            or col_name.startswith("t_")
-            or not any(fragment in col_l for fragment in keyword_fragments)
-        ):
-            continue
-        line = _summarize_setting(col_name, col_name.replace("_", " "), "auto")
-        if line and line not in session_settings_lines:
-            session_settings_lines.append(line)
-        if len(session_settings_lines) >= 9:
-            break
+    session_settings_lines = [f"trials: {len(trials)}", "Outcomes (% of all trials)"]
+    for key, count in outcome_counts.items():
+        label = {
+            "ew_pre": "EW before stimulus",
+            "ew_stim": "EW during stimulus",
+            "not_initiated": "not initiated",
+            "no_choice": "no choice",
+        }.get(key, key)
+        session_settings_lines.append(
+            f"  {label}: {100 * count / len(trials):.1f}% ({count})"
+        )
+    changes: dict[int, list[str]] = {}
+    context: list[str] = []
+    for group, settings in setting_groups.items():
+        lines = []
+        for column, label, mode in settings:
+            if column not in trials:
+                continue
+            series = trials[column]
+            known = series.dropna()
+            if known.empty:
+                continue
+            numeric = pd.to_numeric(series, errors="coerce").to_numpy(float)
+            finite = numeric[np.isfinite(numeric)]
+            if mode == "values":
+                text = (
+                    ", ".join(f"{v:.3g}" for v in np.unique(finite))
+                    if finite.size
+                    else ", ".join(sorted(set(known.astype(str))))
+                )
+            elif finite.size:
+                start = f"{numeric[0]:.3g}" if np.isfinite(numeric[0]) else "unknown"
+                end = f"{numeric[-1]:.3g}" if np.isfinite(numeric[-1]) else "unknown"
+                text = f"{start} → {end}; range {min(finite):.3g}–{max(finite):.3g}"
+            else:
+                continue
+            lines.append(f"  {label}: {text}")
+            # Adaptive wait and sampled delays are shown in hover, not as change markers.
+            if mode == "progression" and column not in {
+                "required_wait_time",
+                "pre_stim_delay",
+                "configured_reward_volume",
+            }:
+                changed = (
+                    np.flatnonzero(
+                        np.isfinite(numeric[1:])
+                        & np.isfinite(numeric[:-1])
+                        & ~np.isclose(numeric[1:], numeric[:-1], rtol=0, atol=1e-6)
+                    )
+                    + 1
+                )
+                for idx in changed:
+                    changes.setdefault(int(trial_nums[idx]), []).append(
+                        f"{label}: {numeric[idx - 1]:.3g} → {numeric[idx]:.3g}"
+                    )
+        if lines:
+            session_settings_lines.extend([group, *lines])
+    for trial in slide_x:
+        idx = int(np.argmin(abs(trial_nums - trial)))
+        values = []
+        for column, label in [
+            ("required_wait_time", "required wait"),
+            ("pre_stim_delay", "pre-stim delay"),
+            ("configured_reward_volume", "reward (µL)"),
+        ]:
+            if column in trials and pd.notna(trials[column].iloc[idx]):
+                values.append(f"{label}: {trials[column].iloc[idx]:.3g}")
+        context.append("<br>".join(values))
 
     if start_times.size > 1:
         session_duration_min = (
@@ -614,19 +616,17 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
     water_by_session = get_subject_water(subject)
     session_water_ml = water_by_session.get(session_name, np.nan)
     session_water_ul = (
-        float(session_water_ml) * 1000.0
-        if np.isfinite(session_water_ml) and float(session_water_ml) > 0
-        else np.nan
+        float(session_water_ml) * 1000.0 if np.isfinite(session_water_ml) else np.nan
     )
-    rewarded_count = int(np.sum(rewarded_mask))
-    reward_step_ul = (
-        session_water_ul / rewarded_count
-        if rewarded_count and np.isfinite(session_water_ul)
-        else (1.0 if rewarded_count else 0.0)
-    )
-    water_step_total = np.where(rewarded_mask, reward_step_ul, 0.0)
-    water_step_left = np.where(rewarded_left_mask, reward_step_ul, 0.0)
-    water_step_right = np.where(rewarded_right_mask, reward_step_ul, 0.0)
+    volumes = pd.to_numeric(
+        trials.get("configured_reward_volume", pd.Series(np.nan, index=trials.index)),
+        errors="coerce",
+    ).to_numpy(float)
+    volumes = np.where(np.isfinite(volumes) & (volumes >= 0), volumes, np.nan)
+    # Unknown rewarded amounts propagate; never invent water or rescale to Watering.
+    water_step_total = np.where(rewarded_mask, volumes, 0.0)
+    water_step_left = np.where(rewarded_left_mask, volumes, 0.0)
+    water_step_right = np.where(rewarded_right_mask, volumes, 0.0)
     water_cum_total = np.cumsum(water_step_total)
     water_cum_left = np.cumsum(water_step_left)
     water_cum_right = np.cumsum(water_step_right)
@@ -652,10 +652,14 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
 
     out = {
         "stims": ustims.tolist(),
-        "n_correct": n_correct,
-        "n_incorrect": n_incorrect,
-        "n_ew": n_ew,
-        "n_no_choice": n_no_choice,
+        "n_correct": per_stim["correct"],
+        "n_incorrect": per_stim["incorrect"],
+        "n_ew": [a + b for a, b in zip(per_stim["ew_pre"], per_stim["ew_stim"])],
+        "n_ew_pre": per_stim["ew_pre"],
+        "n_ew_stim": per_stim["ew_stim"],
+        "n_not_initiated": per_stim["not_initiated"],
+        "n_no_choice": per_stim["no_choice"],
+        "outcome_counts": outcome_counts,
         "p_right": p_right,
         "median_rt": median_rt,
         "rts": valid_rts.tolist(),
@@ -676,6 +680,12 @@ def session_metrics(subject: str, session_name: str) -> dict | None:
         "response_times_left": response_left.tolist(),
         "response_times_right": response_right.tolist(),
         "session_settings_lines": session_settings_lines,
+        "settings_change_trials": sorted(changes),
+        "settings_change_text": [
+            "<br>".join(changes[trial]) for trial in sorted(changes)
+        ],
+        "performance_settings": context,
+        "recorded_water_ul": session_water_ul,
         "water_cum_x": water_cum_x,
         "water_cum_total_ul": water_cum_total.astype(float).tolist(),
         "water_cum_left_ul": water_cum_left.astype(float).tolist(),
@@ -789,7 +799,12 @@ def multisession_metrics(
         return None
     d_session_names = tuple(d["session_name"].tolist())
 
-    wait_medians = get_wait_medians_for_sessions(subject, d_session_names)
+    trial_frames = get_trials_for_sessions(subject, d_session_names)
+    summaries = {}
+    for name, frame in trial_frames.items():
+        if modality is not None:
+            frame = frame[frame.rewarded_modality == modality]
+        summaries[name] = _trial_summary(frame)
     water_by_session = get_subject_water(subject)
 
     try:
@@ -836,13 +851,11 @@ def multisession_metrics(
         else:
             training_time_hours.append(np.nan)
 
-    ew_rate: list[float] = []
     side_bias: list[float] = []
     for resp_vals in response_values:
         resp = np.asarray(resp_vals)
         choice = np.isin(resp, [-1, 1])
         n_choice = int(choice.sum())
-        ew_rate.append(float((~choice).sum() / resp.shape[0]) if resp.size else np.nan)
         if n_choice > 0:
             frac = float((resp[choice] == 1).sum() / n_choice)
             side_bias.append(frac - 0.5)
@@ -864,10 +877,6 @@ def multisession_metrics(
         rt_valid = rt_arr[np.isfinite(rt_arr) & (rt_arr > 0) & (rt_arr < 2)]
         median_rt_list.append(float(np.median(rt_valid)) if rt_valid.size else np.nan)
 
-    median_wait_list = [
-        wait_medians.get(session_name, np.nan) for session_name in session_names
-    ]
-
     # Water earned per session (from Watering table via DecisionTask)
     water = [
         water_by_session.get(session_name, np.nan) for session_name in session_names
@@ -876,12 +885,28 @@ def multisession_metrics(
     # --- Smoothing Logic ---
     res = {
         "perf_easy": np.array(d["performance_easy"]),
-        "ew_rate": np.array(ew_rate),
+        **{
+            key: np.array(
+                [summaries.get(name, {}).get(key, np.nan) for name in session_names]
+            )
+            for key in (
+                "ew_rate",
+                "correct_rate",
+                "incorrect_rate",
+                "ew_pre_rate",
+                "ew_stim_rate",
+                "not_initiated_rate",
+                "no_choice_rate",
+                "completion_rate",
+                "required_wait_start",
+                "required_wait_end",
+                "median_wait",
+            )
+        },
         "n_with_choice": np.array(d["n_with_choice"]),
         "side_bias": np.array(side_bias),
         "median_init": np.array(median_init),
         "median_rt": np.array(median_rt_list),
-        "median_wait": np.array(median_wait_list),
         "water": np.array(water),
         "training_time_hours": np.array(training_time_hours),
     }
@@ -891,6 +916,9 @@ def multisession_metrics(
         # Simple moving average, handling NaNs
         # We can use pandas rolling on a temporary series for each metric
         for k, v in res.items():
+            if k in {"required_wait_start", "required_wait_end"}:
+                out[k] = np.asarray(v).tolist()
+                continue
             s = pd.Series(v)
             # Center=True, min_periods=1 to keep tails
             out[k] = (
