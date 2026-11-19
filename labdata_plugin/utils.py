@@ -878,13 +878,6 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
         raise(ValueError('The camera log has the wrong shape?')) # there is an issue, raise...
     frame_num = camlog[camlog.columns[0]].values  # time
     t = camlog[camlog.columns[1]].values  # time
-    # Chameleon3 firmware 1.13.3.0 (all rigs) occasionally adds exactly 128 s to its
-    # timestamp at a 64 s boundary of its clock; frames and later intervals stay correct.
-    period = np.median(np.diff(t))
-    jumps = (np.diff(frame_num) == 1) & (np.abs(np.diff(t) - 128 - period) < 0.5 * period)
-    if np.any(jumps):
-        warnings.warn(f'Removing {jumps.sum()} 128-second camera clock jump(s) [cam{icam}].')
-        t = t - np.r_[0, np.cumsum(jumps)] * 128
     idx = np.argsort(t)
     t = t[idx]
     frame_num = frame_num[idx]
@@ -907,7 +900,9 @@ def _handle_chipmunk_camera_sync(icam, camlog, comm, vid, trialdicts, passive_tr
     frametimes = None
     if passive_trials or passive_replay is not None:
         # Replay sessions must match exactly; the loop below keeps its tolerance for other sessions.
-        onsets = _replay_gpio_onsets(zip(channel_selection, gpio), t, trialmarkers,
+        # Frame IDs times the frame period, not camera timestamps, which can jump by 128 s.
+        clock = frame_num * np.median(np.diff(t) / np.diff(frame_num))
+        onsets = _replay_gpio_onsets(zip(channel_selection, gpio), clock, trialmarkers,
                                      len(trialdicts), stopped_trial_pulse, passive_replay)
         frametimes = extrapolate_time_from_clock(trialmarkers, frame_num[onsets], np.arange(len(vid)))
     for iin,g in ([] if passive_trials or passive_replay is not None else zip(channel_selection,gpio)):
