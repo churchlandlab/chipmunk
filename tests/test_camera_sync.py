@@ -85,7 +85,7 @@ class ReplaySyncTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'matching GPIO'):
             self.ns['_handle_chipmunk_camera_sync'](0,pd.DataFrame({0:frames,1:frames/100,2:gpio}),[],frames,self.active,self.passive)
 
-    def test_replay_camera_clock_jump_requires_bpod_interval_match(self):
+    def test_replay_alignment_ignores_camera_clock_jump(self):
         # GRB061 20261116 has a +128 s timestamp jump with consecutive frame IDs.
         frames = np.arange(1400)
         gpio = np.zeros(len(frames), dtype=int)
@@ -93,13 +93,12 @@ class ReplaySyncTest(unittest.TestCase):
             gpio[start:start + 10] = 1
         clock = frames / 100 + (frames >= 700) * 128
         log = pd.DataFrame({0: frames, 1: clock, 2: gpio})
-        with self.assertWarnsRegex(UserWarning, '128-second'):
-            times, _ = self.ns['_handle_chipmunk_camera_sync'](
-                0, log, [], frames, self.active, self.passive)
+        times, _ = self.ns['_handle_chipmunk_camera_sync'](
+            0, log, [], frames, self.active, self.passive)
         np.testing.assert_allclose(times, frames / 100)
-        # If Bpod also records that pause, removing it must not fabricate a match.
+        # A real 128 s gap in Bpod with no matching frames must still fail.
         paused = [dict(row, t_sync=row['t_sync'] + 128) for row in self.passive]
-        with self.assertWarns(UserWarning), self.assertRaisesRegex(ValueError, 'matching GPIO'):
+        with self.assertRaisesRegex(ValueError, 'matching GPIO'):
             self.ns['_handle_chipmunk_camera_sync'](0, log, [], frames, self.active, paused)
 
 
